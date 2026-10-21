@@ -22,6 +22,8 @@ class Api102SmokeModule : XposedModule() {
     override fun onPackageReady(param: PackageReadyParam) {
         log(Log.INFO, TAG, "onPackageReady pkg=${param.packageName} cl=${param.classLoader}")
         if (param.packageName != "com.tencent.mm") return
+        probeLegacy("module_cl", javaClass.classLoader)
+        probeLegacy("host_cl", param.classLoader)
         runCatching {
             val activity = Class.forName("android.app.Activity", false, param.classLoader)
             val onResume = activity.getDeclaredMethod("onResume")
@@ -32,6 +34,41 @@ class Api102SmokeModule : XposedModule() {
             log(Log.INFO, TAG, "smoke hook installed OK")
         }.onFailure {
             log(Log.ERROR, TAG, "smoke hook install failed: $it")
+        }
+        probeLegacyHook(param.classLoader)
+    }
+
+    /** 探测现代模块 classloader 是否还能看到 legacy de.robv 类 */
+    private fun probeLegacy(tag: String, cl: ClassLoader?) {
+        val names = listOf(
+            "de.robv.android.xposed.XC_MethodHook",
+            "de.robv.android.xposed.XposedBridge",
+            "de.robv.android.xposed.XposedHelpers",
+            "de.robv.android.xposed.callbacks.XCallback",
+            "de.robv.android.xposed.XC_MethodReplacement"
+        )
+        names.forEach { n ->
+            val r = runCatching { Class.forName(n, false, cl) }
+            log(Log.INFO, TAG, "probe[$tag] $n = ${if (r.isSuccess) "FOUND" else "MISSING"}")
+        }
+    }
+
+    /** 真正调用一次 legacy 桥，确认它在现代模块里能否工作 */
+    private fun probeLegacyHook(hostCl: ClassLoader) {
+        runCatching {
+            val activity = Class.forName("android.app.Activity", false, hostCl)
+            val onResume = activity.getDeclaredMethod("onResume")
+            de.robv.android.xposed.XposedBridge.hookMethod(
+                onResume,
+                object : de.robv.android.xposed.XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        log(Log.INFO, TAG, "legacy bridge hook fired")
+                    }
+                }
+            )
+            log(Log.INFO, TAG, "legacy bridge hook installed OK")
+        }.onFailure {
+            log(Log.ERROR, TAG, "legacy bridge hook failed: $it")
         }
     }
 
