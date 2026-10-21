@@ -724,7 +724,7 @@ object ConversationGroupRuntime {
         ) ?: return false
         val parentExtraInstalled = hook(getStringExtra, object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
-                if (param.thisObject.javaClass.name != NATIVE_GROUP_FRAGMENT ||
+                if (param.thisObject!!.javaClass.name != NATIVE_GROUP_FRAGMENT ||
                     param.args?.getOrNull(0) != CONTACT_USER_EXTRA
                 ) {
                     return
