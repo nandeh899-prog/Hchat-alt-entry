@@ -69,6 +69,8 @@ android {
             useLegacyPackaging = true
         }
         resources {
+            // libxposed 现代模块元数据（META-INF/xposed/*）必须打包进 APK
+            merges += "META-INF/xposed/*"
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "DebugProbesKt.bin"
             excludes += "META-INF/*.version"
@@ -99,6 +101,8 @@ kotlin {
 
 dependencies {
     compileOnly("de.robv.android.xposed:api:82")
+    // libxposed 现代 API（框架自带该包，编译期只需 provide）
+    compileOnly("io.github.libxposed:api:102.0.0")
     implementation("io.github.billywei01:fastkv:3.0.1")
     implementation("org.luckypray:dexkit:2.0.1")
     implementation("com.google.flatbuffers:flatbuffers-java:23.5.26")
