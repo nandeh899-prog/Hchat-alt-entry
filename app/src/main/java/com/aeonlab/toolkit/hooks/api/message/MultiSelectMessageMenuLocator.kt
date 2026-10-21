@@ -84,7 +84,9 @@ object MultiSelectMessageMenuLocator {
                         returnType("void")
                         paramTypes()
                         declaredClass(CHATTING_COMPONENT_PREFIX, StringMatchType.StartsWith)
-                        addCaller(MethodMatcher(menuClickMethod))
+                        // DexKit 2.0.1 不支持 addCaller（2.2.0 新增）；此处已由返回值/参数/类名前缀三重约束，
+                        // 且结果会再经 isMultiSelectExitMethod 过滤，故省略调用者约束。
+                        // addCaller(MethodMatcher(menuClickMethod))
                     })
                 }
             ).mapNotNull { runCatching { it.getMethodInstance(context.hostClassLoader()) }.getOrNull() }
