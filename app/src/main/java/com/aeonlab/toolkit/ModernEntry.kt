@@ -22,8 +22,17 @@ class ModernEntry : XposedModule() {
 
     private val dispatched = ConcurrentHashMap<String, Boolean>()
 
+    /**
+     * 真实进程名（如 com.tencent.mm:push）。
+     * 不能用 ApplicationInfo.processName：那是 manifest 里静态声明的值，恒等于包名，
+     * 会把 :push / :appbrand* 等子进程误判成主进程，导致它们跑完整初始化。
+     */
+    @Volatile
+    private var currentProcessName: String? = null
+
     override fun onModuleLoaded(param: XposedModuleInterface.ModuleLoadedParam) {
         CompatRuntime.installLibXposed(this)
+        currentProcessName = param.processName
         Log.i(
             TAG,
             "onModuleLoaded process=${param.processName} api=$apiVersion " +
@@ -60,7 +69,7 @@ class ModernEntry : XposedModule() {
     ) {
         val pkg = packageName ?: return
         val loader = classLoader ?: return
-        val processName = info?.processName ?: pkg
+        val processName = currentProcessName ?: info?.processName ?: pkg
         if (dispatched.putIfAbsent("$pkg|$processName", true) != null) return
         Log.i(TAG, "$stage pkg=$pkg process=$processName first=$firstPackage")
         val compat = XC_LoadPackage.LoadPackageParam().apply {
