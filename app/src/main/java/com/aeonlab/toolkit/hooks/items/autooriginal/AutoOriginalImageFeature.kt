@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.hooks.items.autooriginal
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry

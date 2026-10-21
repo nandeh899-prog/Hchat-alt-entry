@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import de.robv.android.xposed.XposedBridge;
+import com.aeonlab.toolkit.xposed.compat.XposedBridge;
 
 /**
  * DexFinder - 使用 DexKit 定位微信混淆后的类和方法

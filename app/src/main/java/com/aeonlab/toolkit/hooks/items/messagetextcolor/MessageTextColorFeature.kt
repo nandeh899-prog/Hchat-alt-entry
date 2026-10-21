@@ -11,7 +11,7 @@ import android.text.style.ClickableSpan
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.R
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis

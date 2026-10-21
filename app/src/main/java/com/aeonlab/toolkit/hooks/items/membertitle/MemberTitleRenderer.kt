@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.hooks.items.membertitle
 import android.text.SpannableStringBuilder
 import android.view.View
 import android.widget.TextView
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.api.contact.WeChatChatroomApi
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis

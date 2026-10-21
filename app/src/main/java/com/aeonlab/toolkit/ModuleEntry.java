@@ -39,10 +39,9 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import de.robv.android.xposed.IXposedHookLoadPackage;
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedHelpers;
-import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook;
+import com.aeonlab.toolkit.xposed.compat.XposedHelpers;
+import com.aeonlab.toolkit.xposed.compat.XC_LoadPackage;
 
 /**
  * 模块入口。
@@ -55,7 +54,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  *
  * 进程过滤：普通功能只在微信主进程加载；:appbrand* 使用独立的轻量运行时。
  */
-public class ModuleEntry implements IXposedHookLoadPackage {
+public class ModuleEntry {
     private static final String TAG = "[Hchat:Entry]";
     private static final String WECHAT_PKG = "com.tencent.mm";
     private static final Object DEXKIT_CREATE_LOCK = new Object();
@@ -68,7 +67,6 @@ public class ModuleEntry implements IXposedHookLoadPackage {
     private FeatureManager featureManager;
     private FeatureContext featureContext;
 
-    @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         // 1. 包名过滤
         if (!isWeChatPackage(lpparam.packageName)) return;

@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.core
 
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XposedBridge
 import java.lang.reflect.Member
 import java.util.concurrent.CancellationException
 

@@ -19,7 +19,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.RelativeLayout
 import android.widget.FrameLayout
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry

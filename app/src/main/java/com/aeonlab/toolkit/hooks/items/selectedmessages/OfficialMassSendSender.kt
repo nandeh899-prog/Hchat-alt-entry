@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.hooks.items.selectedmessages
 import android.media.MediaMetadataRetriever
 import android.os.Handler
 import android.os.Looper
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.media.WeChatEmojiApi

@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook;
 import com.aeonlab.toolkit.dexkit.DexFinder;
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis;
 import com.aeonlab.toolkit.hooks.core.HookRegistry;

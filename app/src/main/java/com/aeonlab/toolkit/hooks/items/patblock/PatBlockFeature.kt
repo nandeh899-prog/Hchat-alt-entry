@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.patblock
 
 import android.view.View
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.event.Events
 import com.aeonlab.toolkit.hooks.core.BaseFeature

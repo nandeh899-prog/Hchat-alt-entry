@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.api.message
 
 import android.text.TextUtils
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexFinder
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.api.media.WeChatInternalServices

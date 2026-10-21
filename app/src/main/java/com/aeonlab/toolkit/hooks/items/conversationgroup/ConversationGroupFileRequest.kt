@@ -6,8 +6,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XposedBridge
 import com.aeonlab.toolkit.utils.HLog
 import java.lang.ref.WeakReference
 import java.util.concurrent.ArrayBlockingQueue

@@ -499,8 +499,8 @@ import com.aeonlab.toolkit.ui.FeatureSettingsProvider
 import com.aeonlab.toolkit.ui.UIRegistry
 import com.aeonlab.toolkit.utils.KavaReflector
 import com.aeonlab.toolkit.utils.KeywordReplacementRule
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XposedBridge
 import org.json.JSONArray
 import org.json.JSONObject
 import top.yukonga.miuix.kmp.basic.BreadcrumbBar

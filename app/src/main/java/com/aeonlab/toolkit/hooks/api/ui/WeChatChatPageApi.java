@@ -12,7 +12,7 @@ import com.aeonlab.toolkit.utils.KavaReflector;
 import java.lang.reflect.Method;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook;
 
 /**
  * 当前聊天页 API。

@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.core
 
 import android.content.Context
-import de.robv.android.xposed.callbacks.XC_LoadPackage
+import com.aeonlab.toolkit.xposed.compat.XC_LoadPackage
 import com.aeonlab.toolkit.dexkit.DexBridgeHolder
 import com.aeonlab.toolkit.dexkit.DexFinder
 import com.aeonlab.toolkit.event.EventBus

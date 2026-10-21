@@ -1,6 +1,6 @@
 package com.aeonlab.toolkit.hooks.items.script
 
-import de.robv.android.xposed.XposedBridge
+import com.aeonlab.toolkit.xposed.compat.XposedBridge
 import com.aeonlab.toolkit.dexkit.DexBridgeHolder
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.DexKitBridge

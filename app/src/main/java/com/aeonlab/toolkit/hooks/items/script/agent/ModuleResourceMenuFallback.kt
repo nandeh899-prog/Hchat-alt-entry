@@ -2,8 +2,8 @@ package com.aeonlab.toolkit.hooks.items.script.agent
 
 import android.content.Context
 import android.content.res.Resources
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XposedHelpers
 import com.aeonlab.toolkit.utils.HLog
 
 object ModuleResourceMenuFallback {

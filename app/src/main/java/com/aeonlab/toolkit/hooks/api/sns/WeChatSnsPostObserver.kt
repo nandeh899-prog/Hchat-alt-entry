@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.api.sns
 
 import android.content.Context
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.utils.KavaReflector
