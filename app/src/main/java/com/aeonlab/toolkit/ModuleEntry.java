@@ -543,7 +543,7 @@ public class ModuleEntry implements IXposedHookLoadPackage {
             DexKitBridge cached = DEXKIT_BRIDGES.get(key);
             if (cached != null) return cached;
             // 仅缓存轻量入口；实际查询才加载，连续空闲 30 秒后释放 native 分析资源。
-            DexKitBridge bridge = DexKitBridge.createManaged(apkPath, 30_000L);
+            DexKitBridge bridge = DexKitBridge.create(apkPath);
             DEXKIT_BRIDGES.put(key, bridge);
             return bridge;
         }
