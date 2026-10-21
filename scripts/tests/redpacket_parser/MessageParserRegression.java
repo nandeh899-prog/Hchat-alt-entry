@@ -1,6 +1,6 @@
-package h.Hchat.hooks.items.payment.detect;
+package com.aeonlab.toolkit.hooks.items.payment.detect;
 
-import h.Hchat.hooks.api.message.WeChatMessageParseApi;
+import com.aeonlab.toolkit.hooks.api.message.WeChatMessageParseApi;
 
 public final class MessageParserRegression {
     public static void main(String[] args) {

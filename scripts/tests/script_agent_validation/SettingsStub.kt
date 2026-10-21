@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.script.agent
+package com.aeonlab.toolkit.hooks.items.script.agent
 
 object ScriptPluginAgentSettings {
     const val WRITE_APPROVAL_ASK = "ask"

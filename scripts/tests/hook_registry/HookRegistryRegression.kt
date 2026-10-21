@@ -1,5 +1,5 @@
 import de.robv.android.xposed.XC_MethodHook
-import h.Hchat.hooks.core.HookRegistry
+import com.aeonlab.toolkit.hooks.core.HookRegistry
 
 fun main() {
     val registry = HookRegistry.get()

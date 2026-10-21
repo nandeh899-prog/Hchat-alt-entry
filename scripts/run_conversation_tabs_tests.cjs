@@ -44,4 +44,4 @@ run([
     'scripts/tests/conversation_tabs/ConversationTabsRegression.kt'
 ]);
 run(['-cp', [artifact, stdlib].join(path.delimiter),
-    'h.Hchat.hooks.items.conversationtabs.ConversationTabsRegressionKt']);
+    'com.aeonlab.toolkit.hooks.items.conversationtabs.ConversationTabsRegressionKt']);

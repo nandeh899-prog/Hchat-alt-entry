@@ -82,5 +82,5 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
     '-no-stdlib', '-no-reflect', '-classpath', stdlib, '-d', artifact, extracted,
     ...fs.readdirSync(tests).filter(file => file.endsWith('.kt')).map(file => path.join(tests, file))]);
 run(['-cp', [artifact, stdlib].join(path.delimiter),
-    'h.Hchat.hooks.items.conversationtabs.ConversationTabsLifecycleRegressionKt']);
+    'com.aeonlab.toolkit.hooks.items.conversationtabs.ConversationTabsLifecycleRegressionKt']);
 console.log('Test artifacts: ' + output);

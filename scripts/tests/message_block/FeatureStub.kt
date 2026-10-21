@@ -1,4 +1,4 @@
-package h.Hchat.hooks.core
+package com.aeonlab.toolkit.hooks.core
 
 import android.content.Context
 import de.robv.android.xposed.XC_MethodHook

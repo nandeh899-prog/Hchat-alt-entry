@@ -43,7 +43,7 @@ function uiSlice(start, end) {
     return ui.slice(from, to).replaceAll('private fun ', 'internal fun ');
 }
 const selection = path.join(output, 'SelectionFunctions.kt');
-fs.writeFileSync(selection, 'package h.Hchat.hooks.items.messageblock\n' +
+fs.writeFileSync(selection, 'package com.aeonlab.toolkit.hooks.items.messageblock\n' +
     'data class ContactOption(val id: String, val label: String)\n' +
     uiSlice('private fun messageBlockBindingFromContact(', 'private fun normalizedMessageBlockBinding(') +
     uiSlice('private fun groupMemberEntry(', '\nsuspend fun loadAvatarBitmap('));
@@ -53,5 +53,5 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
         'hooks/api/model/WeChatMessage.kt', 'hooks/api/model/WeChatMessageTypes.kt',
         'hooks/api/model/WeChatParsedMessage.kt'].map(file => source + file),
     ...fs.readdirSync(path.join(root, tests)).filter(file => file.endsWith('.kt')).map(file => tests + file)]);
-run(['-cp', [artifact, stdlib, json].join(path.delimiter), 'h.Hchat.hooks.items.messageblock.RuleRegressionKt']);
+run(['-cp', [artifact, stdlib, json].join(path.delimiter), 'com.aeonlab.toolkit.hooks.items.messageblock.RuleRegressionKt']);
 console.log('Test artifacts: ' + output);

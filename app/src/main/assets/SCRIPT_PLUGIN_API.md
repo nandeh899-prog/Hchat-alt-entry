@@ -113,11 +113,11 @@ process=main
 | `XposedBridge` | `de.robv.android.xposed.XposedBridge` | Xposed 原生接口。 |
 | `XposedHelpers` | `de.robv.android.xposed.XposedHelpers` | Xposed 辅助接口。 |
 | `XC_MethodHook` | `de.robv.android.xposed.XC_MethodHook` | Xposed Hook 回调类。 |
-| `WeChatApis` | `h.Hchat.hooks.api.core.WeChatApis` | Hchat 内部微信 API 入口，进阶用法。普通插件优先使用本文档里的 WA 风格函数。 |
-| `KavaReflector` | `h.Hchat.utils.KavaReflector` | Hchat 反射封装，进阶用法。 |
+| `WeChatApis` | `com.aeonlab.toolkit.hooks.api.core.WeChatApis` | Hchat 内部微信 API 入口，进阶用法。普通插件优先使用本文档里的 WA 风格函数。 |
+| `KavaReflector` | `com.aeonlab.toolkit.utils.KavaReflector` | Hchat 反射封装，进阶用法。 |
 | `DexKitBridge` | `org.luckypray.dexkit.DexKitBridge` | DexKit 原始桥接类，进阶用法。 |
-| `DexFinder` | `h.Hchat.dexkit.DexFinder` | Hchat DexKit 定位器，进阶用法。 |
-| `DexBridgeHolder` | `h.Hchat.dexkit.DexBridgeHolder` | Hchat DexKit 持有器，进阶用法。 |
+| `DexFinder` | `com.aeonlab.toolkit.dexkit.DexFinder` | Hchat DexKit 定位器，进阶用法。 |
+| `DexBridgeHolder` | `com.aeonlab.toolkit.dexkit.DexBridgeHolder` | Hchat DexKit 持有器，进阶用法。 |
 | `PluginCallBack` | `me.hd.wauxv.plugin.api.callback.PluginCallBack` | WA 同款 HTTP/下载回调。 |
 
 同时还注入了这些变量，可以直接使用：

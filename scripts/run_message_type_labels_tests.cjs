@@ -37,5 +37,5 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
     'app/src/main/java/h/Hchat/hooks/items/hchatextra/MessageTypeLabels.kt',
     'app/src/main/java/h/Hchat/hooks/items/hchatextra/MessageDetailsVisibility.kt',
     'scripts/tests/message_type_labels/MessageTypeLabelsRegression.kt']);
-run(['-cp', [artifact, stdlib, xml].join(path.delimiter), 'h.Hchat.hooks.items.hchatextra.MessageTypeLabelsRegressionKt']);
+run(['-cp', [artifact, stdlib, xml].join(path.delimiter), 'com.aeonlab.toolkit.hooks.items.hchatextra.MessageTypeLabelsRegressionKt']);
 console.log('Test artifacts: ' + output);

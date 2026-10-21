@@ -37,8 +37,8 @@ const stubs = {
     'android/text/TextUtils.java': `package android.text; public class TextUtils {
         public static boolean isEmpty(CharSequence value) { return value == null || value.length() == 0; }
     }`,
-    'h/Hchat/dexkit/DexFinder.java': `package h.Hchat.dexkit;
-        import java.lang.reflect.*; import java.util.*; import h.Hchat.utils.KavaReflector;
+    'h/Hchat/dexkit/DexFinder.java': `package com.aeonlab.toolkit.dexkit;
+        import java.lang.reflect.*; import java.util.*; import com.aeonlab.toolkit.utils.KavaReflector;
         public class DexFinder {
             ${dexFinder.match(/    public (?:Method|Class<\?>|Constructor<\?>) voice\w+;/g).join('\n')}
             private boolean voiceMessagePathLookupComplete;
@@ -100,8 +100,8 @@ const stubs = {
                 }
             }
         }`,
-    'h/Hchat/hooks/api/core/WeChatApis.java': `package h.Hchat.hooks.api.core;
-        import h.Hchat.hooks.api.net.WeChatNetworkApi;
+    'h/Hchat/hooks/api/core/WeChatApis.java': `package com.aeonlab.toolkit.hooks.api.core;
+        import com.aeonlab.toolkit.hooks.api.net.WeChatNetworkApi;
         public class WeChatApis {
             public static final WeChatNetworkApi NETWORK = new WeChatNetworkApi();
             public static WeChatNetworkApi network() { return NETWORK; }
@@ -110,26 +110,26 @@ const stubs = {
                 public Version current() { return this; } public String displayVersion() { return "8.0.78.3180"; }
             }
         }`,
-    'h/Hchat/hooks/api/net/WeChatNetworkApi.java': `package h.Hchat.hooks.api.net;
+    'h/Hchat/hooks/api/net/WeChatNetworkApi.java': `package com.aeonlab.toolkit.hooks.api.net;
         public class WeChatNetworkApi {
             public boolean result; public Object request; public boolean isReady() { return true; }
             public boolean sendRequest(Object value) { request = value; return result; }
         }`,
-    'h/Hchat/hooks/api/media/WeChatInternalServices.java': `package h.Hchat.hooks.api.media;
+    'h/Hchat/hooks/api/media/WeChatInternalServices.java': `package com.aeonlab.toolkit.hooks.api.media;
         public class WeChatInternalServices {
             public static final java.util.Map<Class<?>,Object> services = new java.util.HashMap<>();
-            public static Object getService(h.Hchat.dexkit.DexFinder finder, Class<?> owner) { return services.get(owner); }
+            public static Object getService(com.aeonlab.toolkit.dexkit.DexFinder finder, Class<?> owner) { return services.get(owner); }
         }`,
-    'h/Hchat/hooks/items/fakevoiceduration/FakeVoiceDurationFeature.java': `package h.Hchat.hooks.items.fakevoiceduration;
+    'h/Hchat/hooks/items/fakevoiceduration/FakeVoiceDurationFeature.java': `package com.aeonlab.toolkit.hooks.items.fakevoiceduration;
         public class FakeVoiceDurationFeature {
             public static boolean isEnabled(android.content.Context context) { return false; }
             public static int durationMillis(android.content.Context context) { return 1000; }
         }`,
-    'h/Hchat/utils/HLog.java': `package h.Hchat.utils; public class HLog {
+    'h/Hchat/utils/HLog.java': `package com.aeonlab.toolkit.utils; public class HLog {
         public static String message; public static Throwable error;
         public static void e(String value, Throwable cause) { message = value; error = cause; }
     }`,
-    'h/Hchat/utils/KavaReflector.java': `package h.Hchat.utils; import java.lang.reflect.*;
+    'h/Hchat/utils/KavaReflector.java': `package com.aeonlab.toolkit.utils; import java.lang.reflect.*;
         public class KavaReflector {
             public static boolean isStatic(Member value) { return value != null && Modifier.isStatic(value.getModifiers()); }
             public static <T extends AccessibleObject> T accessible(T value) { if (value != null) value.setAccessible(true); return value; }
@@ -182,5 +182,5 @@ function run(command, args) {
 run(process.env.JAVAC || 'javac', ['-d', output,
     source + 'hooks/api/media/WeChatVoiceApi.java',
     'scripts/tests/voice_compat/VoiceCompatRegression.java', ...generated]);
-run(process.env.JAVA || 'java', ['-cp', output, 'h.Hchat.hooks.api.media.VoiceCompatRegression']);
+run(process.env.JAVA || 'java', ['-cp', output, 'com.aeonlab.toolkit.hooks.api.media.VoiceCompatRegression']);
 console.log('Test artifacts: ' + output);

@@ -35,5 +35,5 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
     'app/src/main/java/h/Hchat/hooks/items/conversationgroup/ConversationGroupParentPolicy.kt',
     'scripts/tests/conversation_group_parent/ParentPolicyRegression.kt']);
 run(['-cp', [artifact, stdlib].join(path.delimiter),
-    'h.Hchat.hooks.items.conversationgroup.ParentPolicyRegressionKt']);
+    'com.aeonlab.toolkit.hooks.items.conversationgroup.ParentPolicyRegressionKt']);
 console.log('Test artifacts: ' + output);

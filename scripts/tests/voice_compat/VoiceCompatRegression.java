@@ -1,9 +1,9 @@
-package h.Hchat.hooks.api.media;
+package com.aeonlab.toolkit.hooks.api.media;
 
 import com.tencent.mm.storage.e9;
-import h.Hchat.dexkit.DexFinder;
-import h.Hchat.hooks.api.core.WeChatApis;
-import h.Hchat.utils.HLog;
+import com.aeonlab.toolkit.dexkit.DexFinder;
+import com.aeonlab.toolkit.hooks.api.core.WeChatApis;
+import com.aeonlab.toolkit.utils.HLog;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;

@@ -30,7 +30,7 @@
 - 不要把 keystore、`local.properties`、构建缓存、APK 产物或临时文件提交到仓库。
 - 启动期不要并发创建或查询共享 `DexKitBridge`，也不要使用 `DexKitBridge.create(classLoader, true)` 初始化微信 ClassLoader；当前通过 `DexInstallScheduler.runDexKitTask(...)` 统一串行执行 bridge 创建、DexKit 查询及关联 Hook 安装，解析出的 Method/Class 再用运行时 ClassLoader 实例化，避免 DexKit native 与 Hook JNI 并发进入 ART 状态切换。
 - 普通功能不要为了等 DexKit 全量解析而阻塞微信启动。`DexInstallScheduler` 把 DexKit 可用拆成三段：`Stage.EARLY` 表示共享 `DexKitBridge` 已创建后即可排队，只给必须抢在微信 UI 构建前安装且确认适合调度器的 Hook 使用；`Stage.BRIDGE` 表示共享 `DexKitBridge` 与运行时 ClassLoader 已可用，单功能 DexKit 定位可以立即排队重建缓存；`Stage.WARMUP` 表示 `DexFinder.resolveAll()` 公共预热已完成，并会发布 sticky `Events.DexReady`。依赖自身字符串/方法定位的普通功能默认用 `BRIDGE`，依赖公共 `DexFinder` 全量字段或 `WeChatApis` 观察器完整可用的功能必须显式用 `WARMUP`。
-- 依赖 DexKit 的普通功能统一通过 `h.Hchat.hooks.core.DexInstallScheduler` 安装：功能层安装函数返回 `Boolean`，`true` 代表核心 hook 已安装成功，`false` 代表缓存缺失、DexKit 暂未命中或 Hook 安装失败并交给调度器有限重试。微信设置页入口是时序例外：不等待普通调度队列或 DexReady，而是在 `Hchat-Init` 功能安装阶段通过同一 DexKit 串行门直接安装，既抢在设置页 UI 构建前生效，也不再创建独立线程并发查询共享 bridge。除这类明确例外外，功能安装期只登记任务，所有功能登记完成后由调度器按阶段和优先级单后台队列执行；不要在功能内再写 `installWithRetry`、`Thread.sleep` 重试或裸线程抢跑 DexKit。
+- 依赖 DexKit 的普通功能统一通过 `com.aeonlab.toolkit.hooks.core.DexInstallScheduler` 安装：功能层安装函数返回 `Boolean`，`true` 代表核心 hook 已安装成功，`false` 代表缓存缺失、DexKit 暂未命中或 Hook 安装失败并交给调度器有限重试。微信设置页入口是时序例外：不等待普通调度队列或 DexReady，而是在 `Hchat-Init` 功能安装阶段通过同一 DexKit 串行门直接安装，既抢在设置页 UI 构建前生效，也不再创建独立线程并发查询共享 bridge。除这类明确例外外，功能安装期只登记任务，所有功能登记完成后由调度器按阶段和优先级单后台队列执行；不要在功能内再写 `installWithRetry`、`Thread.sleep` 重试或裸线程抢跑 DexKit。
 - 使用 `DexMethodCache` 的功能不能在 hooker 构造时保存固定 `runtimeKey`；每次读取或写入定位缓存前都要实时调用 `DexMethodCache.runtimeKey(context, classLoader)`，让微信升级、降级、热更新和 ClassLoader 指纹变化能立即清空旧 descriptor 并重建当前版本缓存。
 
 ## 本机工具说明
@@ -177,7 +177,7 @@ sh ./gradlew :app:assembleRelease --no-daemon --no-watch-fs -x lintVitalAnalyzeR
 
 - DexKit 用于定位微信混淆类、方法和字符串锚点。
 - FastKV 用于模块配置存储，统一通过 `HchatStorage.preferences(...)` 使用，不要在功能代码里直接实例化 FastKV。
-- KavaRef 是项目反射封装基础，新增反射统一走 `h.Hchat.utils.KavaReflector`。
+- KavaRef 是项目反射封装基础，新增反射统一走 `com.aeonlab.toolkit.utils.KavaReflector`。
 - Miuix 是设置界面使用的 Compose UI 体系。
 - KernelSU 是底部导航、液态玻璃和过渡效果的重要参考项目。
 - BeanShell-Android 用于用户自定义脚本插件能力，插件目录采用 WA 风格：`Hchat/脚本插件/<插件名>/main.java`。
@@ -248,7 +248,7 @@ done
 
 ## 日志规则
 
-LSPosed 只有 `XposedBridge.log(Throwable)` 会按错误日志显示。模块自身的失败、异常、未找到、未命中、不可用等错误日志必须统一使用 `h.Hchat.utils.HLog.e(...)`，不要直接 `XposedBridge.log(String)`。普通运行状态不输出到 LSPosed；抓包内容只写入抓包文件。用户脚本主动 `log()` 和明确开启的调试输出仍保留普通字符串日志，避免把调试信息全部标红。
+LSPosed 只有 `XposedBridge.log(Throwable)` 会按错误日志显示。模块自身的失败、异常、未找到、未命中、不可用等错误日志必须统一使用 `com.aeonlab.toolkit.utils.HLog.e(...)`，不要直接 `XposedBridge.log(String)`。普通运行状态不输出到 LSPosed；抓包内容只写入抓包文件。用户脚本主动 `log()` 和明确开启的调试输出仍保留普通字符串日志，避免把调试信息全部标红。
 
 `捕获异常日志` 位于 `娱乐 > 调试`，默认关闭。开启后，模块在用户同意协议后于微信主进程启动期安装异常记录器；运行中开启也会立即补装。Java 捕获器在 `Application.onCreate` 原方法执行前安装，未捕获异常会写入完整线程堆栈；Native 捕获器覆盖 `SIGSEGV`、`SIGABRT`、`SIGBUS`、`SIGILL`、`SIGFPE`、`SIGSYS`，只用无堆分配的信号现场代码保存信号、可读 `si_code`、发送方、线程名、故障地址、关键寄存器、`pc/lr` 所属 so 与文件偏移、可执行内存映射，并在 ARM64 上保存最多 32 层经过可读栈映射校验的 frame-pointer 回溯；`SIGABRT` 不再把无意义的 `siginfo` 联合字段显示为故障地址。记录完成后继续转交微信原处理器，不能阻断系统 tombstone。Android 11 及以上同时读取 `ApplicationExitInfo`：Native 异常补充退出 PID/UID、内存和系统 tombstone，系统明确记录为 `REASON_ANR` 的异常退出则单独生成 ANR 报告并附带系统 ANR trace；ANR 不使用固定时长的主线程看门狗推断，避免把短暂卡顿、调试暂停或系统负载误报为 ANR。记录保存在微信私有目录 `Hchat/crash/`，下次进入稳定 Activity 后用 Miuix 弹窗展示；点击日志区域或“复制日志”会复制完整内容，用户关闭弹窗后归档为 `last_crash.log` 并避免重复弹出，Activity 切换或写盘失败时保留待展示记录。关闭开关会立即取消待展示弹窗并清理尚未归档的 Java、Native、ANR 记录，同时推进退出记录基线，后续重新开启不会补弹关闭期间的旧异常；`last_crash.log` 继续保留。`OutOfMemoryError` 的 `Failed to allocate` 类型不记录、不弹窗。
 
@@ -307,7 +307,7 @@ Protobuf 抓包复用 `ProtobufPacketHook` 的唯一网络入口，通过 `onPro
 - AAC/M4A/MP4：`decodeAacFile()`、`encodePcmToAac()`、`encodePcmToM4a()`、`mp4ToSilk()`、`silkToM4a()`、`mp4ToM4a()`、`mp4ToAac()`、`m4aToSilk()`、`aacToSilk()`、`m4aToAac()`、`m4aToM4a()`、`autoToAac()`、`autoToM4a()`、`autoAacToSilk()`、`silkToAac()`、`aacToPcm()`、`pcmToAac()`、`pcmToM4a()`、`m4aToPcm()`、`decodeM4aFile()`
 - 通用入口：`startTransform(int type, String inputPath, String outputPath, int sampleRate, Consumer callback)`
 
-脚本运行时、快照和音频方法底层依赖 `h.Hchat.hooks.items.script.ScriptPluginRuntime`、`h.Hchat.hooks.items.script.ScriptAudioBridge` 和 `me.yun.silk.*`。发布构建必须保留这些类的 keep 规则，避免脚本通过方法名调用时被 R8 混淆。收到消息后的媒体下载回调还必须保留 `ScriptMessageHook`、`ScriptPluginRuntime` / `ScriptWaBridge` 内部类、`WeChatMessageChangeApi` 和 `WeChatDatabaseListenerApi`；`alt-entry` 还必须保留 `FinderMediaDownloadSupport` 和 `FinderFeedDetailResolver` 及其内部类。数据库可能先写入 `msgSvrId=0` 的半成品消息，再通过后续写入补齐正文和媒体元数据；普通消息回调与媒体下载分开去重，媒体队列重新查询最新记录后才提交下载。媒体回调声明以 BeanShell 方法表与源码方法声明/显式绑定合并识别，不能只依赖 R8 环境下的解释器方法表。凡是脚本能直接拿到并按方法名调用的 Bean/消息对象也必须 keep，包括 `ScriptMessageBean`、`ScriptQuoteMsgBean`、`WeChatMessage`、`WeChatQuoteMsg`、`WeChatImageMsg`、`WeChatVideoMsg`、`WeChatFileMsg`、`WeChatTransferMsg`、`WeChatPatMsg` 等；否则 release 包里会出现对象类名变成混淆类、`getTitle()` / `getContent()` 等方法取不到值的问题。脚本的普通消息、确认、输入、单选和多选界面通过 `showModule*Dialog` 复用模块 Miuix 弹窗；旧签名默认显示在底部，带 `position` 的重载可指定 `top`、`center` 或 `bottom`，运行时负责切回主线程并校验当前前台 Activity。插件 Agent 默认生成这些接口，不直接生成 Android 原生 `Dialog` / `AlertDialog`，复杂自定义布局除外。
+脚本运行时、快照和音频方法底层依赖 `com.aeonlab.toolkit.hooks.items.script.ScriptPluginRuntime`、`com.aeonlab.toolkit.hooks.items.script.ScriptAudioBridge` 和 `me.yun.silk.*`。发布构建必须保留这些类的 keep 规则，避免脚本通过方法名调用时被 R8 混淆。收到消息后的媒体下载回调还必须保留 `ScriptMessageHook`、`ScriptPluginRuntime` / `ScriptWaBridge` 内部类、`WeChatMessageChangeApi` 和 `WeChatDatabaseListenerApi`；`alt-entry` 还必须保留 `FinderMediaDownloadSupport` 和 `FinderFeedDetailResolver` 及其内部类。数据库可能先写入 `msgSvrId=0` 的半成品消息，再通过后续写入补齐正文和媒体元数据；普通消息回调与媒体下载分开去重，媒体队列重新查询最新记录后才提交下载。媒体回调声明以 BeanShell 方法表与源码方法声明/显式绑定合并识别，不能只依赖 R8 环境下的解释器方法表。凡是脚本能直接拿到并按方法名调用的 Bean/消息对象也必须 keep，包括 `ScriptMessageBean`、`ScriptQuoteMsgBean`、`WeChatMessage`、`WeChatQuoteMsg`、`WeChatImageMsg`、`WeChatVideoMsg`、`WeChatFileMsg`、`WeChatTransferMsg`、`WeChatPatMsg` 等；否则 release 包里会出现对象类名变成混淆类、`getTitle()` / `getContent()` 等方法取不到值的问题。脚本的普通消息、确认、输入、单选和多选界面通过 `showModule*Dialog` 复用模块 Miuix 弹窗；旧签名默认显示在底部，带 `position` 的重载可指定 `top`、`center` 或 `bottom`，运行时负责切回主线程并校验当前前台 Activity。插件 Agent 默认生成这些接口，不直接生成 Android 原生 `Dialog` / `AlertDialog`，复杂自定义布局除外。
 
 当前 Hchat 音频桥接默认走本地接管后的 `Silk-Codec-Android` native 方法；由于上游 OGG 解码器只支持 Vorbis，首个 Ogg 识别包为 `OpusHead` 时改走 Android `MediaExtractor + MediaCodec` 解码，再复用现有 PCM 重采样和 Silk 编码。普通 Ogg Vorbis 保持 native 路径，Opus 解码失败仍映射为 OGG 错误码；解码过程同时校验有效 PCM 输出并在长时间无进展时中止，失败不保留半成品。Silk 相关接口只接受 `8000/12000/16000/24000`，不支持的采样率按 `24000` 处理；可识别源格式会自动使用真实采样率：MediaCodec 解码以实际输出 PCM 采样率为准，MP3/FLAC/Ogg Vorbis 优先读媒体元数据，WAV 读文件头；转 Silk 时会把中间 PCM 重采样到目标 Silk 采样率，避免容器采样率和解码输出采样率不一致而变速变调；只有裸 PCM 输入因为没有头信息，仍必须依赖脚本传入的 `sampleRate/pcmHz/channels`；`autoToSilk`、`autoToPcm`、`autoToAac`、`autoToM4a`、`autoAacToSilk`、`startTransform` 都必须走 `ScriptAudioBridge` 的统一分发，不要直接绕回未经兼容处理的 native 方法。
 公共 `WeChatApis.media().sendVoice(...)` 会统一切到微信主线程执行，再按文件头识别真实音频类型，非 Silk 的常见音频先转成临时 Silk 再走微信语音上传链路，避免 MP3 等文件改成 `.silk` 后按假后缀发送导致无声；自动回复、红包回复、进退群回复、脚本接口和语音转发复用同一公共发送路径。
@@ -614,7 +614,7 @@ String avatar = getAvatarUrl("wxid_xxx", true);
 音频转换：
 
 - `音频转换` 设置页放在 `实用` 页签内的 `语音` 分组，名称固定为 `音频转换`。当前模块版提供 `任意音频转silk保存`、`任意音频转silk发送`、`Silk 转 MP3 保存`、`Silk 转 M4A 保存` 四种模式；输入文件统一使用系统文档选择器，保存模式统一使用系统创建文档选择器，发送目标统一使用现有联系人选择器，不提供手填路径、手填 wxid 或脚本式弹窗流程。
-- `音频转换` 模块页与脚本 API 共用 `h.Hchat.media.AudioTransformBridge`。`任意音频转silk保存` 优先走 `autoToSilk(...)`，输入本身已是 Silk 时直接复制；OGG 会按识别包区分 Vorbis 与 Opus，Ogg Opus 通过系统媒体解码器转为 PCM 后再编码 Silk。`任意音频转silk发送` 复用同一兼容入口及 `WeChatApis.media().voices().send(...)` 公共发送链路；`Silk 转 MP3/M4A 保存` 分别复用 `silkToMp3(...)`、`silkToM4a(...)`。保存结果写入用户在系统文档选择器里确认的目标 URI。
+- `音频转换` 模块页与脚本 API 共用 `com.aeonlab.toolkit.media.AudioTransformBridge`。`任意音频转silk保存` 优先走 `autoToSilk(...)`，输入本身已是 Silk 时直接复制；OGG 会按识别包区分 Vorbis 与 Opus，Ogg Opus 通过系统媒体解码器转为 PCM 后再编码 Silk。`任意音频转silk发送` 复用同一兼容入口及 `WeChatApis.media().voices().send(...)` 公共发送链路；`Silk 转 MP3/M4A 保存` 分别复用 `silkToMp3(...)`、`silkToM4a(...)`。保存结果写入用户在系统文档选择器里确认的目标 URI。
 - `音频转换` 选择输入文件后提供播放/暂停和可拖动进度条；普通音频直接使用系统播放器异步准备，Silk 输入先在后台转换为唯一命名的临时 M4A 试听文件。切换文件、进入名单页、开始处理或离开页面时停止并释放播放器，临时试听文件随页面或文件切换删除。`任意音频转 Silk 发送` 模式可启用“裁剪与自动分割”，把当前播放位置分别设为开始时间或结束时间，也可重新设置为完整音频区间；播放到选定终点后自动暂停并回到起点。自动分割秒数最少 1 秒且不设置人为上限，发送前把源音频解码为单声道 PCM，只读取选定起止区间并按设置时长编码为一段或多段 Silk，再按原顺序逐段发送。处理和发送过程支持取消，任一分段失败后停止发送余下分段；任务完成、取消或失败后自动清理临时 PCM/Silk 文件。所有保存模式仍输出单个完整文件，不执行裁剪或分段。
 
 微信强保活：
@@ -1692,12 +1692,12 @@ hooks/items/example/notify/    # Toast、系统通知、模板变量
 ### Feature
 
 ```kotlin
-package h.Hchat.hooks.items.example
+package com.aeonlab.toolkit.hooks.items.example
 
-import h.Hchat.event.Events
-import h.Hchat.hooks.api.core.WeChatApis
-import h.Hchat.hooks.core.BaseFeature
-import h.Hchat.hooks.core.FeatureContext
+import com.aeonlab.toolkit.event.Events
+import com.aeonlab.toolkit.hooks.api.core.WeChatApis
+import com.aeonlab.toolkit.hooks.core.BaseFeature
+import com.aeonlab.toolkit.hooks.core.FeatureContext
 
 class ExampleFeature : BaseFeature() {
     override fun featureId(): String = ID
@@ -1732,10 +1732,10 @@ class ExampleFeature : BaseFeature() {
 Provider 只提供入口元信息，不打开页面。
 
 ```kotlin
-package h.Hchat.hooks.items.example
+package com.aeonlab.toolkit.hooks.items.example
 
-import h.Hchat.ui.FeatureSettingsProvider
-import h.Hchat.ui.SimpleFeatureSettingsProvider
+import com.aeonlab.toolkit.ui.FeatureSettingsProvider
+import com.aeonlab.toolkit.ui.SimpleFeatureSettingsProvider
 
 class ExampleSettingsProvider : SimpleFeatureSettingsProvider(
     ExampleFeature.ID,
@@ -1941,7 +1941,7 @@ HookRegistry.get().hook(method, object : XC_MethodHook() {
 1. 先用 DexKit/DexClub 在目标版本确认类、方法、构造器。
 2. 把解析结果放进 DexFinder，并加版本/热更新缓存。
 3. 业务功能只消费 DexFinder 或 WeChatApis，不散落 findClass。
-4. 反射查找、类加载、实例创建和方法调用必须走 h.Hchat.utils.KavaReflector。
+4. 反射查找、类加载、实例创建和方法调用必须走 com.aeonlab.toolkit.utils.KavaReflector。
 5. 未确认的能力只写 supports/isAvailable，不写猜测实现。
 ```
 

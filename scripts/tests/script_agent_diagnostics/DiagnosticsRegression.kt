@@ -1,9 +1,9 @@
-package h.Hchat.hooks.items.script.agent
+package com.aeonlab.toolkit.hooks.items.script.agent
 
 import android.content.Context
-import h.Hchat.hooks.items.script.ScriptPluginRuntime
-import h.Hchat.hooks.items.script.ScriptPluginSettings
-import h.Hchat.preferences.HchatStorage
+import com.aeonlab.toolkit.hooks.items.script.ScriptPluginRuntime
+import com.aeonlab.toolkit.hooks.items.script.ScriptPluginSettings
+import com.aeonlab.toolkit.preferences.HchatStorage
 import org.json.JSONObject
 import java.io.File
 import java.nio.file.Files

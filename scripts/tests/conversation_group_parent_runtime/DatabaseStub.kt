@@ -1,4 +1,4 @@
-package h.Hchat.hooks.api.runtime
+package com.aeonlab.toolkit.hooks.api.runtime
 
 internal class WeChatDatabaseApi(
     initial: Map<String, String>,

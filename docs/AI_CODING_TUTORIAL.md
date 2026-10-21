@@ -708,7 +708,7 @@ Android：<版本和 SDK>，设备：<型号>，ABI：<arm64-v8a；仅支持 64 
 7. UI 是否被复用、覆盖、遮罩或透明 View 截走触摸。
 8. R8 是否改写了反射、脚本、JNI 或公共接口所依赖的名称和签名。
 
-日志里第一处 `h.Hchat` 调用通常比堆栈最后的 Android 系统行更有价值。异常不能只记录“失败”，应同时保留功能名、阶段、微信版本、目标 descriptor 和原始 Throwable，并限制重复日志频率。
+日志里第一处 `com.aeonlab.toolkit` 调用通常比堆栈最后的 Android 系统行更有价值。异常不能只记录“失败”，应同时保留功能名、阶段、微信版本、目标 descriptor 和原始 Throwable，并限制重复日志频率。
 
 ### 3. UI 与 Hook 的通用注意事项
 

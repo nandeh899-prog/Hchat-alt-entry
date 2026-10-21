@@ -26,5 +26,5 @@ run(['-Xmx256m', '-cp', jars.map(name => path.join(lib, name)).join(path.delimit
     'scripts/tests/message_details_layout/AndroidStub.kt',
     'scripts/tests/message_details_layout/TextViewStub.kt',
     'scripts/tests/message_details_layout/LayoutRegression.kt']);
-run(['-cp', jar + path.delimiter + path.join(lib, stdlib), 'h.Hchat.hooks.items.hchatextra.LayoutRegressionKt']);
+run(['-cp', jar + path.delimiter + path.join(lib, stdlib), 'com.aeonlab.toolkit.hooks.items.hchatextra.LayoutRegressionKt']);
 console.log('Test artifacts: ' + output);

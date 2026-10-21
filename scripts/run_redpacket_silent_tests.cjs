@@ -44,6 +44,6 @@ run(javac, ['-cp', classpath, '-d', output,
     ...['grab/RedPacketSilentHandler.java', 'grab/RedPacketUiAutomator.java', 'detect/RedPacketParser.java',
         'detect/RedPacketReflector.java', 'fake/RedPacketFakePacketCompat.java'].map(file => production + file),
     ...fs.readdirSync(path.join(root, tests)).filter(file => file.endsWith('.java')).map(file => tests + file)]);
-run(java, ['-cp', classpath, 'h.Hchat.hooks.items.payment.grab.SilentHandlerRegression']);
-run(java, ['-cp', classpath, 'h.Hchat.hooks.items.payment.grab.UiAutomatorRegression']);
+run(java, ['-cp', classpath, 'com.aeonlab.toolkit.hooks.items.payment.grab.SilentHandlerRegression']);
+run(java, ['-cp', classpath, 'com.aeonlab.toolkit.hooks.items.payment.grab.UiAutomatorRegression']);
 console.log('Test artifacts: ' + output);

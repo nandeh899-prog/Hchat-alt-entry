@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.conversationtabs
+package com.aeonlab.toolkit.hooks.items.conversationtabs
 
 import android.content.SharedPreferences
 import android.view.Gravity
@@ -10,12 +10,12 @@ import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.FrameLayout
 import de.robv.android.xposed.XC_MethodHook
-import h.Hchat.hooks.core.FeatureContext
-import h.Hchat.hooks.core.HookRegistry
-import h.Hchat.hooks.items.conversationgroup.ConversationGroupHomeProjection
-import h.Hchat.preferences.HchatStorage
-import h.Hchat.utils.HLog
-import h.Hchat.utils.KavaReflector
+import com.aeonlab.toolkit.hooks.core.FeatureContext
+import com.aeonlab.toolkit.hooks.core.HookRegistry
+import com.aeonlab.toolkit.hooks.items.conversationgroup.ConversationGroupHomeProjection
+import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.utils.HLog
+import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.ref.WeakReference
 import java.util.WeakHashMap
 import java.util.concurrent.atomic.AtomicLong

@@ -14,6 +14,6 @@ run(process.env.JAVAC || (fs.existsSync(termux + 'javac') ? termux + 'javac' : '
     'scripts/tests/startup/NativeLoadCacheRegression.java'
 ]);
 run(process.env.JAVA || (fs.existsSync(termux + 'java') ? termux + 'java' : 'java'), [
-    '-cp', output, 'h.Hchat.loader.utils.NativeLoadCacheRegression'
+    '-cp', output, 'com.aeonlab.toolkit.loader.utils.NativeLoadCacheRegression'
 ]);
 console.log('Test artifacts: ' + output);

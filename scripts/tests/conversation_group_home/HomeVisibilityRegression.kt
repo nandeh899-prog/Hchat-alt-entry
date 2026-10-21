@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.conversationgroup
+package com.aeonlab.toolkit.hooks.items.conversationgroup
 
 private fun check(value: Boolean, message: String) {
     if (!value) error(message)

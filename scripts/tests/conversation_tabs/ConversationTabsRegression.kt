@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.conversationtabs
+package com.aeonlab.toolkit.hooks.items.conversationtabs
 
 private var checks = 0
 

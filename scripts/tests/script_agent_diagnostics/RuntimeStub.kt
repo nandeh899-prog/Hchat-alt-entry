@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.script
+package com.aeonlab.toolkit.hooks.items.script
 
 import android.content.Context
 import java.io.File

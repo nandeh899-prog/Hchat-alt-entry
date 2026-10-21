@@ -1,4 +1,4 @@
-package h.Hchat.utils;
+package com.aeonlab.toolkit.utils;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;

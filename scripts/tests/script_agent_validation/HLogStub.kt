@@ -1,4 +1,4 @@
-package h.Hchat.utils
+package com.aeonlab.toolkit.utils
 
 object HLog {
     val failures = mutableListOf<Throwable>()

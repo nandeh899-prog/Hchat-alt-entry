@@ -2,7 +2,7 @@
 
 ## 范围与结论
 
-目标产物：Hchat-alt-entry-r8-debug-signed.apk，包名 h.Hchat，versionCode=1，versionName=1.0.0。
+目标产物：Hchat-alt-entry-r8-debug-signed.apk，包名 com.aeonlab.toolkit，versionCode=1，versionName=1.0.0。
 SHA-256：5ffaa373b90e932f18d6f54a1eecb537d49cef3bd9cb4d01a53cf307c197c570。
 
 通过 DexClub MCP 检查该 APK，并对照本目录源码。确认插件 Hook 句柄滞留、无界普通消息队列、未跟随插件卸载取消的延迟任务三类问题，已修复源码。未获取设备堆转储、卡顿时线程栈、微信版本及启用插件清单，因此不能断定实际卡顿全由小程序或 R8 引起，也未测得帧率、PSS 或 GC 的改善幅度。

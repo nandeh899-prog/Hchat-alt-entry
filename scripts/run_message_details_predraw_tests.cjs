@@ -25,5 +25,5 @@ run(['-Xmx256m', '-cp', jars.map(name => path.join(lib, name)).join(path.delimit
     'app/src/main/java/h/Hchat/hooks/items/hchatextra/MessageDetailsPreDrawQueue.kt',
     'scripts/tests/message_details_predraw/AndroidStub.kt',
     'scripts/tests/message_details_predraw/PreDrawRegression.kt']);
-run(['-cp', jar + path.delimiter + path.join(lib, stdlib), 'h.Hchat.hooks.items.hchatextra.PreDrawRegressionKt']);
+run(['-cp', jar + path.delimiter + path.join(lib, stdlib), 'com.aeonlab.toolkit.hooks.items.hchatextra.PreDrawRegressionKt']);
 console.log('Test artifacts: ' + output);

@@ -43,6 +43,6 @@ run(process.env.JAVAC || 'javac', ['-cp', classpath, '-d', output,
     source + 'hooks/items/payment/detect/RedPacketParser.java',
     'scripts/tests/redpacket_parser/MessageParserRegression.java',
     ...fs.readdirSync(path.join(root, tests)).filter(file => file.endsWith('.java')).map(file => tests + file)]);
-run(java, ['-cp', classpath, 'h.Hchat.hooks.api.message.ParserRegression']);
-run(java, ['-cp', classpath, 'h.Hchat.hooks.items.payment.detect.MessageParserRegression']);
+run(java, ['-cp', classpath, 'com.aeonlab.toolkit.hooks.api.message.ParserRegression']);
+run(java, ['-cp', classpath, 'com.aeonlab.toolkit.hooks.items.payment.detect.MessageParserRegression']);
 console.log('Test artifacts: ' + output);

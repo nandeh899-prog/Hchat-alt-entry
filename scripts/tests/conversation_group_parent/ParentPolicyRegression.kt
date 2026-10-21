@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.conversationgroup
+package com.aeonlab.toolkit.hooks.items.conversationgroup
 
 private var checks = 0
 private fun same(expected: Any?, actual: Any?, label: String) {

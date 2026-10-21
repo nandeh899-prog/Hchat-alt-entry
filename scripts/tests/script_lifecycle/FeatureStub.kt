@@ -1,2 +1,2 @@
-package h.Hchat.hooks.core
+package com.aeonlab.toolkit.hooks.core
 class FeatureContext

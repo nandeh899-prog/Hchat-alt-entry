@@ -38,5 +38,5 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
     ...['ScriptPluginAgentModels.kt', 'ScriptPluginAgentSettings.kt', 'ScriptPluginAgentProviderAdapter.kt',
         'ScriptPluginAgentReasoning.kt'].map(file => source + file),
     ...fs.readdirSync(path.join(root, tests)).filter(file => file.endsWith('.kt')).map(file => tests + file)]);
-run(['-cp', [artifact, stdlib, json].join(path.delimiter), 'h.Hchat.hooks.items.script.agent.ReasoningRegressionKt']);
+run(['-cp', [artifact, stdlib, json].join(path.delimiter), 'com.aeonlab.toolkit.hooks.items.script.agent.ReasoningRegressionKt']);
 console.log('Test artifacts: ' + output);

@@ -1,6 +1,6 @@
-package h.Hchat.hooks.api.core;
+package com.aeonlab.toolkit.hooks.api.core;
 
-import h.Hchat.hooks.api.runtime.WeChatTaskApi;
+import com.aeonlab.toolkit.hooks.api.runtime.WeChatTaskApi;
 
 public final class WeChatApis {
     private static final Runtime RUNTIME = new Runtime();

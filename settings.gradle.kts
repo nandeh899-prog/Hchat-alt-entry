@@ -14,5 +14,5 @@ dependencyResolutionManagement {
         maven { url = uri("https://api.xposed.info/") }
     }
 }
-rootProject.name = "Hchat"
+rootProject.name = "Toolbox"
 include(":app")

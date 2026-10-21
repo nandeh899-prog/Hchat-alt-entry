@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "h.Hchat"
+    namespace = "com.aeonlab.toolkit"
     compileSdk = 37
 
     val autoVersionCode = System.getenv("HCAT_VERSION_CODE")?.toIntOrNull() ?: 1
@@ -16,7 +16,7 @@ android {
     defaultConfig {
         // 共存版支持：由 HCAT_APP_ID_SUFFIX 注入后缀（如 .coexist），默认构建官方包名
         val appIdSuffix = System.getenv("HCAT_APP_ID_SUFFIX")?.trim().orEmpty()
-        applicationId = "h.Hchat$appIdSuffix"
+        applicationId = "com.aeonlab.toolkit$appIdSuffix"
         minSdk = 27
         targetSdk = 37
         versionCode = autoVersionCode

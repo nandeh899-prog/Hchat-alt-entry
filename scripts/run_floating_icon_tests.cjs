@@ -24,5 +24,5 @@ run(['-Xmx256m', '-cp', jars.map(name => path.join(lib, name)).join(path.delimit
     '-classpath', path.join(lib, stdlib), '-d', jar,
     'app/src/main/java/h/Hchat/hooks/items/floatingshortcut/FloatingShortcutIconLoader.kt',
     ...fs.readdirSync(path.join(root, 'scripts/tests/floating_shortcut_icons')).filter(name => name.endsWith('.kt')).map(name => 'scripts/tests/floating_shortcut_icons/' + name)]);
-run(['-cp', jar + path.delimiter + path.join(lib, stdlib), 'h.Hchat.hooks.items.floatingshortcut.IconLoaderRegressionKt']);
+run(['-cp', jar + path.delimiter + path.join(lib, stdlib), 'com.aeonlab.toolkit.hooks.items.floatingshortcut.IconLoaderRegressionKt']);
 console.log('Test artifacts: ' + output);

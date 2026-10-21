@@ -39,5 +39,5 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
     'scripts/tests/script_agent_reasoning/AndroidContext.kt',
     'scripts/tests/script_agent_reasoning/MemoryStorage.kt',
     ...fs.readdirSync(path.join(root, tests)).filter(file => file.endsWith('.kt')).map(file => tests + file)]);
-run(['-cp', [artifact, stdlib, json].join(path.delimiter), 'h.Hchat.hooks.items.script.agent.DiagnosticsRegressionKt']);
+run(['-cp', [artifact, stdlib, json].join(path.delimiter), 'com.aeonlab.toolkit.hooks.items.script.agent.DiagnosticsRegressionKt']);
 console.log('Test artifacts: ' + output);

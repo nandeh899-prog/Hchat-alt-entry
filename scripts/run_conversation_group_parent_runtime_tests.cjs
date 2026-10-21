@@ -34,16 +34,16 @@ function sourceBetween(start, end) {
     return runtime.slice(from, to).replaceAll('private fun ', 'fun ');
 }
 const extracted = path.join(output, 'ParentRuntimeUnderTest.kt');
-fs.writeFileSync(extracted, `package h.Hchat.hooks.items.conversationgroup
+fs.writeFileSync(extracted, `package com.aeonlab.toolkit.hooks.items.conversationgroup
 import android.content.SharedPreferences
-import h.Hchat.utils.HLog
+import com.aeonlab.toolkit.utils.HLog
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 internal object ParentRuntimeUnderTest {
     private const val TAG = "ConversationGroupTest"
     private const val KEY_ORIGINAL_PARENT_REFS = "original_parent_refs"
     private val parentRestoreFailures = ConcurrentHashMap.newKeySet<String>()
-    private fun updateParentRefs(database: h.Hchat.hooks.api.runtime.WeChatDatabaseApi,
+    private fun updateParentRefs(database: com.aeonlab.toolkit.hooks.api.runtime.WeChatDatabaseApi,
         talkers: List<String>, parent: String): Boolean = database.updateParents(talkers, parent)
 ` + sourceBetween('    private fun applyParentPlan(', '    private fun syncDatabase(') +
     sourceBetween('    private fun loadOriginalParentRefs(', '    private fun locateQueryMethod(') + '}\n');
@@ -59,5 +59,5 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
     production + 'ConversationGroupParentPolicy.kt', extracted,
     ...fs.readdirSync(path.join(root, tests)).filter(file => file.endsWith('.kt')).map(file => tests + file)]);
 run(['-cp', [artifact, stdlib, json].join(path.delimiter),
-    'h.Hchat.hooks.items.conversationgroup.ParentRuntimeRegressionKt']);
+    'com.aeonlab.toolkit.hooks.items.conversationgroup.ParentRuntimeRegressionKt']);
 console.log('Test artifacts: ' + output);

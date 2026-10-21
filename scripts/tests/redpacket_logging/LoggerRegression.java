@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.payment.core;
+package com.aeonlab.toolkit.hooks.items.payment.core;
 
 import de.robv.android.xposed.XposedBridge;
 import java.lang.reflect.Method;
@@ -14,7 +14,7 @@ public final class LoggerRegression {
     public static void main(String[] arguments) throws Exception {
         Class<?> logger;
         try {
-            logger = Class.forName("h.Hchat.hooks.items.payment.core.RedPacketLogger");
+            logger = Class.forName("com.aeonlab.toolkit.hooks.items.payment.core.RedPacketLogger");
         } catch (ClassNotFoundException missing) {
             throw new AssertionError("缺少红包日志入口", missing);
         }

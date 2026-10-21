@@ -841,7 +841,7 @@ trackSubscription(WeChatApis.runtime().databaseChanges().subscribe(change -> {
 - 遇到不确定问题必须先逆向微信，再动手改代码。宁愿多花时间，也不能凭空捏造修复。
 - 不要把不确定结论写成确定答案；必须说明证据来自哪个 APK/类/方法/字段。
 - API 层只放可复用且已验证的微信能力。单个功能自己的业务逻辑、过滤逻辑、通知文案、统计逻辑不能放进 `hooks/api/**`。
-- 新增反射代码必须使用 `h.Hchat.utils.KavaReflector`。不要在业务功能里散落 `getDeclared*`、`setAccessible`、`Constructor.newInstance`、`Class.forName` 或 `Method.invoke`。
+- 新增反射代码必须使用 `com.aeonlab.toolkit.utils.KavaReflector`。不要在业务功能里散落 `getDeclared*`、`setAccessible`、`Constructor.newInstance`、`Class.forName` 或 `Method.invoke`。
 - 如果 API 层必须保存或传递原始 `Method` / `Field` / `Constructor` 给 Xposed、DexKit 或缓存，也必须通过 `KavaReflector` 获取。
 - `h/Hchat/compat/kavaref/**` 是 KavaRef core 的本地兼容层。目录放在 Hchat 下是为了项目结构好看；文件内部 `package com.highcapable.kavaref...` 不能改。
 
@@ -858,7 +858,7 @@ trackSubscription(WeChatApis.runtime().databaseChanges().subscribe(change -> {
 模块统一反射入口：
 
 ```kotlin
-h.Hchat.utils.KavaReflector
+com.aeonlab.toolkit.utils.KavaReflector
 ```
 
 已接入的路径：

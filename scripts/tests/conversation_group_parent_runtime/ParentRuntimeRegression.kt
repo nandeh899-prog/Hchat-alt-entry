@@ -1,6 +1,6 @@
-package h.Hchat.hooks.items.conversationgroup
+package com.aeonlab.toolkit.hooks.items.conversationgroup
 
-import h.Hchat.hooks.api.runtime.WeChatDatabaseApi
+import com.aeonlab.toolkit.hooks.api.runtime.WeChatDatabaseApi
 import org.json.JSONObject
 
 private const val ACCOUNT = "account-a"

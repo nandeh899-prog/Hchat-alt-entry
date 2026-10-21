@@ -43,6 +43,6 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
     'scripts/tests/script_agent_mcp/McpRegression.kt']);
 // The optional slow test exercises the real 90-second total deadline despite frequent SSE heartbeats.
 run(['-Xmx256m', ...(process.env.MCP_TIMEOUT_TEST === '1' ? ['-Dhchat.mcp.timeoutTest=true'] : []),
-    '-cp', [artifact, ...dependencies].join(path.delimiter), 'h.Hchat.hooks.items.script.agent.McpRegressionKt'],
+    '-cp', [artifact, ...dependencies].join(path.delimiter), 'com.aeonlab.toolkit.hooks.items.script.agent.McpRegressionKt'],
     process.env.MCP_TIMEOUT_TEST === '1' ? 150000 : 60000);
 console.log('Test artifacts: ' + output);

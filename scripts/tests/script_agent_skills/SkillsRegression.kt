@@ -1,8 +1,8 @@
-package h.Hchat.hooks.items.script.agent
+package com.aeonlab.toolkit.hooks.items.script.agent
 
 import android.content.Context
 import android.net.Uri
-import h.Hchat.hooks.items.script.ScriptPluginRuntime
+import com.aeonlab.toolkit.hooks.items.script.ScriptPluginRuntime
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File

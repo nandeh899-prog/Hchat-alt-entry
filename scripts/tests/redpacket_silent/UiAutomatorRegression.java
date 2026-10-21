@@ -1,13 +1,13 @@
-package h.Hchat.hooks.items.payment.grab;
+package com.aeonlab.toolkit.hooks.items.payment.grab;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Handler;
 import android.widget.Button;
 import android.widget.TextView;
-import h.Hchat.hooks.items.payment.core.RedPacketEffectiveRule;
-import h.Hchat.hooks.items.payment.core.RedPacketSettings;
-import h.Hchat.hooks.items.payment.core.RedPacketState;
+import com.aeonlab.toolkit.hooks.items.payment.core.RedPacketEffectiveRule;
+import com.aeonlab.toolkit.hooks.items.payment.core.RedPacketSettings;
+import com.aeonlab.toolkit.hooks.items.payment.core.RedPacketState;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;

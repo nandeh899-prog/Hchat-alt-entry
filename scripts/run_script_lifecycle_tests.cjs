@@ -19,11 +19,11 @@ const tests = [
         'scripts/tests/hook_registry/XposedStub.kt',
         'scripts/tests/hook_registry/HookRegistryRegression.kt'
     ]],
-    ['delays', 'h.Hchat.hooks.items.script.DelayRegressionKt', [
+    ['delays', 'com.aeonlab.toolkit.hooks.items.script.DelayRegressionKt', [
         'app/src/main/java/h/Hchat/hooks/items/script/ScriptDelayScope.kt',
         stub + 'AndroidStub.kt', stub + 'HLogStub.kt', stub + 'DelayRegression.kt'
     ]],
-    ['messages', 'h.Hchat.hooks.items.script.MessageRegressionKt', [
+    ['messages', 'com.aeonlab.toolkit.hooks.items.script.MessageRegressionKt', [
         'app/src/main/java/h/Hchat/hooks/items/script/ScriptMessageHook.kt',
         ...['AndroidStub', 'HLogStub', 'FeatureStub', 'FinderStub', 'MessageApiStub', 'ScriptRuntimeStub', 'MessageRegression'].map(name => stub + name + '.kt')
     ]]

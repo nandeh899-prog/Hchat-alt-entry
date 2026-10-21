@@ -48,7 +48,7 @@ cd /data/data/com.termux/files/home/Hchat-alt-entry
 - 影响功能行为、对外接口、脚本接口、UI 入口、文件路径、构建发布流程或逆向依据的改动，只同步更新对应文档；只有长期项目规则本身发生变化时，才更新仓库内和已安装的 skill。
 - 脚本插件接口保持 WA 风格：优先兼容 WA 的方法名、参数顺序、参数类型、返回值；新增脚本接口一项一提交，并同步更新 `docs/SCRIPT_PLUGIN_API.md`。
 - 插件 Agent 只能把内置指南和插件接口文档明确列出的能力当作已确认能力；两者未说明且当前运行时或工具结果无法确认时，必须明确说明未知或需要实际验证，不得猜测接口、行为、限制或版本兼容性。
-- 模块自身错误日志统一走 `h.Hchat.utils.HLog.e(...)`。
+- 模块自身错误日志统一走 `com.aeonlab.toolkit.utils.HLog.e(...)`。
 - Agent 的外部联网必须保留可核验来源；服务端专用的搜索工具不能直接假设可从 APK 调用，运行端应通过明确的工具调用和结果回灌提供能力，不能只依赖摘要接口并把失败说成没有资料。
 - Agent 模型请求启用提示缓存时，固定 system 与工具定义必须保持稳定；用户消息、模型响应、工具调用和工具结果按发生顺序只追加，普通网络重试复用同一请求前缀，只有压缩上下文或用户主动改写历史时开启新的缓存周期。
 - Agent 的 API 或网络失败不能删除已完成的插件暂存修改；继续任务必须恢复经路径、插件身份、基线、内容指纹和 revision 校验的工作区 checkpoint，并避免重放已成功工具，只有新任务、重新开始、明确取消、成功提交或恢复点过期才清理。
@@ -77,7 +77,7 @@ cd /data/data/com.termux/files/home/Hchat-alt-entry
 - 微信页面把 Intent 参数复制到 UIC、ViewModel 或其它内部状态时，必须确认真实初始化时序并在复制前改写；不能只 Hook Activity `onCreate` 后假设后续状态仍会读取同一个 Intent。
 - Hook 必须限定到逆向确认的具体业务范围并只 Hook 可执行的具体方法；不能全局关闭共用保护，也不能直接 Hook 抽象方法。
 - 反射或 Hook 签名发生变化时，日志应包含微信版本、目标描述符和失败阶段等必要定位信息。
-- 新增反射代码统一走 `h.Hchat.utils.KavaReflector`。
+- 新增反射代码统一走 `com.aeonlab.toolkit.utils.KavaReflector`。
 
 微信 APK 路径由用户自行设置，不在项目规则中预设个人设备目录或文件名。传给 DexClub 时使用绝对路径：
 
@@ -94,7 +94,7 @@ test -f "$WECHAT_APK" && ls -lh "$WECHAT_APK"
 - 能放后台线程的 DexKit 定位和 hook 尽量放后台，避免拖慢微信启动；必须早期同步生效的场景优先走缓存命中路径。
 - 依赖 DexKit 的功能要支持补装，不能只在启动时尝试一次。
 - 功能同时运行在主进程与微信子进程、且 DexKit 只应在主进程执行时，主进程负责定位并缓存描述符，子进程通过跨进程缓存解析当前 ClassLoader 下的成员，并使用统一调度器有限补装，不能在子进程另建 DexKit。
-- 依赖 DexKit 的普通功能统一走 `h.Hchat.hooks.core.DexInstallScheduler`；安装函数返回 `Boolean`，成功才标记 installed/hooked。
+- 依赖 DexKit 的普通功能统一走 `com.aeonlab.toolkit.hooks.core.DexInstallScheduler`；安装函数返回 `Boolean`，成功才标记 installed/hooked。
 - 必须抢在微信 UI 构建前安装的设置入口类 Hook 不要等待普通 DexKit 调度队列；确认需要例外时，应在初始化后台阶段通过统一 DexKit 串行门直接安装并在文档说明原因。
 - 不要在功能内新增 `installWithRetry`、`Thread.sleep` 重试或裸线程抢跑 DexKit。
 - 使用 `DexMethodCache` 的功能每次定位前实时读取 `DexMethodCache.runtimeKey(context, classLoader)`；不要在 hooker 构造时保存固定 runtime key。

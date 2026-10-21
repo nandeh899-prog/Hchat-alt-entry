@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.hchatextra
+package com.aeonlab.toolkit.hooks.items.hchatextra
 
 private var checks = 0
 private fun same(expected: Any?, actual: Any?) {

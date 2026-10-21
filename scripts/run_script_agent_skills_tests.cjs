@@ -35,5 +35,5 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
     '-no-stdlib', '-no-reflect', '-classpath', [stdlib, json].join(path.delimiter), '-d', artifact,
     'app/src/main/java/h/Hchat/hooks/items/script/agent/ScriptPluginAgentSkills.kt',
     ...fs.readdirSync(path.join(root, tests)).filter(file => file.endsWith('.kt')).map(file => tests + file)]);
-run(['-cp', [artifact, stdlib, json].join(path.delimiter), 'h.Hchat.hooks.items.script.agent.SkillsRegressionKt']);
+run(['-cp', [artifact, stdlib, json].join(path.delimiter), 'com.aeonlab.toolkit.hooks.items.script.agent.SkillsRegressionKt']);
 console.log('Test artifacts: ' + output);

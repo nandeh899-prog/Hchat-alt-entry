@@ -1,4 +1,4 @@
-package h.Hchat.hooks.api.core
+package com.aeonlab.toolkit.hooks.api.core
 
 class TestMessage(val id: Long, val kind: String = "text")
 class Change(val message: TestMessage?)

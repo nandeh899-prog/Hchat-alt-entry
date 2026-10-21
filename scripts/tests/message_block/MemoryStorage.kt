@@ -1,4 +1,4 @@
-package h.Hchat.preferences
+package com.aeonlab.toolkit.preferences
 
 import android.content.Context
 

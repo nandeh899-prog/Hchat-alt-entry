@@ -1,7 +1,7 @@
-package h.Hchat.hooks.items.script.agent
+package com.aeonlab.toolkit.hooks.items.script.agent
 
 import android.content.Context
-import h.Hchat.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.HchatStorage
 import org.json.JSONArray
 import org.json.JSONObject
 

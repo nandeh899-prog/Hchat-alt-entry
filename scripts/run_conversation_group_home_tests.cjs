@@ -43,4 +43,4 @@ run([
     'scripts/tests/conversation_group_home/HomeVisibilityRegression.kt'
 ]);
 run(['-cp', [artifact, stdlib].join(path.delimiter),
-    'h.Hchat.hooks.items.conversationgroup.HomeVisibilityRegressionKt']);
+    'com.aeonlab.toolkit.hooks.items.conversationgroup.HomeVisibilityRegressionKt']);

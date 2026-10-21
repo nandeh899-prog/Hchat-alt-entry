@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.conversationtabs
+package com.aeonlab.toolkit.hooks.items.conversationtabs
 
 import android.view.View
 import android.view.ViewGroup
@@ -9,10 +9,10 @@ import com.tencent.mm.ui.conversation.MainUI
 import com.tencent.mm.ui.conversation.MainUIView
 import com.tencent.mm.ui.conversation.ConversationListView
 import com.tencent.mm.ui.conversation.OtherUi
-import h.Hchat.hooks.core.FeatureContext
-import h.Hchat.hooks.core.HookRegistry
-import h.Hchat.utils.HLog
-import h.Hchat.utils.KavaReflector
+import com.aeonlab.toolkit.hooks.core.FeatureContext
+import com.aeonlab.toolkit.hooks.core.HookRegistry
+import com.aeonlab.toolkit.utils.HLog
+import com.aeonlab.toolkit.utils.KavaReflector
 
 private var checks = 0
 private var scenarios = 0

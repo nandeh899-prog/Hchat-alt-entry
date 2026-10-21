@@ -16,7 +16,7 @@ try {
         'app/src/main/java/h/Hchat/utils/XmlValueReader.java',
         'app/src/main/java/h/Hchat/hooks/items/payment/detect/RedPacketParser.java',
         'scripts/tests/redpacket_parser/ParserRegression.java']);
-    run(process.env.JAVA || 'java', ['-cp', output, 'h.Hchat.hooks.items.payment.detect.ParserRegression']);
+    run(process.env.JAVA || 'java', ['-cp', output, 'com.aeonlab.toolkit.hooks.items.payment.detect.ParserRegression']);
 } finally {
     fs.rmSync(output, { recursive: true, force: true });
 }

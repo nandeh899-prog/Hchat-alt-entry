@@ -1,4 +1,4 @@
-package h.Hchat.hooks.core;
+package com.aeonlab.toolkit.hooks.core;
 
 import de.robv.android.xposed.XC_MethodHook;
 import java.lang.reflect.Method;

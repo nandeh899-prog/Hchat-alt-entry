@@ -10,35 +10,35 @@
 # Android Xml API 返回系统 XmlPullParser 实现，接口 ABI 不能重命名或收窄
 -keep class org.xmlpull.v1.** { *; }
 
--keep class h.Hchat.hooks.items.script.ScriptPluginRuntime { *; }
--keep class h.Hchat.hooks.items.script.ScriptPluginBridge { *; }
--keep class h.Hchat.hooks.items.script.ScriptFloatingGlassBarHandle { *; }
--keep class h.Hchat.hooks.items.script.ScriptDexKitBridge { *; }
--keep class h.Hchat.hooks.items.script.ScriptWaBridge { *; }
--keep class h.Hchat.hooks.items.script.ScriptAudioBridge { *; }
--keep class h.Hchat.hooks.items.script.ScriptMessageBean { *; }
--keep class h.Hchat.hooks.items.script.ScriptQuoteMsgBean { *; }
--keep class h.Hchat.hooks.items.script.ScriptPluginRuntime$SendResult { *; }
--keep class h.Hchat.hooks.items.protobuf.ProtobufPacketRuntime$Packet { *; }
--keep class h.Hchat.hooks.api.model.ContactLabelBean { *; }
--keep class h.Hchat.hooks.api.model.WeChatContact { *; }
--keep class h.Hchat.hooks.api.model.WeChatChatroom { *; }
--keep class h.Hchat.hooks.api.model.WeChatMessage { *; }
--keep class h.Hchat.hooks.api.model.WeChatQuoteMsg { *; }
--keep class h.Hchat.hooks.api.model.WeChatImageMsg { *; }
--keep class h.Hchat.hooks.api.model.WeChatVideoMsg { *; }
--keep class h.Hchat.hooks.api.model.WeChatFileMsg { *; }
--keep class h.Hchat.hooks.api.model.WeChatTransferMsg { *; }
--keep class h.Hchat.hooks.api.model.WeChatPatMsg { *; }
--keep class h.Hchat.hooks.api.model.WeChatSnsMedia { *; }
--keep class h.Hchat.hooks.api.model.WeChatSnsPost { *; }
--keep class h.Hchat.hooks.api.model.WeChatSnsLivePhoto { *; }
--keep class h.Hchat.hooks.api.model.WeChatSnsPrepareResult { *; }
--keep class h.Hchat.hooks.api.core.WeChatApis { *; }
--keep class h.Hchat.hooks.api.runtime.WeChatDatabaseApi { *; }
--keep class h.Hchat.dexkit.DexBridgeHolder { *; }
--keep class h.Hchat.dexkit.DexFinder { *; }
--keep class h.Hchat.utils.KavaReflector { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.ScriptPluginRuntime { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.ScriptPluginBridge { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.ScriptFloatingGlassBarHandle { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.ScriptDexKitBridge { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.ScriptWaBridge { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.ScriptAudioBridge { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.ScriptMessageBean { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.ScriptQuoteMsgBean { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.ScriptPluginRuntime$SendResult { *; }
+-keep class com.aeonlab.toolkit.hooks.items.protobuf.ProtobufPacketRuntime$Packet { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.ContactLabelBean { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatContact { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatChatroom { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatMessage { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatQuoteMsg { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatImageMsg { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatVideoMsg { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatFileMsg { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatTransferMsg { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatPatMsg { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatSnsMedia { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatSnsPost { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatSnsLivePhoto { *; }
+-keep class com.aeonlab.toolkit.hooks.api.model.WeChatSnsPrepareResult { *; }
+-keep class com.aeonlab.toolkit.hooks.api.core.WeChatApis { *; }
+-keep class com.aeonlab.toolkit.hooks.api.runtime.WeChatDatabaseApi { *; }
+-keep class com.aeonlab.toolkit.dexkit.DexBridgeHolder { *; }
+-keep class com.aeonlab.toolkit.dexkit.DexFinder { *; }
+-keep class com.aeonlab.toolkit.utils.KavaReflector { *; }
 -keep class okhttp3.** { *; }
 -keep class okio.** { *; }
 -keep class com.alibaba.fastjson2.** { *; }
@@ -50,9 +50,9 @@
 
 # Xposed
 -keep class de.robv.android.xposed.** { *; }
--keep class h.Hchat.ModuleEntry { *; }
--keep class h.Hchat.crash.NativeCrashBridge { *; }
--keep class h.Hchat.crash.CrashExitInfoApi30 { *; }
+-keep class com.aeonlab.toolkit.ModuleEntry { *; }
+-keep class com.aeonlab.toolkit.crash.NativeCrashBridge { *; }
+-keep class com.aeonlab.toolkit.crash.CrashExitInfoApi30 { *; }
 
 # Termux 终端：JNI 类的 native 方法按 Java_com_termux_terminal_JNI_* 符号绑定 libtermux.so，
 # 类名/方法名一旦被 R8 改名，动态绑定就找不到符号。整包 keep 最稳。
@@ -62,9 +62,9 @@
     native <methods>;
 }
 # 反射注入 native 库搜索路径用到的加载器
--keep class h.Hchat.loader.utils.NativeLibraryLoader { *; }
--keep class h.Hchat.hooks.items.script.agent.ProotTerminalView { *; }
--keep class h.Hchat.hooks.items.script.agent.ProotEnvironment { *; }
+-keep class com.aeonlab.toolkit.loader.utils.NativeLibraryLoader { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.agent.ProotTerminalView { *; }
+-keep class com.aeonlab.toolkit.hooks.items.script.agent.ProotEnvironment { *; }
 
 # 保留反射访问的微信内部类字段名
 -keepclassmembers class * {

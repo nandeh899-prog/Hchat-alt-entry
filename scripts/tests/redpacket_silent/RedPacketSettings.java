@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.payment.core;
+package com.aeonlab.toolkit.hooks.items.payment.core;
 
 public final class RedPacketSettings {
     public static final String KEY_GRAB_MODE = "mode";

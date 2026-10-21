@@ -1,2 +1,2 @@
-package h.Hchat.utils
+package com.aeonlab.toolkit.utils
 object KavaReflector { fun declaredMethods(type: Class<*>) = type.declaredMethods }

@@ -4,7 +4,7 @@
 
 通过 DexClub MCP 确认用户指定 app-debug.apk 包名为 com.qechat.wechat，版本 1.0.0，SHA-256 为 7c22adb3d1aa444aa7088676ada05b63d476b64719a49556e15abc646b84afce。对照其 HchatExtraHooker 方法 Java 导出与同项目 Kotlin 源码。
 
-上次对照时（2026-09-11 18:00 前）设备实际安装的 h.Hchat APK SHA-256 为 1eceb6cc4752f4e4181e311e9555b4475c3d838cdc26fbcf59bd5dbffc218a2a（17:01），并非上一轮 17:37 产物 7f3e4b2ae2680db62fabd0f37f43ad8461b88fbc2bcf38dcdabfd37b4b246090。因此 17:43/17:44 的 gg5.t4、gg5.n8 layout 失败日志不能用于判断上一轮 APK 的设备效果。
+上次对照时（2026-09-11 18:00 前）设备实际安装的 com.aeonlab.toolkit APK SHA-256 为 1eceb6cc4752f4e4181e311e9555b4475c3d838cdc26fbcf59bd5dbffc218a2a（17:01），并非上一轮 17:37 产物 7f3e4b2ae2680db62fabd0f37f43ad8461b88fbc2bcf38dcdabfd37b4b246090。因此 17:43/17:44 的 gg5.t4、gg5.n8 layout 失败日志不能用于判断上一轮 APK 的设备效果。
 
 ## 已确认的差异与处理
 

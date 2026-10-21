@@ -1,4 +1,4 @@
-package h.Hchat.hooks.items.payment.detect;
+package com.aeonlab.toolkit.hooks.items.payment.detect;
 
 public final class ParserRegression {
     private static int checks;

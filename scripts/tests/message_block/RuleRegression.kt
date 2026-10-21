@@ -1,8 +1,8 @@
-package h.Hchat.hooks.items.messageblock
+package com.aeonlab.toolkit.hooks.items.messageblock
 
 import android.content.Context
-import h.Hchat.hooks.api.model.WeChatParsedMessage
-import h.Hchat.preferences.HchatStorage
+import com.aeonlab.toolkit.hooks.api.model.WeChatParsedMessage
+import com.aeonlab.toolkit.preferences.HchatStorage
 
 class MessageBlockSettingsProvider
 private var checks = 0

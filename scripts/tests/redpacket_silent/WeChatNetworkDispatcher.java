@@ -1,4 +1,4 @@
-package h.Hchat.hooks.api.net;
+package com.aeonlab.toolkit.hooks.api.net;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

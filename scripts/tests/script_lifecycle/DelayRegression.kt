@@ -1,7 +1,7 @@
-package h.Hchat.hooks.items.script
+package com.aeonlab.toolkit.hooks.items.script
 
 import android.os.Handler
-import h.Hchat.utils.HLog
+import com.aeonlab.toolkit.utils.HLog
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger

@@ -1,8 +1,8 @@
-package h.Hchat.hooks.items.script
+package com.aeonlab.toolkit.hooks.items.script
 
-import h.Hchat.hooks.api.core.WeChatApis
-import h.Hchat.hooks.core.FeatureContext
-import h.Hchat.utils.HLog
+import com.aeonlab.toolkit.hooks.api.core.WeChatApis
+import com.aeonlab.toolkit.hooks.core.FeatureContext
+import com.aeonlab.toolkit.utils.HLog
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.ThreadPoolExecutor

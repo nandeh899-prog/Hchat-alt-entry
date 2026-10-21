@@ -1,7 +1,7 @@
-package h.Hchat.hooks.items.script.agent
+package com.aeonlab.toolkit.hooks.items.script.agent
 
 import bsh.ScriptSyntaxValidator
-import h.Hchat.utils.HLog
+import com.aeonlab.toolkit.utils.HLog
 import java.io.File
 import java.util.concurrent.Executors
 

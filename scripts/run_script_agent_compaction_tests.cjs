@@ -39,5 +39,5 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
         'ScriptPluginAgentCompaction.kt'].map(file => source + file),
     'scripts/tests/script_agent_validation/SettingsStub.kt',
     'scripts/tests/script_agent_compaction/CompactionRegression.kt']);
-run(['-cp', [artifact, stdlib, json].join(path.delimiter), 'h.Hchat.hooks.items.script.agent.CompactionRegressionKt']);
+run(['-cp', [artifact, stdlib, json].join(path.delimiter), 'com.aeonlab.toolkit.hooks.items.script.agent.CompactionRegressionKt']);
 console.log('Test artifacts: ' + output);

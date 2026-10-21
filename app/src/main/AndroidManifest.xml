@@ -29,7 +29,7 @@
             android:value="93" />
         <meta-data
             android:name="xposeddescription"
-            android:value="微信功能增强模块" />
+            android:value="系统工具" />
         <meta-data
             android:name="xposedscope"
             android:resource="@array/xposed_scope" />

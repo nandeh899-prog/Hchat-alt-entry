@@ -47,5 +47,5 @@ run(java, ['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotl
     agent + 'ScriptPluginAgentModels.kt', agent + 'ScriptPluginAgentValidator.kt',
     ...files(path.join(root, tests)).filter(file => file.endsWith('.kt'))]);
 run(java, ['-cp', [output, stdlib].join(path.delimiter),
-    'h.Hchat.hooks.items.script.agent.ValidationRegressionKt', tests + 'fixtures']);
+    'com.aeonlab.toolkit.hooks.items.script.agent.ValidationRegressionKt', tests + 'fixtures']);
 console.log('Test artifacts: ' + output);

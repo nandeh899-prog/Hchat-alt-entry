@@ -17,7 +17,7 @@ try {
         'scripts/tests/redpacket_logging/LoggerRegression.java',
         'app/src/main/java/h/Hchat/utils/HLog.java',
         ...(fs.existsSync(path.join(root, logger)) ? [logger] : [])]);
-    run(process.env.JAVA || 'java', ['-cp', output, 'h.Hchat.hooks.items.payment.core.LoggerRegression']);
+    run(process.env.JAVA || 'java', ['-cp', output, 'com.aeonlab.toolkit.hooks.items.payment.core.LoggerRegression']);
 } finally {
     fs.rmSync(output, { recursive: true, force: true });
 }

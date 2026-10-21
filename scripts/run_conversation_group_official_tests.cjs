@@ -36,5 +36,5 @@ run(['-Xmx256m', '-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli
     'scripts/tests/conversation_group_official/AndroidCursor.kt',
     'scripts/tests/conversation_group_official/OfficialCursorRegression.kt']);
 run(['-cp', [artifact, stdlib].join(path.delimiter),
-    'h.Hchat.hooks.items.conversationgroup.OfficialCursorRegressionKt']);
+    'com.aeonlab.toolkit.hooks.items.conversationgroup.OfficialCursorRegressionKt']);
 console.log('Test artifacts: ' + output);

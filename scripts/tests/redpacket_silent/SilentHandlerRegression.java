@@ -1,14 +1,14 @@
-package h.Hchat.hooks.items.payment.grab;
+package com.aeonlab.toolkit.hooks.items.payment.grab;
 
-import h.Hchat.dexkit.DexFinder;
-import h.Hchat.hooks.api.core.WeChatApis;
-import h.Hchat.hooks.api.net.WeChatNetworkDispatcher;
-import h.Hchat.hooks.api.runtime.WeChatTaskApi;
-import h.Hchat.hooks.core.HookRegistry;
-import h.Hchat.hooks.items.payment.core.RedPacketSettings;
-import h.Hchat.hooks.items.payment.core.RedPacketEffectiveRule;
-import h.Hchat.hooks.items.payment.core.RedPacketState;
-import h.Hchat.utils.HLog;
+import com.aeonlab.toolkit.dexkit.DexFinder;
+import com.aeonlab.toolkit.hooks.api.core.WeChatApis;
+import com.aeonlab.toolkit.hooks.api.net.WeChatNetworkDispatcher;
+import com.aeonlab.toolkit.hooks.api.runtime.WeChatTaskApi;
+import com.aeonlab.toolkit.hooks.core.HookRegistry;
+import com.aeonlab.toolkit.hooks.items.payment.core.RedPacketSettings;
+import com.aeonlab.toolkit.hooks.items.payment.core.RedPacketEffectiveRule;
+import com.aeonlab.toolkit.hooks.items.payment.core.RedPacketState;
+import com.aeonlab.toolkit.utils.HLog;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;

@@ -1,7 +1,7 @@
-package h.Hchat.hooks.api.message;
+package com.aeonlab.toolkit.hooks.api.message;
 
-import h.Hchat.hooks.api.model.WeChatMessage;
-import h.Hchat.hooks.api.model.WeChatParsedMessage;
+import com.aeonlab.toolkit.hooks.api.model.WeChatMessage;
+import com.aeonlab.toolkit.hooks.api.model.WeChatParsedMessage;
 import java.util.Objects;
 
 public final class ParserRegression {
