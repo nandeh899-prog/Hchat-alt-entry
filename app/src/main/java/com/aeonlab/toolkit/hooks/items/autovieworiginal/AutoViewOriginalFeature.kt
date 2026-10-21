@@ -126,7 +126,7 @@ private class AutoViewOriginalRuntime(
         runCatching {
             HookRegistry.get().hook(callback, object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    val owner = readFieldByType(param.thisObject, IMAGE_GALLERY_UI) as? Activity
+                    val owner = readFieldByType(param.thisObject!!, IMAGE_GALLERY_UI) as? Activity
                         ?: return
                     val position = (param.args.firstOrNull() as? Number)?.toInt() ?: return
                     scheduleAutoView(owner, position, PAGE_CHANGE_INITIAL_DELAY_MS)

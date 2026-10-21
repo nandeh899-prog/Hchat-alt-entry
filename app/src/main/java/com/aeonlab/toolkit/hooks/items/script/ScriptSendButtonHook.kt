@@ -190,7 +190,7 @@ object ScriptSendButtonHook {
         return runCatching {
             HookRegistry.get().hook(attachMethod, object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    trackInputView(findInputView(param.thisObject))
+                    trackInputView(findInputView(param.thisObject!!))
                 }
             })
             true

@@ -15,6 +15,10 @@ open class XC_MethodHook @JvmOverloads constructor(
     @JvmField val priority: Int = XCallback.PRIORITY_DEFAULT
 ) {
 
+    /**
+     * 与 legacy API 82 保持一致：result / throwable 是 public 字段，
+     * 大量既有代码直接写 param.result = x，不能改成 private + setter。
+     */
     class MethodHookParam {
         @JvmField
         var method: Member? = null
@@ -25,9 +29,12 @@ open class XC_MethodHook @JvmOverloads constructor(
         @JvmField
         var args: Array<Any?> = emptyArray()
 
-        private var result: Any? = null
-        private var throwable: Throwable? = null
-        private var overridden = false
+        @JvmField
+        var result: Any? = null
+
+        @JvmField
+        var throwable: Throwable? = null
+
         private var extras: MutableMap<String, Any?>? = null
 
         fun getResult(): Any? = result
@@ -35,7 +42,6 @@ open class XC_MethodHook @JvmOverloads constructor(
         fun setResult(value: Any?) {
             result = value
             throwable = null
-            overridden = true
         }
 
         fun hasThrowable(): Boolean = throwable != null
@@ -44,7 +50,6 @@ open class XC_MethodHook @JvmOverloads constructor(
 
         fun setThrowable(value: Throwable?) {
             throwable = value
-            overridden = true
         }
 
         fun getObjectExtra(key: String): Any? = extras?.get(key)
@@ -58,18 +63,12 @@ open class XC_MethodHook @JvmOverloads constructor(
             extras?.remove(key)
         }
 
-        /** 是否已被 setResult / setThrowable 覆盖（供桥接层判断是否跳过原方法） */
-        internal fun isOverridden(): Boolean = overridden
-
-        /** 进入 after 阶段前重置覆盖标记，但保留 result / throwable 现状 */
-        internal fun enterAfterPhase() {
-            overridden = false
-        }
+        /** 与 legacy 判定一致：result 或 throwable 非空即视为已覆盖原方法 */
+        internal fun isOverridden(): Boolean = result != null || throwable != null
 
         internal fun seedAfterPhase(value: Any?, error: Throwable?) {
             result = value
             throwable = error
-            overridden = false
         }
 
         internal fun putRawResult(value: Any?) {

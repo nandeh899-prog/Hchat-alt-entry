@@ -324,7 +324,7 @@ private class VoiceForwardHooker(
             .forEach { queryMethod ->
                 if (hookMethod(queryMethod, object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
-                            removeVoiceFromFavoriteAdapter(param.thisObject)
+                            removeVoiceFromFavoriteAdapter(param.thisObject!!)
                         }
                     })) {
                     hooked++
@@ -338,7 +338,7 @@ private class VoiceForwardHooker(
             }
             if (resetMethod != null && hookMethod(resetMethod, object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        removeVoiceFromFavoriteAdapter(param.thisObject)
+                        removeVoiceFromFavoriteAdapter(param.thisObject!!)
                     }
                 })) {
                 hooked++

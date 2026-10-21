@@ -133,7 +133,7 @@ internal object ConversationTabsRuntime {
                     if (param.hasThrowable() || !clazz.isInstance(param.thisObject)) return
                     val original = param.result as? View ?: return
                     clearChangedAccount()
-                    ensureHost(param.thisObject, original)
+                    ensureHost(param.thisObject!!, original)
                     reload()
                 }
             })
@@ -143,7 +143,7 @@ internal object ConversationTabsRuntime {
                     clearChangedAccount()
                     // getLayoutView inflates a NEW root. Read the existing native root instead.
                     val root = KavaReflector.readField(rootField, param.thisObject) as? View
-                    if (root != null) ensureHost(param.thisObject, root)
+                    if (root != null) ensureHost(param.thisObject!!, root)
                     reload()
                 }
             })
