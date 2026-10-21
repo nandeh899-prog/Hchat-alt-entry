@@ -424,6 +424,12 @@ public class ModuleEntry implements IXposedHookLoadPackage {
                 ClassLoader hostClassLoader = resolveHostClassLoader(hostContext, lpparam);
                 DexKitBridge dexKit = createDexKitBridge(hostClassLoader, apkPath);
                 DexFinder finder = new DexFinder(dexKit, hostClassLoader, hostContext);
+                // 临时自检：把 DexKit 定位能力落盘，便于真机排查定位全空的问题
+                try {
+                    com.aeonlab.toolkit.dexkit.DexKitSelfCheck.dump(
+                            hostContext, dexKit, hostClassLoader, apkPath);
+                } catch (Throwable ignored) {
+                }
                 WeChatImageApi.installMarsCdnManagerHook(
                         finder.marsCdnManagerClass,
                         message -> HLog.e("[Hchat:WechatApi] " + message));
