@@ -82,8 +82,10 @@ open class XC_MethodHook @JvmOverloads constructor(
         }
     }
 
+    @Throws(Throwable::class)
     protected open fun beforeHookedMethod(param: MethodHookParam) {}
 
+    @Throws(Throwable::class)
     protected open fun afterHookedMethod(param: MethodHookParam) {}
 
     // internal：仅供兼容层桥接调用（Java 侧不可见，不会污染对外 API）
