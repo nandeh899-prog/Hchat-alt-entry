@@ -18,7 +18,7 @@ import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import de.robv.android.xposed.XposedBridge;
+import com.aeonlab.toolkit.xposed.compat.XposedBridge;
 
 /**
  * Native 库加载器。

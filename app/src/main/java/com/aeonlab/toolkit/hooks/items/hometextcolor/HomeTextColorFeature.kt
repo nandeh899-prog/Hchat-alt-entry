@@ -19,8 +19,8 @@ import android.widget.Button
 import android.widget.CompoundButton
 import android.widget.EditText
 import android.widget.TextView
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.callbacks.XCallback
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XCallback
 import com.aeonlab.toolkit.R
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.event.Events

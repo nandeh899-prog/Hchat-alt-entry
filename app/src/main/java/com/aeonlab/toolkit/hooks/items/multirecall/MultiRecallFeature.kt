@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.hooks.items.multirecall
 import android.app.Activity
 import android.view.MenuItem
 import android.widget.Toast
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.event.Events
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.message.MultiSelectMessageMenuLocator

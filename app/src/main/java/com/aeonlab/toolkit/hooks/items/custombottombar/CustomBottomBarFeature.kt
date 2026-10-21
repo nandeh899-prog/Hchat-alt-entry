@@ -38,7 +38,7 @@ import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.event.Events
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis

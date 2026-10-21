@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.hooks.items.conversationgroup
 import android.database.Cursor
 import android.os.Handler
 import android.os.Looper
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
@@ -185,7 +185,7 @@ internal object ConversationGroupHomeProjection {
             check(queries.isNotEmpty()) { "旧版首页 Cursor 查询缺失" }
             (queries + changes).forEach { method -> hook(method, object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    if (!captureRefresh(installation, param.thisObject, Refresh(notice))) return
+                    if (!captureRefresh(installation, param.thisObject!!, Refresh(notice))) return
                     enterQuery(installation)
                     legacyDepth.set((legacyDepth.get() ?: 0) + 1)
                 }
@@ -251,7 +251,7 @@ internal object ConversationGroupHomeProjection {
                     if (!isActive(installation)) return
                     if (param.hasThrowable()) return
                     updates.firstOrNull { it.declaringClass.isInstance(param.thisObject) }
-                        ?.let { captureRefresh(installation, param.thisObject, Refresh(it)) }
+                        ?.let { captureRefresh(installation, param.thisObject!!, Refresh(it)) }
                     val hidden = if (hasTabFilterInQuery()) emptySet() else hiddenIds()
                     if (hidden.isEmpty()) return
                     runCatching {
@@ -297,7 +297,7 @@ internal object ConversationGroupHomeProjection {
         updates.forEach { update -> hook(update, object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
                 val argument = param.args?.getOrNull(0)
-                captureRefresh(installation, param.thisObject, Refresh(
+                captureRefresh(installation, param.thisObject!!, Refresh(
                     update,
                     if (update.parameterTypes.size == 3 && argument != null) {
                         WeakReference(argument)

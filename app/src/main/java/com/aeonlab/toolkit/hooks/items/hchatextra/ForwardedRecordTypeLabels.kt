@@ -12,7 +12,7 @@ import android.widget.BaseAdapter
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry

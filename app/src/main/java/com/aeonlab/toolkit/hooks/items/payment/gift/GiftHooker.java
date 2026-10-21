@@ -5,7 +5,7 @@ import android.content.Context;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.robv.android.xposed.XposedBridge;
+import com.aeonlab.toolkit.xposed.compat.XposedBridge;
 
 import com.aeonlab.toolkit.dexkit.DexFinder;
 import com.aeonlab.toolkit.utils.HLog;

@@ -1,8 +1,8 @@
 package com.aeonlab.toolkit.hooks.items.hidemenu
 
 import android.view.MenuItem
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.callbacks.XCallback
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XCallback
 import com.aeonlab.toolkit.event.Events
 import com.aeonlab.toolkit.hooks.api.message.SingleMessageMenuLocator
 import com.aeonlab.toolkit.hooks.core.BaseFeature

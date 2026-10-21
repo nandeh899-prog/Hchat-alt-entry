@@ -11,7 +11,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook;
 
 /**
  * AddMsg 消息预监听。

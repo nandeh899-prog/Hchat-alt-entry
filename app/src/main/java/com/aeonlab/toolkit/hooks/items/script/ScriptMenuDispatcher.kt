@@ -12,7 +12,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.SettingsDexFinder
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.message.SingleMessageMenuLocator

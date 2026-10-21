@@ -11,7 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry

@@ -9,7 +9,7 @@ import android.graphics.Paint
 import android.graphics.Shader
 import android.graphics.drawable.Icon
 import android.widget.ImageView
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.event.Events
 import com.aeonlab.toolkit.hooks.core.BaseFeature

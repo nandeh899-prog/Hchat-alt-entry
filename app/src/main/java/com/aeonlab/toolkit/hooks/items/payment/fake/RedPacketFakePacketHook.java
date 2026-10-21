@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook;
 
 /**
  * 伪造/分裂红包发包与响应修正。

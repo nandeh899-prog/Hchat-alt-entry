@@ -6,7 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.MenuItem
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry

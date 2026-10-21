@@ -3,8 +3,8 @@ package com.aeonlab.toolkit.hooks.items.messagebubble
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XposedBridge
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 

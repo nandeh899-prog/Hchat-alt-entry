@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.protobuf
 
 import android.content.Context
-import de.robv.android.xposed.XposedBridge
+import com.aeonlab.toolkit.xposed.compat.XposedBridge
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar

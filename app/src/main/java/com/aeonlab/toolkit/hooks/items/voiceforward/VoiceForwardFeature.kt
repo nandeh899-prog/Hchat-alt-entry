@@ -12,7 +12,7 @@ import android.widget.AdapterView
 import android.widget.ListAdapter
 import android.widget.ListView
 import android.widget.Toast
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.event.Events
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
@@ -324,7 +324,7 @@ private class VoiceForwardHooker(
             .forEach { queryMethod ->
                 if (hookMethod(queryMethod, object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
-                            removeVoiceFromFavoriteAdapter(param.thisObject)
+                            removeVoiceFromFavoriteAdapter(param.thisObject!!)
                         }
                     })) {
                     hooked++
@@ -338,7 +338,7 @@ private class VoiceForwardHooker(
             }
             if (resetMethod != null && hookMethod(resetMethod, object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        removeVoiceFromFavoriteAdapter(param.thisObject)
+                        removeVoiceFromFavoriteAdapter(param.thisObject!!)
                     }
                 })) {
                 hooked++

@@ -19,7 +19,7 @@ import android.widget.Adapter
 import android.widget.AdapterView
 import android.widget.TextView
 import android.widget.Toast
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.conversation.WeChatConversationChangeApi
@@ -724,7 +724,7 @@ object ConversationGroupRuntime {
         ) ?: return false
         val parentExtraInstalled = hook(getStringExtra, object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
-                if (param.thisObject.javaClass.name != NATIVE_GROUP_FRAGMENT ||
+                if (param.thisObject!!.javaClass.name != NATIVE_GROUP_FRAGMENT ||
                     param.args?.getOrNull(0) != CONTACT_USER_EXTRA
                 ) {
                     return

@@ -1,6 +1,6 @@
 package com.aeonlab.toolkit.hooks.items.realtail
 
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry

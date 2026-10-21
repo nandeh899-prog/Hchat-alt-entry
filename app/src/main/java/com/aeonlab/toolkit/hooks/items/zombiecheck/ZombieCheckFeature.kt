@@ -1,6 +1,6 @@
 package com.aeonlab.toolkit.hooks.items.zombiecheck
 
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.event.Events
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
@@ -85,7 +85,7 @@ internal class ZombieCheckHooker(
                     val args = param.args ?: return
                     if (args.size != 3) return
                     runtime.onProbeCallback(
-                        scene = param.thisObject,
+                        scene = param.thisObject!!,
                         errCode = (args[0] as? Number)?.toInt() ?: return,
                         errMessage = args[1]?.toString().orEmpty(),
                         response = args[2] as? JSONObject

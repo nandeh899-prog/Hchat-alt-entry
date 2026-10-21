@@ -10,9 +10,9 @@ import android.os.SystemClock
 import android.system.Os
 import android.widget.Toast
 import bsh.Interpreter
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XposedBridge
+import com.aeonlab.toolkit.xposed.compat.XposedHelpers
 import dalvik.system.DexClassLoader
 import com.aeonlab.toolkit.BuildConfig
 import com.aeonlab.toolkit.dexkit.DexBridgeHolder
@@ -1706,9 +1706,9 @@ object ScriptPluginRuntime {
             set("startedAt", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()))
             eval(
                 """
-                import de.robv.android.xposed.XC_MethodHook;
-                import de.robv.android.xposed.XposedBridge;
-                import de.robv.android.xposed.XposedHelpers;
+                import com.aeonlab.toolkit.xposed.compat.XC_MethodHook;
+                import com.aeonlab.toolkit.xposed.compat.XposedBridge;
+                import com.aeonlab.toolkit.xposed.compat.XposedHelpers;
                 import com.aeonlab.toolkit.dexkit.DexBridgeHolder;
                 import com.aeonlab.toolkit.dexkit.DexFinder;
                 import com.aeonlab.toolkit.hooks.api.core.WeChatApis;

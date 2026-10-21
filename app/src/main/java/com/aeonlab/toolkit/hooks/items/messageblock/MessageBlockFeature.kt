@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.messageblock
 
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.callbacks.XCallback
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XCallback
 import com.aeonlab.toolkit.event.Events
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.model.WeChatMessage

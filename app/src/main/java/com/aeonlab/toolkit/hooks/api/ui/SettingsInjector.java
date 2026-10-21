@@ -28,9 +28,9 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook;
+import com.aeonlab.toolkit.xposed.compat.XposedBridge;
+import com.aeonlab.toolkit.xposed.compat.XposedHelpers;
 
 import com.aeonlab.toolkit.dexkit.SettingsDexFinder;
 import com.aeonlab.toolkit.hooks.core.HookRegistry;
@@ -422,7 +422,7 @@ public class SettingsInjector {
             for (Method m : KavaReflector.declaredMethods(childSettingItemClass)) {
                 if (m.getReturnType() == dex.settingLocationClass) {
                     HookRegistry.get().hook(m, new XC_MethodHook(
-                            de.robv.android.xposed.callbacks.XCallback.PRIORITY_HIGHEST) {
+                            com.aeonlab.toolkit.xposed.compat.XCallback.PRIORITY_HIGHEST) {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) {
                             try {

@@ -4,7 +4,7 @@ import android.app.Activity
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import de.robv.android.xposed.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
@@ -126,7 +126,7 @@ private class AutoViewOriginalRuntime(
         runCatching {
             HookRegistry.get().hook(callback, object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    val owner = readFieldByType(param.thisObject, IMAGE_GALLERY_UI) as? Activity
+                    val owner = readFieldByType(param.thisObject!!, IMAGE_GALLERY_UI) as? Activity
                         ?: return
                     val position = (param.args.firstOrNull() as? Number)?.toInt() ?: return
                     scheduleAutoView(owner, position, PAGE_CHANGE_INITIAL_DELAY_MS)

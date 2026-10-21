@@ -10,7 +10,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook;
 
 import com.aeonlab.toolkit.dexkit.DexFinder;
 import com.aeonlab.toolkit.hooks.core.HookRegistry;

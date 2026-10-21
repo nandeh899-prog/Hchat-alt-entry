@@ -32,8 +32,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XposedBridge
 import com.aeonlab.toolkit.hooks.items.script.agent.ScriptPluginAgentSkills
 import com.aeonlab.toolkit.utils.HLog
 import java.lang.ref.WeakReference

@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook;
 
 /**
  * 静默抢红包链路。

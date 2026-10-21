@@ -24,7 +24,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 
-import de.robv.android.xposed.XposedBridge;
+import com.aeonlab.toolkit.xposed.compat.XposedBridge;
 
 /**
  * SettingsDexFinder - 使用 DexKit 解析微信设置页相关类和方法

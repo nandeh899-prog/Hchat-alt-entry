@@ -1,6 +1,6 @@
 package com.aeonlab.toolkit.utils;
 
-import de.robv.android.xposed.XposedBridge;
+import com.aeonlab.toolkit.xposed.compat.XposedBridge;
 
 /**
  * LSPosed treats Throwable logs as error logs. Use this only for real failures.

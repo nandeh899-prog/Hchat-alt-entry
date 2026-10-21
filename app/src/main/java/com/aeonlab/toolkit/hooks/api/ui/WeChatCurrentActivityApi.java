@@ -8,7 +8,7 @@ import com.aeonlab.toolkit.utils.KavaReflector;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook;
 
 /**
  * 当前微信 Activity 跟踪 API。

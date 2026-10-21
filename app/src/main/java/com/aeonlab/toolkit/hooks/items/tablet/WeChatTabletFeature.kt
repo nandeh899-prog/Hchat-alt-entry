@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.view.View
 import android.widget.Button
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
+import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XposedBridge
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
