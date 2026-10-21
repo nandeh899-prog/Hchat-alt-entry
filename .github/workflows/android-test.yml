@@ -11,6 +11,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: 触发者与分支校验
+        run: |
+          set -e
+          allowed_actor="nandeh899-prog"
+          echo "triggered by=${GITHUB_ACTOR} ref=${GITHUB_REF_NAME}"
+          if [ "${GITHUB_ACTOR}" != "$allowed_actor" ]; then
+            echo "::error::仅允许仓库所有者触发构建，当前触发者: ${GITHUB_ACTOR}"
+            exit 1
+          fi
+          case "${GITHUB_REF_NAME}" in
+            alt-entry|api102|main|master|v*) ;;
+            *) echo "::error::不允许的分支: ${GITHUB_REF_NAME}"; exit 1 ;;
+          esac
       - name: 拉取当前频道代码
         uses: actions/checkout@v4
 
