@@ -9,6 +9,11 @@ public final class HLog {
     private HLog() {
     }
 
+    /** 普通信息日志（不抛栈，LSPosed 不标记为错误） */
+    public static void i(String message) {
+        XposedBridge.log(message);
+    }
+
     public static void e(String message) {
         XposedBridge.log(new RuntimeException(message));
     }

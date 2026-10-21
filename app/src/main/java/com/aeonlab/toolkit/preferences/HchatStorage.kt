@@ -71,7 +71,7 @@ object HchatStorage {
         if (hasAnyChild(legacy)) {
             val migrated = runCatching { migrateDirectory(legacy, preferred) }.getOrDefault(false)
             if (migrated) {
-                HLog.e("$TAG 配置目录已迁移: ${legacy.name} -> ${preferred.name}")
+                HLog.i("$TAG 配置目录已迁移: ${legacy.name} -> ${preferred.name}")
                 return preferred
             }
             HLog.e("$TAG 配置迁移未完成，暂用旧目录: ${legacy.absolutePath}")
