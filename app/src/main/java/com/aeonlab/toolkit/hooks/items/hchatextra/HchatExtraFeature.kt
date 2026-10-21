@@ -1,5 +1,6 @@
 package com.aeonlab.toolkit.hooks.items.hchatextra
 
+import com.aeonlab.toolkit.utils.HLog
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ClipData
@@ -540,10 +541,16 @@ private class HchatExtraHooker(
         val adapterBinds = locateChattingAdapterBindMethods()
         val adapterClass = locateChattingDataAdapterClass()
         val binds = (listOfNotNull(itemBind) + adapterBinds).distinct()
-        var complete = itemBind != null && adapterClass != null &&
-            adapterBinds.any { it.parameterTypes.size == 2 } && adapterBinds.any { it.parameterTypes.size == 3 }
+        // 适配器绑定在不同微信版本可能只存在 2 参或只存在 3 参，
+        // 因此不再把「两种参数形态都存在」当作安装成功的前提，只作为诊断信息记录。
+        val arity2 = adapterBinds.any { it.parameterTypes.size == 2 }
+        val arity3 = adapterBinds.any { it.parameterTypes.size == 3 }
+        var hookedCount = 0
         for (bind in binds) {
-            if (!hookedMethods.add(bind)) continue
+            if (!hookedMethods.add(bind)) {
+                hookedCount++
+                continue
+            }
             val installed = runCatching {
                 HookRegistry.get().hook(bind, object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
@@ -578,9 +585,16 @@ private class HchatExtraHooker(
                 logger("消息显示时间Hook安装失败: $bind", it)
                 false
             }
-            complete = installed && complete
+            if (installed) hookedCount++
         }
-        return complete
+        // 主入口定位成功且至少一条 Hook 装上即视为可用；其余属版本差异，不作为失败。
+        val usable = itemBind != null && hookedCount > 0
+        HLog.i(
+            "[Hchat:Extra] 消息显示时间安装: itemBind=${itemBind != null} " +
+                "adapterClass=${adapterClass != null} adapterBinds=${adapterBinds.size}" +
+                "(2参=$arity2 3参=$arity3) hooked=$hookedCount/${binds.size} usable=$usable"
+        )
+        return usable
     }
 
     private fun captureMessageDetailsBindState(args: Array<Any?>?): MessageDetailsBindState {
