@@ -43,7 +43,7 @@ import com.aeonlab.toolkit.R
 import com.aeonlab.toolkit.crash.CrashReportRuntime
 import com.aeonlab.toolkit.crash.CrashReportSettings
 import com.aeonlab.toolkit.crash.CrashReportSettingsProvider
-import com.aeonlab.toolkit.hooks.api.ui.HchatAgentIconDrawable
+import com.aeonlab.toolkit.hooks.api.ui.AeonLabAgentIconDrawable
 import com.aeonlab.toolkit.hooks.items.floatingshortcut.FloatingShortcutFeature
 import com.aeonlab.toolkit.hooks.items.script.market.PluginMarketClient
 import com.aeonlab.toolkit.hooks.items.script.market.PluginMarketSettings
@@ -10551,7 +10551,7 @@ private fun FloatingShortcutIconPreview(
                 update = { imageView ->
                     imageView.contentDescription = description
                     imageView.setImageDrawable(
-                        HchatAgentIconDrawable(fallbackTint, HchatAgentIconDrawable.Frame.CIRCLE)
+                        AeonLabAgentIconDrawable(fallbackTint, AeonLabAgentIconDrawable.Frame.CIRCLE)
                     )
                 },
                 modifier = Modifier.size(26.dp)

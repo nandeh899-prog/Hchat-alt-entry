@@ -31,7 +31,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
-import com.aeonlab.toolkit.hooks.api.ui.HchatAgentIconDrawable
+import com.aeonlab.toolkit.hooks.api.ui.AeonLabAgentIconDrawable
 import com.aeonlab.toolkit.preferences.HchatStorage
 import com.aeonlab.toolkit.ui.SettingsUI
 import com.aeonlab.toolkit.ui.miuix.MiuixSettingsPage
@@ -1035,7 +1035,7 @@ object FloatingShortcutRuntime {
             item.iconPath
         }
         val fallback = if (item.actionType == FloatingShortcutSettings.ACTION_PLUGIN_AGENT) {
-            HchatAgentIconDrawable(tint, HchatAgentIconDrawable.Frame.CIRCLE)
+            AeonLabAgentIconDrawable(tint, AeonLabAgentIconDrawable.Frame.CIRCLE)
         } else {
             FloatingShortcutGlyphDrawable(FloatingShortcutGlyphs.forItem(item), tint)
         }

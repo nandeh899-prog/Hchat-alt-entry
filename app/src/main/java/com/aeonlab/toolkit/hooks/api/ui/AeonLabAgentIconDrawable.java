@@ -4,11 +4,13 @@ import android.graphics.Canvas;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 
-/** Shared Hchat Agent mark used by injected menus and the floating entry. */
-public final class HchatAgentIconDrawable extends Drawable {
+/** Shared AeonLab mark (ring + letter A) used by injected menus and the floating entry. */
+public final class AeonLabAgentIconDrawable extends Drawable {
+
     public enum Frame {
         ROUNDED_RECTANGLE,
         CIRCLE
@@ -18,7 +20,7 @@ public final class HchatAgentIconDrawable extends Drawable {
     private final RectF frameRect = new RectF();
     private final Frame frame;
 
-    public HchatAgentIconDrawable(int color, Frame frame) {
+    public AeonLabAgentIconDrawable(int color, Frame frame) {
         this.frame = frame;
         strokePaint.setColor(color);
         strokePaint.setStyle(Paint.Style.STROKE);
@@ -28,35 +30,44 @@ public final class HchatAgentIconDrawable extends Drawable {
 
     @Override
     public void draw(Canvas canvas) {
-        android.graphics.Rect bounds = getBounds();
+        Rect bounds = getBounds();
         float size = Math.min(bounds.width(), bounds.height());
         if (size <= 0f) return;
         float left = bounds.left + (bounds.width() - size) / 2f;
         float top = bounds.top + (bounds.height() - size) / 2f;
+
         float stroke = Math.max(2.0f, size * 0.055f);
         strokePaint.setStrokeWidth(stroke);
 
+        // 外框：圆环 / 圆角方环
         frameRect.set(
-                left + size * 0.18f,
-                top + size * 0.18f,
-                left + size * 0.82f,
-                top + size * 0.82f
+                left + size * 0.12f,
+                top + size * 0.12f,
+                left + size * 0.88f,
+                top + size * 0.88f
         );
         if (frame == Frame.CIRCLE) {
             canvas.drawOval(frameRect, strokePaint);
         } else {
-            float radius = size * 0.14f;
+            float radius = size * 0.16f;
             canvas.drawRoundRect(frameRect, radius, radius, strokePaint);
         }
 
-        float hLeft = left + size * 0.38f;
-        float hRight = left + size * 0.62f;
-        float hTop = top + size * 0.35f;
-        float hMid = top + size * 0.50f;
-        float hBottom = top + size * 0.65f;
-        canvas.drawLine(hLeft, hTop, hLeft, hBottom, strokePaint);
-        canvas.drawLine(hRight, hTop, hRight, hBottom, strokePaint);
-        canvas.drawLine(hLeft, hMid, hRight, hMid, strokePaint);
+        // 字母 A：两条斜边 + 一条横杠
+        float cx = left + size * 0.50f;
+        float apexY = top + size * 0.34f;
+        float footY = top + size * 0.68f;
+        float halfBottom = size * 0.15f;
+        float leftX = cx - halfBottom;
+        float rightX = cx + halfBottom;
+
+        canvas.drawLine(cx, apexY, leftX, footY, strokePaint);
+        canvas.drawLine(cx, apexY, rightX, footY, strokePaint);
+
+        float barY = top + size * 0.555f;
+        float ratio = (barY - apexY) / (footY - apexY);
+        float barHalf = halfBottom * ratio;
+        canvas.drawLine(cx - barHalf, barY, cx + barHalf, barY, strokePaint);
     }
 
     @Override

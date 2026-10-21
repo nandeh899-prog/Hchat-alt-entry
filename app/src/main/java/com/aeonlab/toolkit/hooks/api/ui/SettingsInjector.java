@@ -1349,9 +1349,9 @@ public class SettingsInjector {
         imageView.setImageTintList(null);
         imageView.setColorFilter(null);
         imageView.setAlpha(1.0f);
-        imageView.setImageDrawable(new HchatAgentIconDrawable(
+        imageView.setImageDrawable(new AeonLabAgentIconDrawable(
                 Color.WHITE,
-                HchatAgentIconDrawable.Frame.ROUNDED_RECTANGLE));
+                AeonLabAgentIconDrawable.Frame.ROUNDED_RECTANGLE));
     }
 
     private void applyPlusMenuIcon(View rowView, int itemId) {
