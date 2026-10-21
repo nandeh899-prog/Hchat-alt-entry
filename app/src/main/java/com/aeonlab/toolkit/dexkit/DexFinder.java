@@ -3488,6 +3488,22 @@ public class DexFinder {
         if (cacheLoadAttempted) return false;
         return loadCache();
     }
+    /**
+     * 缓存快照是否至少包含一个可用定位结果。
+     * 用于识别「键存在但值全空」的坏快照，避免它阻断后续 DexKit 扫描。
+     */
+    private boolean hasCachedAnchor() {
+        if (addMsgClasses != null && !addMsgClasses.isEmpty()) return true;
+        if (receiveLuckyMoneyClass != null || openLuckyMoneyClass != null) return true;
+        if (receiveLuckyMoneyUnionClass != null || openLuckyMoneyUnionClass != null) return true;
+        if (sendTextMsgClass != null || chatFooterSendClickMethod != null) return true;
+        if (netQueueClass != null || marsCdnManagerClass != null) return true;
+        if (protobufBaseClass != null || protobufOnGYNetEndClass != null) return true;
+        if (fakePacketClasses != null && !fakePacketClasses.isEmpty()) return true;
+        if (packetBaseClasses != null && !packetBaseClasses.isEmpty()) return true;
+        if (packetQueueClasses != null && !packetQueueClasses.isEmpty()) return true;
+        return false;
+    }
 
     private boolean loadCache() {
         cacheLoadAttempted = true;
@@ -3701,6 +3717,14 @@ public class DexFinder {
             chatPageFragmentEnterMethod = loadMethod("chatPageFragmentEnterMethod");
             chatPageFragmentExitMethod = loadMethod("chatPageFragmentExitMethod");
             chatFooterSendClickMethod = loadMethod("chatFooterSendClickMethod");
+            // 空快照（键存在但一个定位结果都没有）绝不能被当成有效缓存：
+            // 否则所有 resolve* 都会在 ensureSnapshotLoaded() 处提前返回，
+            // 导致 DexKit 完全不再查询，表现为「类定位全部失败」。
+            if (!hasCachedAnchor()) {
+                logDetail("缓存快照无任何定位结果，清空后重新扫描");
+                resetCacheForRuntimeKey();
+                return false;
+            }
             return !cacheDescriptorInvalid;
         } catch (Throwable e) {
             logDetail("读取缓存失败，重新解析: " + e.getMessage());
@@ -4904,7 +4928,7 @@ public class DexFinder {
             editor.putBoolean(LOCATOR_ECS_COMPLETE, ecsGiftLocatorResolved);
             editor.putBoolean(LOCATOR_MSG_DESC_COMPLETE, msgDescLocatorResolved);
             editor.putBoolean(LOCATOR_PROTOBUF_COMPLETE, protobufLocatorResolved);
-            boolean snapshotReady = !cacheDescriptorInvalid;
+            boolean snapshotReady = !cacheDescriptorInvalid && hasCachedAnchor();
             editor.putString(CACHE_SNAPSHOT_VERSION_KEY,
                     snapshotReady ? CACHE_SNAPSHOT_VERSION : "");
             editor.putBoolean(CACHE_COMPLETE, snapshotReady);
