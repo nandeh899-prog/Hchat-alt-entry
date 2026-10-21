@@ -510,7 +510,7 @@ public class ModuleEntry implements IXposedHookLoadPackage {
     private Context createModuleContext(Context hostContext) {
         try {
             return hostContext.createPackageContext(
-                    "h.Hchat",
+                    BuildConfig.APPLICATION_ID,
                     Context.CONTEXT_IGNORE_SECURITY | Context.CONTEXT_INCLUDE_CODE
             );
         } catch (Throwable e) {

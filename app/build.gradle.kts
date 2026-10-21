@@ -14,7 +14,9 @@ android {
     val autoVersionName = System.getenv("HCAT_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.0.0"
 
     defaultConfig {
-        applicationId = "h.Hchat"
+        // 共存版支持：由 HCAT_APP_ID_SUFFIX 注入后缀（如 .coexist），默认构建官方包名
+        val appIdSuffix = System.getenv("HCAT_APP_ID_SUFFIX")?.trim().orEmpty()
+        applicationId = "h.Hchat$appIdSuffix"
         minSdk = 27
         targetSdk = 37
         versionCode = autoVersionCode
