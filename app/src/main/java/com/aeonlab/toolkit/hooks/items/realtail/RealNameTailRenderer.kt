@@ -31,7 +31,7 @@ class RealNameTailRenderer(
     private val holderTextFieldCache = ConcurrentHashMap<Class<*>, Field?>()
     private val likelyMsgCache = ConcurrentHashMap<Class<*>, Boolean>()
     private val inSetText = ThreadLocal<Boolean>()
-    private val methodCachePrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_real_tail_method_cache")
+    private val methodCachePrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_real_tail_method_cache")
     @Volatile private var installed = false
     var profilePrefetcher: ContactProfilePrefetcher? = null
 

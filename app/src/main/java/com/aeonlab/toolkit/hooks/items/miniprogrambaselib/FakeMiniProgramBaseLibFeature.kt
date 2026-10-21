@@ -42,7 +42,7 @@ class FakeMiniProgramBaseLibFeature : BaseFeature() {
         const val ID = "fake_mini_program_base_lib"
         private const val TAG = "[Hchat:FakeMiniProgramHostVersion]"
         internal const val CACHE_PREFS_NAME =
-            "Hchat_fake_mini_program_host_version_member_cache"
+            "AeonLab_fake_mini_program_host_version_member_cache"
         internal const val CACHE_PRIVATE_OPEN_URL_METHOD = "private_open_url_method"
         @Volatile private var appBrandProcessHookInstalled = false
 

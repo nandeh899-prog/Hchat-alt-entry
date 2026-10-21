@@ -329,7 +329,7 @@ internal class CallMediaLimitHooker(
         DexMethodCache.runtimeKey(context.hostContext(), context.hostClassLoader())
 
     companion object {
-        private const val CACHE_PREFS = "Hchat_call_media_limit_method_cache"
+        private const val CACHE_PREFS = "AeonLab_call_media_limit_method_cache"
         private const val CACHE_DEVICE_OCCUPY_METHODS = "device_occupy_methods_v1"
         private const val CACHE_VOICE_PLAYBACK_GUARD = "voice_playback_guard_v1"
         private const val DEVICE_OCCUPY_TAG = "MicroMsg.DeviceOccupy"

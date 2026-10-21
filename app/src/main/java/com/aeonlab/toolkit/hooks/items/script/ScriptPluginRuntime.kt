@@ -1216,7 +1216,7 @@ object ScriptPluginRuntime {
         )
         val file = File(
             cacheDir,
-            "Hchat_ImageCallback_${sender}_${messageId}_${System.currentTimeMillis()}.jpg"
+            "AeonLab_ImageCallback_${sender}_${messageId}_${System.currentTimeMillis()}.jpg"
         )
         ScriptWaBridge(currentBridge).downloadImg(imageMsg, file.absolutePath)
         return file.takeIf { it.isFile && it.length() > 0L }?.absolutePath
@@ -1237,7 +1237,7 @@ object ScriptPluginRuntime {
         )
         val file = File(
             cacheDir,
-            "Hchat_VideoCallback_${sender}_${messageId}_${System.currentTimeMillis()}.mp4"
+            "AeonLab_VideoCallback_${sender}_${messageId}_${System.currentTimeMillis()}.mp4"
         )
         return ScriptWaBridge(currentBridge)
             .downloadVideoForListener(msgInfoBean, file.absolutePath)
@@ -1266,7 +1266,7 @@ object ScriptPluginRuntime {
         return media.items.indices.mapNotNull { index ->
             val file = File(
                 cacheDir,
-                "Hchat_FinderCallback_${sender}_${messageId}_${index + 1}_" +
+                "AeonLab_FinderCallback_${sender}_${messageId}_${index + 1}_" +
                     "${System.currentTimeMillis()}.$extension"
             )
             FinderMediaDownloadSupport.downloadItem(

@@ -37,7 +37,7 @@ class DisableHotUpdateFeature : BaseFeature() {
         private const val TINKER_SYNC_RESPONSE = "com.tencent.mm.plugin.hp.util.TinkerSyncResponse"
         private const val PATCH_RESULT = "com.tencent.tinker.lib.service.PatchResult"
         private const val LEGACY_PATCH_SERVICE = "com.tencent.mm.hotpatch.LegacyTinkerCore\$PatchService"
-        private const val CACHE_PREFS = "Hchat_hot_update_method_cache"
+        private const val CACHE_PREFS = "AeonLab_hot_update_method_cache"
         private val RESPONSE_HANDLER_STRINGS = listOf(
             "null cannot be cast to non-null type com.tencent.mm.plugin.hp.util.TinkerSyncResponse",
             "onReceiveUpgradePatch. try to start apply",

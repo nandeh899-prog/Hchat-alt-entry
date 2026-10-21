@@ -75,7 +75,7 @@ private class FinderMediaDownloadHooker(
     private val context: FeatureContext,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_finder_media_download_method_cache")
+    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_finder_media_download_method_cache")
     private val hookedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
 
     fun install(): Boolean {

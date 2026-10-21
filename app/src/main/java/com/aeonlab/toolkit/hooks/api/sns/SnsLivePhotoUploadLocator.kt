@@ -21,7 +21,7 @@ internal data class SnsLivePhotoUploadRuntime(
 )
 
 internal object SnsLivePhotoUploadLocator {
-    private const val PREFS_NAME = "Hchat_sns_live_photo_upload_cache"
+    private const val PREFS_NAME = "AeonLab_sns_live_photo_upload_cache"
     private const val CACHE_SET_UPLOAD_LIST = "set_upload_list_v1"
     private const val CACHE_ELEMENT_CLASS = "element_class_v1"
 

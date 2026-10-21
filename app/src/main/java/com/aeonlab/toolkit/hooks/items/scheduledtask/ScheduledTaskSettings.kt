@@ -73,7 +73,7 @@ class ScheduledTaskSettings(context: Context?) {
     }
 
     companion object {
-        const val PREFS_NAME = "Hchat_scheduled_task_config"
+        const val PREFS_NAME = "AeonLab_scheduled_task_config"
         const val KEY_ENABLE = "scheduled_task_enable"
         const val KEY_TASKS = "scheduled_task_items_v1"
 

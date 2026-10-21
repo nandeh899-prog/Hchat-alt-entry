@@ -18,7 +18,7 @@ internal data class SnsForwardNativeMediaMethods(
 )
 
 internal object SnsForwardNativeMediaLocator {
-    private const val PREFS_NAME = "Hchat_sns_forward_native_media_method_cache"
+    private const val PREFS_NAME = "AeonLab_sns_forward_native_media_method_cache"
     private const val SNS_MODEL_PACKAGE = "com.tencent.mm.plugin.sns.model."
 
     fun locate(

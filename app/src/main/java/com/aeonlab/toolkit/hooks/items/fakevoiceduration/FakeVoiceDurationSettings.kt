@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.fakevoiceduration
 
 object FakeVoiceDurationSettings {
-    const val PREFS_NAME = "Hchat_fake_voice_duration_config"
+    const val PREFS_NAME = "AeonLab_fake_voice_duration_config"
     const val KEY_ENABLE = "fake_voice_duration_enable"
     const val KEY_DURATION_SECONDS = "fake_voice_duration_seconds"
     const val DEFAULT_ENABLE = false

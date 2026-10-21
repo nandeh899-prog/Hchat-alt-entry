@@ -4,7 +4,7 @@ import android.content.Context
 import com.aeonlab.toolkit.preferences.HchatStorage
 
 object GameEmojiSettings {
-    const val PREFS_NAME = "Hchat_game_emoji_config"
+    const val PREFS_NAME = "AeonLab_game_emoji_config"
 
     const val KEY_FIXED_RESULT = "game_emoji_fixed_result"
     const val KEY_PICK_BEFORE_SEND = "game_emoji_pick_before_send"

@@ -4,7 +4,7 @@ import android.content.SharedPreferences
 import org.json.JSONArray
 
 object MomentsFakeInteractionSettings {
-    const val PREFS_NAME = "Hchat_moments_fake_interaction_config"
+    const val PREFS_NAME = "AeonLab_moments_fake_interaction_config"
     const val KEY_FAKE_LIKE_ENABLE = "fake_like_enable"
     const val KEY_FAKE_COMMENT_ENABLE = "fake_comment_enable"
     const val KEY_FAKE_FORWARD_ENABLE = "fake_forward_enable"

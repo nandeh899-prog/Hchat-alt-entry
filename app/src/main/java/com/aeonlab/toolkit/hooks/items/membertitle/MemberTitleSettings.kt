@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.membertitle
 
 object MemberTitleSettings {
-    const val PREFS_NAME = "Hchat_member_title_config"
+    const val PREFS_NAME = "AeonLab_member_title_config"
     const val KEY_ENABLE = "enable"
     const val KEY_SHOW_MEMBER = "show_member"
     const val KEY_OWNER_COLOR = "owner_color"

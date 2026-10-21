@@ -2,7 +2,7 @@ package com.aeonlab.toolkit.hooks.items.custombottombar
 
 object FloatingBottomBarSettings {
     const val FEATURE_ID = "floating_bottom_bar"
-    const val PREFS_NAME = "Hchat_custom_bottom_bar_config"
+    const val PREFS_NAME = "AeonLab_custom_bottom_bar_config"
 
     const val KEY_ENABLE = "custom_bottom_bar_enable"
     const val KEY_STYLE = "custom_bottom_bar_style"
@@ -34,7 +34,7 @@ object FloatingBottomBarSettings {
 }
 
 object CustomBottomBarSettings {
-    const val PREFS_NAME = "Hchat_native_bottom_bar_config"
+    const val PREFS_NAME = "AeonLab_native_bottom_bar_config"
 
     const val KEY_ENABLE = "enable"
     const val KEY_MODIFY_ICONS = "modify_icons"

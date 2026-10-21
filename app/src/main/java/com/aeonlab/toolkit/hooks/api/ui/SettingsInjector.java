@@ -53,7 +53,7 @@ import com.aeonlab.toolkit.utils.KavaReflector;
 public class SettingsInjector {
 
     private static final String TAG = "[Hchat:SettingsInjector]";
-    private static final String PREFS_KEY = "Hchat_settings";
+    private static final String PREFS_KEY = "AeonLab_settings";
     private static final String PREFS_TITLE = "AeonLab";
     private static final String MODULE_TAG = "Hchat";
     private static final boolean VERBOSE = false;
@@ -89,7 +89,7 @@ public class SettingsInjector {
         this.classLoader = classLoader;
         this.dex = dex;
         this.entrySettings = entrySettings;
-        this.dexCacheDir = new File(context.getCacheDir(), "Hchat_proxy_classes");
+        this.dexCacheDir = new File(context.getCacheDir(), "AeonLab_proxy_classes");
         this.dexCacheDir.mkdirs();
     }
 

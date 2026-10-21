@@ -7,7 +7,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 object MessageAffixSettings {
-    const val PREFS_NAME = "Hchat_message_affix_config"
+    const val PREFS_NAME = "AeonLab_message_affix_config"
     const val KEY_ENABLE = "message_affix_enable"
     const val KEY_TEXT_FORMAT = "message_affix_text_format"
     const val KEY_TIME_FORMAT = "message_affix_time_format"

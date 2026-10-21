@@ -2312,7 +2312,7 @@ object ScriptPluginAgentWorkspaceTools {
     private fun workspaceRoot(context: Context): File {
         // 用 filesDir（应用私有持久目录，系统不会清理）替代 cacheDir，
         // 否则缓存被系统清理会导致 Agent 暂存区丢失、会话恢复失败、Agent 反复重试死循环
-        return File(context.filesDir, "Hchat_agent_plugin_workspaces").apply {
+        return File(context.filesDir, "AeonLab_agent_plugin_workspaces").apply {
             if (!isDirectory) check(mkdirs()) { "创建 Agent 工作区目录失败" }
         }
     }

@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.antirecall
 
 object AntiRecallSettings {
-    const val PREFS_NAME = "Hchat_anti_recall_config"
+    const val PREFS_NAME = "AeonLab_anti_recall_config"
     const val KEY_ENABLE = "anti_recall_enable"
     const val KEY_KEEP_SELF_RECALL = "anti_recall_keep_self"
     const val KEY_SHOW_NOTICE = "anti_recall_show_notice"

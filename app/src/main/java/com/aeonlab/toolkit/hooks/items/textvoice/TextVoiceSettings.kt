@@ -5,7 +5,7 @@ import com.aeonlab.toolkit.preferences.HchatStorage
 import kotlin.math.roundToInt
 
 object TextVoiceSettings {
-    const val PREFS_NAME = "Hchat_text_voice_config"
+    const val PREFS_NAME = "AeonLab_text_voice_config"
     const val KEY_SEND_ENABLE = "text_voice_send_enable"
     const val KEY_PLAY_ENABLE = "text_voice_play_enable"
     const val KEY_ENGINE = "text_voice_engine"

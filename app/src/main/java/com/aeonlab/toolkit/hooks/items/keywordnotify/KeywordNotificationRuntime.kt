@@ -48,7 +48,7 @@ import java.util.regex.Pattern
 
 object KeywordNotificationRuntime {
     private const val TAG = "[Hchat:KeywordNotification]"
-    private const val CHANNEL_PREFIX = "Hchat_keyword_notification_"
+    private const val CHANNEL_PREFIX = "AeonLab_keyword_notification_"
     private const val CHANNEL_NAME = "AeonLab 关键词通知"
     private const val EXTRA_KEYWORD_NOTIFY = "hchat_keyword_notification"
     private const val AVATAR_CACHE_MAX_ENTRIES = 64

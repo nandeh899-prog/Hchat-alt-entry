@@ -50,7 +50,7 @@ private class FakeScanCameraHooker(
     private val context: FeatureContext
 ) {
     private val prefs = HchatStorage.preferences(context.hostContext(), FakeScanCameraSettings.PREFS_NAME)
-    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_fake_scan_camera_method_cache")
+    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_fake_scan_camera_method_cache")
 
     @Volatile
     private var qbarStringHandlerInstalled = false

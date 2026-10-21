@@ -22,7 +22,7 @@ object ConversationGroupStore {
         val message: String = ""
     )
 
-    const val PREFS_NAME = "Hchat_conversation_groups"
+    const val PREFS_NAME = "AeonLab_conversation_groups"
     const val KEY_ENABLE = "enabled"
     const val DEFAULT_ENABLE = false
 

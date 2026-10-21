@@ -191,7 +191,7 @@ private class HchatExtraHooker(
         context.hostContext(),
         HideChatAvatarSettings.PREFS_NAME
     )
-    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_extra_method_cache")
+    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_extra_method_cache")
     private val hookedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
     private val hookedClasses = Collections.newSetFromMap(ConcurrentHashMap<Class<*>, Boolean>())
     private val holderRootFieldCache = ConcurrentHashMap<Class<*>, Field>()
@@ -725,7 +725,7 @@ private class HchatExtraHooker(
     private fun locateChattingDataAdapterClass(): Class<*>? {
         chattingDataAdapterClass?.let { return it }
         val methodCacheKey = methodCacheKey()
-        val prefs = DexMethodCache.prefs(context.hostContext(), "Hchat_extra_class_cache")
+        val prefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_extra_class_cache")
         val key = "${methodCacheKey}_chatting_data_adapter"
         prefs.getString(key, null)?.let { name ->
             KavaReflector.loadClass(name, context.hostClassLoader())?.let {
@@ -802,7 +802,7 @@ private class HchatExtraHooker(
 
     private fun locateClasses(cacheName: String, stringGroups: List<List<String>>): List<Class<*>> {
         val methodCacheKey = methodCacheKey()
-        val cached = DexMethodCache.prefs(context.hostContext(), "Hchat_extra_class_cache")
+        val cached = DexMethodCache.prefs(context.hostContext(), "AeonLab_extra_class_cache")
         val classes = linkedSetOf<Class<*>>()
         stringGroups.forEachIndexed { index, strings ->
             val key = "${cacheName}_$index"

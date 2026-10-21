@@ -60,7 +60,7 @@ private class MessageTextColorRenderer(
     private val context: FeatureContext
 ) {
     private val prefs = HchatStorage.preferences(context.hostContext(), MessageTextColorSettings.PREFS_NAME)
-    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_message_text_color_method_cache")
+    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_message_text_color_method_cache")
     private val itemMethodCache = ConcurrentHashMap<Class<*>, Method>()
     private val itemListFieldCache = ConcurrentHashMap<Class<*>, Field>()
     private val holderRootFieldCache = ConcurrentHashMap<Class<*>, Field>()

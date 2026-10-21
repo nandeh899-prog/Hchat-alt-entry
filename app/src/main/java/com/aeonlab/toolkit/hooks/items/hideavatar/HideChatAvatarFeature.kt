@@ -56,7 +56,7 @@ private class HideChatAvatarRuntime(
     private val context: FeatureContext
 ) {
     private val prefs = HchatStorage.preferences(context.hostContext(), HideChatAvatarSettings.PREFS_NAME)
-    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_hide_chat_avatar_method_cache")
+    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_hide_chat_avatar_method_cache")
     private val holderFields = ConcurrentHashMap<Class<*>, AvatarFields>()
     private val unsupportedHolderClasses = ConcurrentHashMap.newKeySet<Class<*>>()
     private val originalMaskWidths = Collections.synchronizedMap(WeakHashMap<View, Int>())

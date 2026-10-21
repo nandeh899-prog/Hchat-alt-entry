@@ -18,7 +18,7 @@ data class InputHintStats(
 )
 
 object InputHintSettings {
-    const val PREFS_NAME = "Hchat_input_hint_config"
+    const val PREFS_NAME = "AeonLab_input_hint_config"
 
     const val KEY_ENABLE = "input_hint_enable"
     const val KEY_TEMPLATE = "input_hint_template"

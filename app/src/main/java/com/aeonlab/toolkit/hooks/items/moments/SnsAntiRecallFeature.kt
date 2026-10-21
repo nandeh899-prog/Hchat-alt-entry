@@ -698,7 +698,7 @@ private class SnsAntiRecallHooker(
     companion object {
         private const val SNS_OBJECT_CLASS = "com.tencent.mm.protocal.protobuf.SnsObject"
         private const val SNS_CONTENT_FIELD = 5
-        private const val CACHE_PREFS = "Hchat_sns_anti_recall_method_cache"
+        private const val CACHE_PREFS = "AeonLab_sns_anti_recall_method_cache"
         private const val CACHE_SCHEMA = "sns_anti_recall_v2"
         private const val CACHE_ENABLE_FLUTTER_SNS_PAGE = "enable_flutter_sns_page"
         private val COMMENT_CONTENT_FIELDS = arrayOf("h", "m")

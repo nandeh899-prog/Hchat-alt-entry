@@ -35,7 +35,7 @@ object TransferReceiveAccountStore {
         if (installed) return true
         val prefs = DexMethodCache.prefs(
             context.hostContext(),
-            "Hchat_transfer_receive_account_method_cache"
+            "AeonLab_transfer_receive_account_method_cache"
         )
         val cacheKey = DexMethodCache.runtimeKey(context.hostContext(), context.hostClassLoader())
         val method = DexMethodCache.load(

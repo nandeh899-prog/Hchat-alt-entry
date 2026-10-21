@@ -328,7 +328,7 @@ internal class QQMusicOrderRuntime(
         private const val DISABLE_CURRENT_CHAT_COMMAND = "关闭点歌"
         private const val MESSAGE_MAX_AGE_MS = 30_000L
         private const val MAX_THUMB_BYTES = 128 * 1024
-        private const val VOICE_CACHE_DIR = "Hchat_qq_music_order_voice"
+        private const val VOICE_CACHE_DIR = "AeonLab_qq_music_order_voice"
         private const val AUDIO_CONNECT_TIMEOUT_MS = 15_000
         private const val AUDIO_READ_TIMEOUT_MS = 30_000
         private const val MAX_AUDIO_BYTES = 128L * 1024L * 1024L

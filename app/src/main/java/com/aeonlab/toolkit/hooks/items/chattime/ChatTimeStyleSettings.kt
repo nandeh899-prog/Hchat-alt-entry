@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.chattime
 
 object ChatTimeStyleSettings {
-    const val PREFS_NAME = "Hchat_chat_time_style_config"
+    const val PREFS_NAME = "AeonLab_chat_time_style_config"
 
     const val KEY_ENABLE = "chat_time_enable"
     const val KEY_MODE = "chat_time_mode"

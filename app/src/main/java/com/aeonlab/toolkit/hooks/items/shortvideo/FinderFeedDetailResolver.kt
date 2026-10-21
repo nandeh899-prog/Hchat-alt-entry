@@ -90,7 +90,7 @@ internal class FinderFeedDetailResolver private constructor(
 
     companion object {
         private const val TAG = "[Hchat:FinderDetail]"
-        private const val PREFS_NAME = "Hchat_finder_feed_detail_cache"
+        private const val PREFS_NAME = "AeonLab_finder_feed_detail_cache"
         private const val CACHE_CONSTRUCTOR = "request_constructor_v2"
         private const val CACHE_CALLBACK = "request_callback_v2"
         private const val CGI_URI = "/cgi-bin/micromsg-bin/findergetcommentdetail"

@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.quickread
 
 object QuickMarkReadSettings {
-    const val PREFS_NAME = "Hchat_quick_mark_read_config"
+    const val PREFS_NAME = "AeonLab_quick_mark_read_config"
 
     const val KEY_DRAG_READ = "drag_read_enable"
     const val KEY_PLUS_MENU_READ = "plus_menu_read_enable"

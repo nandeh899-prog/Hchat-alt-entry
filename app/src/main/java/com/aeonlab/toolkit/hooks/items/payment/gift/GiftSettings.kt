@@ -87,7 +87,7 @@ class GiftSettings @JvmOverloads constructor(
     }
 
     companion object {
-        const val PREFS_NAME = "Hchat_gift_config"
+        const val PREFS_NAME = "AeonLab_gift_config"
         const val KEY_ENABLE = "gift_auto_enable"
         const val KEY_DELAY_VALUE = "gift_delay_value"
         const val KEY_DELAY_UNIT = "gift_delay_unit"

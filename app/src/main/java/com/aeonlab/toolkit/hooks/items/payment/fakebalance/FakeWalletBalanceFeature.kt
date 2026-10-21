@@ -619,7 +619,7 @@ private class FakeWalletBalanceHooker(
 
     companion object {
         private const val TAG = "[Hchat:FakeWalletBalance]"
-        private const val CACHE_PREFS = "Hchat_fake_wallet_balance_method_cache"
+        private const val CACHE_PREFS = "AeonLab_fake_wallet_balance_method_cache"
         private const val CACHE_SCHEMA = "fake_wallet_balance_wekit_style_v1"
         private const val CACHE_TICKER_METHODS = "ticker_methods"
         private const val MALL_WALLET_SECTION_CELL_VIEW =

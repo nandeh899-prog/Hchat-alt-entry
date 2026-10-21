@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.keepalive
 
 object WeChatKeepAliveSettings {
-    const val PREFS_NAME = "Hchat_wechat_keep_alive_config"
+    const val PREFS_NAME = "AeonLab_wechat_keep_alive_config"
     const val KEY_ENABLE = "wechat_keep_alive_enable"
     const val KEY_FOREGROUND_SERVICE = "wechat_keep_alive_foreground_service"
     const val KEY_WAKE_LOCK = "wechat_keep_alive_wake_lock"

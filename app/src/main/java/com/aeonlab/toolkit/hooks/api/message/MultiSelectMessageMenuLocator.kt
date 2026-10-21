@@ -12,7 +12,7 @@ import java.lang.reflect.Modifier
 object MultiSelectMessageMenuLocator {
     private const val CHATTING_COMPONENT_PREFIX = "com.tencent.mm.ui.chatting.component."
     private const val CLICK_METHOD_ANCHOR = "FinalShareCountByType"
-    private const val PREFS_NAME = "Hchat_multi_select_menu_method_cache"
+    private const val PREFS_NAME = "AeonLab_multi_select_menu_method_cache"
     private const val CACHE_MENU_CREATE = "menu_create_v2"
     private const val CACHE_MENU_CLICK = "menu_click_v1"
     private const val CACHE_MULTI_SELECT_EXIT = "multi_select_exit_v1"

@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.moments
 
 object MomentsPostNotificationSettings {
-    const val PREFS_NAME = "Hchat_moments_post_notification_config"
+    const val PREFS_NAME = "AeonLab_moments_post_notification_config"
     const val KEY_ENABLE = "enable"
     const val KEY_ENABLED_AT_SECONDS = "enabled_at_seconds"
     const val KEY_NOTIFIED_IDS = "notified_ids"

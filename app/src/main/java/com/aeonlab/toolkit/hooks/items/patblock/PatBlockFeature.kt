@@ -60,7 +60,7 @@ private class PatBlockHooker(
     )
     private val methodPrefs = DexMethodCache.prefs(
         context.hostContext(),
-        "Hchat_disable_pat_method_cache"
+        "AeonLab_disable_pat_method_cache"
     )
 
     @Volatile

@@ -5,7 +5,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 
 object FakeWalletBalanceSettings {
-    const val PREFS_NAME = "Hchat_fake_wallet_balance_config"
+    const val PREFS_NAME = "AeonLab_fake_wallet_balance_config"
     const val KEY_ENABLE = "fake_wallet_balance_enable"
     const val KEY_BALANCE_ENABLE = "fake_wallet_balance_enable_balance"
     const val KEY_LQT_ENABLE = "fake_wallet_balance_enable_lqt"

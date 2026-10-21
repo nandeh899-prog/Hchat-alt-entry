@@ -900,7 +900,7 @@ private object ConversationGroupDocumentBridge {
     private val hooks = ConversationGroupFileResultHooks(::onResult)
 
     fun launchExport(activity: Activity, json: String, callback: (DocumentResult) -> Unit) {
-        val fileName = "Hchat_chat_groups_" +
+        val fileName = "AeonLab_chat_groups_" +
             SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".json"
         launch(activity, Operation.Export(json), Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)

@@ -124,7 +124,7 @@ class WeChatSnsPostObserver(
     }
 
     companion object {
-        private const val PREFS_NAME = "Hchat_sns_post_observer_cache"
+        private const val PREFS_NAME = "AeonLab_sns_post_observer_cache"
         private const val CACHE_STORE = "sns_info_replace_by_id_v2"
     }
 }

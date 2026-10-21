@@ -5,7 +5,7 @@ import java.util.Date
 import java.util.Locale
 
 object MomentsAutoCommentSettings {
-    const val PREFS_NAME = "Hchat_moments_auto_comment_config"
+    const val PREFS_NAME = "AeonLab_moments_auto_comment_config"
 
     const val KEY_ENABLE = "comment_enable"
     const val KEY_COMMENT_CONTENT = "comment_content"

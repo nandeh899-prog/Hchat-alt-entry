@@ -356,7 +356,7 @@ object GroupLeaveMonitorHighlighter {
     }
 
     private const val CONTACT_INFO_UI = "com.tencent.mm.plugin.profile.ui.ContactInfoUI"
-    private const val CACHE_PREFS = "Hchat_group_leave_monitor_method_cache"
+    private const val CACHE_PREFS = "AeonLab_group_leave_monitor_method_cache"
     private const val CACHE_SCHEMA = "group_leave_monitor_uri_click_v1"
     private const val CACHE_URI_SPAN_CLICK = "uri_span_click_methods"
 }

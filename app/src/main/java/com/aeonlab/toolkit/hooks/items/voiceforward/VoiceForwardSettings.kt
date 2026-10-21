@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.voiceforward
 
 object VoiceForwardSettings {
-    const val PREFS_NAME = "Hchat_voice_forward_config"
+    const val PREFS_NAME = "AeonLab_voice_forward_config"
     const val KEY_ENABLE = "voice_forward_enable"
     const val KEY_CHAT_FORWARD_ENABLE = "voice_forward_chat_forward_enable"
     const val KEY_CHAT_SAVE_ENABLE = "voice_forward_chat_save_enable"

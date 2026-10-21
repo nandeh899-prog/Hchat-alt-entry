@@ -111,7 +111,7 @@ class ZombieCheckSettings(context: Context) {
     }
 
     companion object {
-        const val PREFS_NAME = "Hchat_zombie_check_config"
+        const val PREFS_NAME = "AeonLab_zombie_check_config"
 
         const val KEY_ENABLE = "zombie_check_enable"
         const val KEY_MIN_DELAY_SECONDS = "zombie_check_min_delay_seconds"

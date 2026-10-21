@@ -44,7 +44,7 @@ class TextSpeechSettings(context: Context?) {
     }
 
     companion object {
-        const val PREFS_NAME = "Hchat_text_speech_config"
+        const val PREFS_NAME = "AeonLab_text_speech_config"
 
         const val KEY_ENABLE = "text_speech_enable"
         const val KEY_TTS_ENGINE = "text_speech_tts_engine"

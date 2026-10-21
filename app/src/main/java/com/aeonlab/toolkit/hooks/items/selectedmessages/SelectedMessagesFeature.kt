@@ -610,7 +610,7 @@ private class SelectedMessagesHooker(
     }
 
     companion object {
-        private const val PREFS_NAME = "Hchat_selected_message_method_cache"
+        private const val PREFS_NAME = "AeonLab_selected_message_method_cache"
         private const val CACHE_RETRANSMIT_DONE = "retransmit_done_v1"
         private const val MENU_MASS_SEND_ID = 0x4843534d
         private const val MENU_SCHEDULE_ID = 0x48435354

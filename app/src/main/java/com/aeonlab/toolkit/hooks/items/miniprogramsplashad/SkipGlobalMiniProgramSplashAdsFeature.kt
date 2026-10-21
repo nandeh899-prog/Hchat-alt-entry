@@ -45,7 +45,7 @@ class SkipGlobalMiniProgramSplashAdsFeature : BaseFeature() {
         const val ID = "skip_global_mini_program_splash_ads"
         private const val TAG = "[Hchat:MiniProgramSplashAds]"
         internal const val CACHE_PREFS_NAME =
-            "Hchat_skip_global_mini_program_splash_ads_method_cache"
+            "AeonLab_skip_global_mini_program_splash_ads_method_cache"
         internal const val CACHE_SPLASH_AD_CHECK_METHOD = "splash_ad_check_method"
         private val installedLoaders = HashSet<String>()
 

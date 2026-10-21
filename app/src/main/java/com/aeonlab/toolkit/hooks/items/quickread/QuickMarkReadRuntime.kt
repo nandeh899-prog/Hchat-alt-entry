@@ -22,7 +22,7 @@ import java.lang.reflect.Method
 
 object QuickMarkReadRuntime {
     private const val TAG = "[Hchat:QuickRead]"
-    private const val CACHE_PREFS = "Hchat_quick_mark_read_method_cache"
+    private const val CACHE_PREFS = "AeonLab_quick_mark_read_method_cache"
     private const val CACHE_SCHEMA = "quick_mark_read_native_v1"
     private const val CACHE_NATIVE_MARK_READ = "native_mark_read"
     private const val AT_ALERT_FLAG = 0x00100000

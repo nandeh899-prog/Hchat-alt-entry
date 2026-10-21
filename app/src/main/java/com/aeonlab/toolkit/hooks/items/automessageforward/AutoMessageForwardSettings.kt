@@ -10,7 +10,7 @@ import org.json.JSONObject
 import java.util.UUID
 
 object AutoMessageForwardSettings {
-    const val PREFS_NAME = "Hchat_auto_message_forward_config"
+    const val PREFS_NAME = "AeonLab_auto_message_forward_config"
     const val KEY_ENABLED = "enabled"
     const val KEY_RULES = "rules_v1"
 

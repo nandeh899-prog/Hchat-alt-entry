@@ -59,7 +59,7 @@ private class QuoteDeleteClearRuntime(
     private val context: FeatureContext,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val methodCachePrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_quote_delete_clear_method_cache")
+    private val methodCachePrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_quote_delete_clear_method_cache")
     private val footerFieldCache = ConcurrentHashMap<Class<*>, Field>()
     @Volatile private var currentFooterRef = WeakReference<Any>(null)
     @Volatile private var installed = false

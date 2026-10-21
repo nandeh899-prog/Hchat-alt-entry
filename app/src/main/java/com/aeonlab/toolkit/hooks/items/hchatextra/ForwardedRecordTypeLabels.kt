@@ -176,7 +176,7 @@ internal class ForwardedRecordTypeLabels(
     private fun locate(): Targets? {
         val loader = context.hostClassLoader()
         val key = DexMethodCache.runtimeKey(context.hostContext(), loader)
-        val prefs = DexMethodCache.prefs(context.hostContext(), "Hchat_forwarded_record_type_v1")
+        val prefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_forwarded_record_type_v1")
         val bind = DexMethodCache.load(prefs, key, loader, "bind")
         val detail = DexMethodCache.load(prefs, key, loader, "detail")
         val cachedType = prefs.getString("datatype", null)?.let { descriptor ->

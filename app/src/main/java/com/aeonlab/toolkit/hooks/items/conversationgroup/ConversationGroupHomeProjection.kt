@@ -81,7 +81,7 @@ internal object ConversationGroupHomeProjection {
     fun installTabs(context: FeatureContext): Boolean = runCatching {
         val installation = installation()
         check(install(context)) { "首页共享入口尚未就绪" }
-        val prefs = DexMethodCache.prefs(context.hostContext(), "Hchat_conversation_group_home_cache")
+        val prefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_conversation_group_home_cache")
         val runtime = DexMethodCache.runtimeKey(context.hostContext(), context.hostClassLoader())
         val cacheKey = "homepage_tabs_select_constructor_v2"
         val expected = arrayOf(
@@ -133,7 +133,7 @@ internal object ConversationGroupHomeProjection {
             if (!isActive(installation)) throw CancellationException("首页安装代次已失效")
             if (hidden != null) hiddenIds = hidden
         }
-        val prefs = DexMethodCache.prefs(context.hostContext(), "Hchat_conversation_group_home_cache")
+        val prefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_conversation_group_home_cache")
         val runtime = DexMethodCache.runtimeKey(context.hostContext(), context.hostClassLoader())
         var methods = DexMethodCache.loadList(prefs, runtime, context.hostClassLoader(), CACHE)
         fun cacheComplete(cached: List<Method>): Boolean {

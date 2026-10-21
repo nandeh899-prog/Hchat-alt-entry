@@ -50,7 +50,7 @@ class FakeLocationFeature : BaseFeature() {
 
     companion object {
         const val ID = "fake_location"
-        internal const val CACHE_PREFS_NAME = "Hchat_fake_location_method_cache"
+        internal const val CACHE_PREFS_NAME = "AeonLab_fake_location_method_cache"
         internal const val CACHE_LOCATION_CALLBACKS = "location_callbacks_v1"
 
         @JvmStatic

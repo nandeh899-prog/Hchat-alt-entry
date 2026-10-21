@@ -62,7 +62,7 @@ class AutoTransferSettings(private val context: Context?) {
     }
 
     companion object {
-        const val PREFS_NAME = "Hchat_transfer_config"
+        const val PREFS_NAME = "AeonLab_transfer_config"
 
         const val KEY_ENABLE = "transfer_auto_enable"
         const val KEY_MODE = "transfer_mode"

@@ -304,7 +304,7 @@ private class OriginalMomentsUploadHooker(
 
     companion object {
         private const val TAG = "[Hchat:OriginalMomentsUpload]"
-        private const val CACHE_PREFS = "Hchat_original_moments_upload_method_cache"
+        private const val CACHE_PREFS = "AeonLab_original_moments_upload_method_cache"
         private const val CACHE_SCHEMA = "original_moments_upload_v2"
         private const val CACHE_IMAGE_PREVIEW = "image_preview_send"
         private const val CACHE_CREATE_PIC = "sns_create_pic"

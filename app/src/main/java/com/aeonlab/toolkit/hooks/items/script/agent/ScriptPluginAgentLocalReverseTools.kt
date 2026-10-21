@@ -1658,7 +1658,7 @@ object ScriptPluginAgentLocalReverseTools {
 
     private const val TARGET_KIND_HOST = "current_wechat_apk"
     private const val TARGET_KIND_EXTERNAL = "external_wechat_apk"
-    private const val TARGET_PREFS_NAME = "Hchat_agent_reverse_targets"
+    private const val TARGET_PREFS_NAME = "AeonLab_agent_reverse_targets"
     private const val TARGET_PREFS_KEY = "targets_v1"
     private const val MAX_REGISTERED_TARGETS = 16
     private const val MAX_COMPARE_TARGETS = 12

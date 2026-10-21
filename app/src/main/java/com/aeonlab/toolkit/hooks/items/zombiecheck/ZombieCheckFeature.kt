@@ -340,7 +340,7 @@ internal class ZombieCheckHooker(
         DexMethodCache.runtimeKey(context.hostContext(), context.hostClassLoader())
 
     companion object {
-        private const val CACHE_PREFS = "Hchat_zombie_check_method_cache"
+        private const val CACHE_PREFS = "AeonLab_zombie_check_method_cache"
         private const val CACHE_PROBE_CONSTRUCTOR = "probe_constructor_v1"
         private const val CACHE_CALLBACK = "probe_callback_v1"
         private const val CACHE_DELETE_METHOD = "delete_contact_method_v2"

@@ -63,7 +63,7 @@ class RoundAvatarFeature : BaseFeature() {
 private class RoundAvatarRuntime(
     private val context: FeatureContext
 ) {
-    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_round_avatar_method_cache")
+    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_round_avatar_method_cache")
     private val hookedMembers = ConcurrentHashMap.newKeySet<Member>()
     private val notificationHookedMembers = ConcurrentHashMap.newKeySet<Member>()
 

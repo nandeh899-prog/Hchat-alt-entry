@@ -36,7 +36,7 @@ class WeChatTabletFeature : BaseFeature() {
         const val ID = "wechat_tablet"
         private const val TAG = "[Hchat:Tablet]"
         private const val CHAT_VOICE_STACK = "com.tencent.mm.pluginsdk.ui.chat"
-        private const val CACHE_PREFS = "Hchat_wechat_tablet_cache"
+        private const val CACHE_PREFS = "AeonLab_wechat_tablet_cache"
         private const val CACHE_KEY = "cache_key"
         private const val CACHE_PAD_METHOD = "pad_method"
         private const val CACHE_LOGIN_BUTTON_METHOD = "login_button_method"

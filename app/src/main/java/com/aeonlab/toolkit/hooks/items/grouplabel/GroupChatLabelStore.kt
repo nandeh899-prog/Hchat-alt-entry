@@ -13,7 +13,7 @@ data class GroupChatLabel(
 )
 
 object GroupChatLabelStore {
-    const val PREFS_NAME = "Hchat_group_chat_labels"
+    const val PREFS_NAME = "AeonLab_group_chat_labels"
     private const val KEY_LABELS = "labels"
 
     @JvmStatic

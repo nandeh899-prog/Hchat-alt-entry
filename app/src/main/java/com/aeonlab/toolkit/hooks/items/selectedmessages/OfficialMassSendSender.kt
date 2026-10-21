@@ -891,7 +891,7 @@ class OfficialMassSendSender(
     )
 
     companion object {
-        private const val PREFS_NAME = "Hchat_selected_message_method_cache"
+        private const val PREFS_NAME = "AeonLab_selected_message_method_cache"
         private const val CACHE_ANCHOR = "official_mass_send_anchor_v1"
         private const val CACHE_EMOJI_CALLBACK = "official_mass_send_emoji_callback_v1"
         private const val CACHE_EMOJI_SPEC = "official_mass_send_emoji_spec_v1"

@@ -50,7 +50,7 @@ class KeywordNotificationSettings(context: Context?) {
     }
 
     companion object {
-        const val PREFS_NAME = "Hchat_keyword_notification_config"
+        const val PREFS_NAME = "AeonLab_keyword_notification_config"
 
         const val KEY_ENABLE = "keyword_notify_enable"
         const val KEY_NOTIFY = "keyword_notify_system"

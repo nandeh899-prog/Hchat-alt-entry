@@ -4,7 +4,7 @@ import android.content.Context
 import com.aeonlab.toolkit.preferences.HchatStorage
 
 object SelectedMessagesSettings {
-    const val PREFS_NAME = "Hchat_selected_messages_config"
+    const val PREFS_NAME = "AeonLab_selected_messages_config"
     const val KEY_ENABLE = "selected_messages_enable"
     const val KEY_BACKGROUND_SILENT_SEND = "selected_messages_background_silent_send"
     const val KEY_OFFICIAL_INTERVAL_MINUTES = "selected_messages_official_interval_minutes"

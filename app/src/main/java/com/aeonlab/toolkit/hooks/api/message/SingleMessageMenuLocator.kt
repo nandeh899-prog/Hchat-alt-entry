@@ -15,7 +15,7 @@ object SingleMessageMenuLocator {
     const val HCHAT_FORWARD_MENU_ITEM_ID = 0x48434657
 
     private const val CHAT_VIEWITEMS_PACKAGE = "com.tencent.mm.ui.chatting.viewitems."
-    private const val PREFS_NAME = "Hchat_single_message_menu_method_cache"
+    private const val PREFS_NAME = "AeonLab_single_message_menu_method_cache"
     private const val CACHE_MENU_CREATE = "menu_create_v1"
     private const val CACHE_MENU_CLICK = "menu_click_v1"
 

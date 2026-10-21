@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 object GroupRenameMonitorSettings {
-    const val PREFS_NAME = "Hchat_group_rename_monitor_config"
+    const val PREFS_NAME = "AeonLab_group_rename_monitor_config"
 
     const val KEY_NOTICE_ENABLE = "group_rename_notice_enable"
     const val KEY_NOTICE_TEXT = "group_rename_notice_text"

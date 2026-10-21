@@ -78,7 +78,7 @@ private class FakeVoiceDurationRuntime(
 ) {
     private val methodPrefs = DexMethodCache.prefs(
         context.hostContext(),
-        "Hchat_fake_voice_duration_recorder_method_cache"
+        "AeonLab_fake_voice_duration_recorder_method_cache"
     )
     @Volatile private var installed = false
 

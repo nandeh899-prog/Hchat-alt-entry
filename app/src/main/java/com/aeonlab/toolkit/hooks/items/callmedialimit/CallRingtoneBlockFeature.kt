@@ -369,7 +369,7 @@ private class CallRingtoneBlockHooker(
         DexMethodCache.runtimeKey(context.hostContext(), context.hostClassLoader())
 
     private companion object {
-        const val CACHE_PREFS = "Hchat_call_ringtone_block_method_cache"
+        const val CACHE_PREFS = "AeonLab_call_ringtone_block_method_cache"
         const val CACHE_DIRECTION_METHODS = "direction_methods_v1"
         const val CACHE_MULTI_TALK_DIRECTION_METHODS = "multi_talk_direction_methods_v1"
         const val CACHE_CORE_START_METHODS = "core_start_methods_v1"

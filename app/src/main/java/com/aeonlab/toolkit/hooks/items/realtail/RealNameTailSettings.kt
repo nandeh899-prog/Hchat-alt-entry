@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.realtail
 
 object RealNameTailSettings {
-    const val PREFS_NAME = "Hchat_real_name_tail_config"
+    const val PREFS_NAME = "AeonLab_real_name_tail_config"
     const val KEY_ENABLE = "enable"
     const val KEY_MESSAGE_QUERY = "message_query"
     const val KEY_VISIBLE_QUERY = "visible_query"

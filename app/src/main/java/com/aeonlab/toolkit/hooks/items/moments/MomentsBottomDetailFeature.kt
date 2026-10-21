@@ -448,7 +448,7 @@ private class MomentsBottomDetailRuntime(
     }
 
     companion object {
-        private const val CACHE_PREFS = "Hchat_moments_bottom_detail_method_cache"
+        private const val CACHE_PREFS = "AeonLab_moments_bottom_detail_method_cache"
         private const val CACHE_TIME_METHOD = "time_method"
         private const val CACHE_GROUP_METHOD = "group_method"
         private const val CACHE_PROFILE_FORMATTER_METHOD = "profile_formatter_method"

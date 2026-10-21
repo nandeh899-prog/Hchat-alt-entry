@@ -71,7 +71,7 @@ class RedPacketSettings @JvmOverloads constructor(
     }
 
     companion object {
-        const val PREFS_NAME = "Hchat_redpacket_config"
+        const val PREFS_NAME = "AeonLab_redpacket_config"
 
         const val KEY_ENABLE = "hb_auto_enable"
         const val KEY_SKIP_SELF = "hb_skip_self"

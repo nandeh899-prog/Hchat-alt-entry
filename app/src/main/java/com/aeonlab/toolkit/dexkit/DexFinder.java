@@ -38,7 +38,7 @@ import com.aeonlab.toolkit.xposed.compat.XposedBridge;
 public class DexFinder {
 
     private static final String TAG = "[Hchat:DexFinder]";
-    private static final String CACHE_PREFS = "Hchat_dex_cache";
+    private static final String CACHE_PREFS = "AeonLab_dex_cache";
     private static final String CACHE_COMPLETE = "cache.complete";
     private static final String CACHE_KEY = "cache.key";
     private static final String CACHE_SNAPSHOT_VERSION_KEY = "cache.snapshot.version";

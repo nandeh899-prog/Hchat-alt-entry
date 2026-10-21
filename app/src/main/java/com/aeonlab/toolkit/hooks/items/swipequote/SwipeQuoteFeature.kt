@@ -106,7 +106,7 @@ private class SwipeQuoteAdapter(
     private val repeatMenuTargets = Collections.synchronizedMap(WeakHashMap<MenuItem, QuoteTarget>())
     private val repeatMenuTargetsByGroup = ConcurrentHashMap<Int, QuoteTarget>()
     private val repeatMenuHookedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
-    private val methodCachePrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_swipe_quote_method_cache")
+    private val methodCachePrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_swipe_quote_method_cache")
     @Volatile private var adapterBindInstalled = false
     @Volatile private var recyclerInterceptInstalled = false
     @Volatile private var recyclerOnTouchInstalled = false

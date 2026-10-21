@@ -1213,7 +1213,7 @@ internal class MomentsFakeForwardRuntime(
         private const val MAX_ID_GENERATION_ATTEMPTS = 64
         private const val ID_OFFSET_BOUND = 0x10000L
         private const val TAG = "[Hchat:moments_fake_interaction:fake_forward]"
-        private const val CACHE_PREFS = "Hchat_moments_fake_forward_cache"
+        private const val CACHE_PREFS = "AeonLab_moments_fake_forward_cache"
         private const val CACHE_DELETE_CALLBACK = "fake_forward_delete_callback_v1"
         private const val CACHE_USER_QUERY = "fake_forward_user_query_v1"
         private const val CACHE_USER_QUERY_PREDICATE = "fake_forward_user_query_predicate_v1"

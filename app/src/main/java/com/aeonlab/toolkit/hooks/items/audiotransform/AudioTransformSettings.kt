@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.audiotransform
 
 object AudioTransformSettings {
-    const val PREFS_NAME = "Hchat_audio_transform_config"
+    const val PREFS_NAME = "AeonLab_audio_transform_config"
     const val KEY_MODE = "audio_transform_mode"
     const val KEY_LAST_TALKER = "audio_transform_last_talker"
     const val KEY_SPLIT_ENABLED = "audio_transform_split_enabled"

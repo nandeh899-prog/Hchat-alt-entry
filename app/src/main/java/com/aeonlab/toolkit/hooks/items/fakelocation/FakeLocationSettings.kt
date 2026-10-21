@@ -4,7 +4,7 @@ import android.content.Context
 import com.aeonlab.toolkit.preferences.HchatStorage
 
 object FakeLocationSettings {
-    const val PREFS_NAME = "Hchat_fake_location_config"
+    const val PREFS_NAME = "AeonLab_fake_location_config"
     const val KEY_ENABLE = "fake_location_enable"
     const val KEY_LATITUDE = "fake_location_latitude"
     const val KEY_LONGITUDE = "fake_location_longitude"

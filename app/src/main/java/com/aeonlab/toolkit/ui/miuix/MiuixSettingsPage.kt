@@ -565,7 +565,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
 import kotlin.random.Random
 
-private const val UI_PREFS_NAME = "Hchat_miuix_ui"
+private const val UI_PREFS_NAME = "AeonLab_miuix_ui"
 private const val KEY_FLOATING_NAV = "floating_nav"
 private const val KEY_GLASS_NAV = "glass_nav"
 private const val KEY_SEARCH_HISTORY = "search_history"
@@ -2037,7 +2037,7 @@ private object RedPacketReplyFilePickerBridge {
         }
         return try {
             val name = safeReplyFileName(queryDisplayName(context, uri) ?: uri.lastPathSegment ?: "reply_file")
-            val dir = File(context.filesDir, "Hchat/redpacket_reply").apply { mkdirs() }
+            val dir = File(context.filesDir, "AeonLab/redpacket_reply").apply { mkdirs() }
             val target = File(dir, "${System.currentTimeMillis()}_$name")
             context.contentResolver.openInputStream(uri)?.use { input ->
                 target.outputStream().use { output -> input.copyTo(output) }
@@ -2150,7 +2150,7 @@ private object AutoReplyFilePickerBridge {
         }
         return try {
             val name = safeReplyFileName(queryDisplayName(context, uri) ?: uri.lastPathSegment ?: "reply_file")
-            val dir = File(context.filesDir, "Hchat/auto_reply").apply { mkdirs() }
+            val dir = File(context.filesDir, "AeonLab/auto_reply").apply { mkdirs() }
             val target = File(dir, "${System.currentTimeMillis()}_$name")
             context.contentResolver.openInputStream(uri)?.use { input ->
                 target.outputStream().use { output -> input.copyTo(output) }
@@ -2262,7 +2262,7 @@ private object ScheduledTaskFilePickerBridge {
         }
         return try {
             val name = safeScheduledTaskFileName(queryDisplayName(context, uri) ?: uri.lastPathSegment ?: "scheduled_task_file")
-            val dir = File(context.filesDir, "Hchat/scheduled_task").apply { mkdirs() }
+            val dir = File(context.filesDir, "AeonLab/scheduled_task").apply { mkdirs() }
             val target = File(dir, "${System.currentTimeMillis()}_$name")
             context.contentResolver.openInputStream(uri)?.use { input ->
                 target.outputStream().use { output -> input.copyTo(output) }
@@ -2393,7 +2393,7 @@ private object AudioTransformDocumentBridge {
         }
         return try {
             val name = safeAudioTransformFileName(queryDisplayName(context, uri) ?: uri.lastPathSegment ?: "audio_input")
-            val dir = File(context.filesDir, "Hchat/audio_transform/input").apply { mkdirs() }
+            val dir = File(context.filesDir, "AeonLab/audio_transform/input").apply { mkdirs() }
             val target = File(dir, "${System.currentTimeMillis()}_$name")
             context.contentResolver.openInputStream(uri)?.use { input ->
                 target.outputStream().use { output -> input.copyTo(output) }
@@ -2547,7 +2547,7 @@ private object ConfigImportExportBridge {
         currentActivity = activity
         hookActivityResult(activity.javaClass)
         hookActivityResult(Activity::class.java)
-        val fileName = "Hchat_config_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".json"
+        val fileName = "AeonLab_config_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".json"
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/json"
@@ -38662,12 +38662,12 @@ private fun scriptPluginExportFileName(plugins: List<ScriptPluginRuntime.ScriptP
     val base = if (plugins.size == 1) {
         plugins.first().displayName ?: plugins.first().name.ifBlank { plugins.first().id }
     } else {
-        "Hchat_脚本插件_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}"
+        "AeonLab_脚本插件_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}"
     }
     val safe = base.removeSuffix(".zip")
         .replace(Regex("""[\\/:*?\"<>|]"""), "_")
         .trim()
-        .ifBlank { "Hchat_脚本插件" }
+        .ifBlank { "AeonLab_脚本插件" }
     return "$safe.zip"
 }
 
@@ -44575,7 +44575,7 @@ private fun GroupLinksCard(context: Context) {
             openExternalLink(context, "https://t.me/Hchat_ci")
         })
         InsetDivider()
-        InfoRow(label = "Telegram Group", value = "Hchat_Group", onClick = {
+        InfoRow(label = "Telegram Group", value = "AeonLab_Group", onClick = {
             openExternalLink(context, "https://t.me/Hchat_Group")
         })
     }

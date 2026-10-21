@@ -24,7 +24,7 @@ internal object FavoriteVoiceResolver {
     )
 
     private const val DEFAULT_VOICE_DURATION_MS = 1_000
-    private const val METHOD_CACHE_PREFS = "Hchat_favorite_voice_method_cache"
+    private const val METHOD_CACHE_PREFS = "AeonLab_favorite_voice_method_cache"
     private val favoriteDataPathMethodCache = ConcurrentHashMap<Class<*>, Method>()
     private val favoriteDownloadMethodCache = ConcurrentHashMap<Class<*>, Method>()
 

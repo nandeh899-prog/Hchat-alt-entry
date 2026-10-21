@@ -1181,7 +1181,7 @@ private class MomentsKeywordBlockRuntime(
     companion object {
         private const val BIND_INFO_EXTRA = "hchat_moments_filter_bind_info"
         private const val SELF_RESOLVE_RETRY_MS = 2_000L
-        private const val CACHE_PREFS = "Hchat_moments_keyword_block_method_cache"
+        private const val CACHE_PREFS = "AeonLab_moments_keyword_block_method_cache"
         private const val CACHE_LEGACY_TIMELINE_CREATE_VIEW = "legacy_timeline_create_view"
         private const val CACHE_IMPROVE_TIMELINE_BIND = "improve_timeline_bind"
         private const val CACHE_SNS_TIMELINE_QUERY = "sns_timeline_query_v1"

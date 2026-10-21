@@ -16,7 +16,7 @@ internal data class SnsAvatarMenuMethods(
 )
 
 internal object SnsAvatarMenuLocator {
-    private const val PREFS_NAME = "Hchat_sns_avatar_menu_method_cache"
+    private const val PREFS_NAME = "AeonLab_sns_avatar_menu_method_cache"
     private const val CACHE_CREATE = "avatar_menu_create_v2"
     private const val CACHE_CLICK = "avatar_menu_click_v2"
 

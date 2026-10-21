@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.protobuf
 
 object ProtobufPacketSettings {
-    const val PREFS_NAME = "Hchat_protobuf_packet_config"
+    const val PREFS_NAME = "AeonLab_protobuf_packet_config"
 
     const val KEY_ENABLE = "protobuf_packet_enable"
     const val KEY_CAPTURE_REQUEST = "protobuf_packet_capture_request"

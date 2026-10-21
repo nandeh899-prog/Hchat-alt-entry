@@ -28,7 +28,7 @@ class MemberTitleRenderer(
     private val holderTextFieldCache = ConcurrentHashMap<Class<*>, Field?>()
     private val likelyMsgCache = ConcurrentHashMap<Class<*>, Boolean>()
     private val inSetText = ThreadLocal<Boolean>()
-    private val methodCachePrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_member_title_method_cache")
+    private val methodCachePrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_member_title_method_cache")
     @Volatile private var usernameBindInstalled = false
 
     fun install(): Boolean {

@@ -4,8 +4,8 @@ import android.content.Context
 import com.aeonlab.toolkit.preferences.HchatStorage
 
 object HchatExtraSettings {
-    const val PREFS_NAME = "Hchat_extra_config"
-    private const val LEGACY_PREFS_NAME = "Hchat_wekit_port_config"
+    const val PREFS_NAME = "AeonLab_extra_config"
+    private const val LEGACY_PREFS_NAME = "AeonLab_wekit_port_config"
 
     const val KEY_GROUP_MEMBER_HISTORY = "group_member_history_enable"
     const val KEY_MESSAGE_DETAILS = "message_details_enable"

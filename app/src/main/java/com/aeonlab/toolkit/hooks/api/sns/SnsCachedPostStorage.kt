@@ -374,7 +374,7 @@ internal class SnsCachedPostStorage(
     companion object {
         const val LOCAL_ID_ALIAS = "hchatLocalId"
         private const val SNS_STORAGE_PACKAGE = "com.tencent.mm.plugin.sns.storage."
-        private const val PREFS_NAME = "Hchat_sns_cached_post_storage_cache"
+        private const val PREFS_NAME = "AeonLab_sns_cached_post_storage_cache"
         private const val CACHE_STORAGE_GETTER = "sns_info_storage_getter_v1"
         private const val CACHE_GET_BY_ID = "sns_info_get_by_id_v1"
         private const val CACHE_GET_BY_USER = "sns_info_get_by_user_v1"

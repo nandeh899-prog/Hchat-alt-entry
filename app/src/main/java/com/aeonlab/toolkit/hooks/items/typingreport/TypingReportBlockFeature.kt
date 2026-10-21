@@ -59,7 +59,7 @@ private class TypingReportBlockHooker(
     )
     private val methodPrefs = DexMethodCache.prefs(
         context.hostContext(),
-        "Hchat_block_typing_report_method_cache"
+        "AeonLab_block_typing_report_method_cache"
     )
 
     @Volatile

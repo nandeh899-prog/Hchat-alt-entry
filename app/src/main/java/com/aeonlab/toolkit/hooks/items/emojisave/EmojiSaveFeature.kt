@@ -167,7 +167,7 @@ private class EmojiSaveRuntime(
         val dir = File(hchatMediaRoot(), "Emoji")
         if (!dir.isDirectory && !dir.mkdirs()) return null
         val time = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
-        return File(dir, "Hchat_emoji_$time${fileExtension(data)}")
+        return File(dir, "AeonLab_emoji_$time${fileExtension(data)}")
     }
 
     private fun hchatMediaRoot(): File {

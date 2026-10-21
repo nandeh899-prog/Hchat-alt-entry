@@ -8,7 +8,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 object ConversationTabsStore {
-    const val PREFS_NAME = "Hchat_conversation_tabs"
+    const val PREFS_NAME = "AeonLab_conversation_tabs"
     fun accountKey(): String = ConversationGroupStore.accountKey()
 
     fun load(context: Context): ConversationTabsConfig {

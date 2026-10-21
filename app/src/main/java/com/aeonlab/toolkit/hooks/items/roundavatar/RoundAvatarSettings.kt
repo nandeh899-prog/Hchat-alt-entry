@@ -5,7 +5,7 @@ import com.aeonlab.toolkit.preferences.HchatStorage
 import kotlin.math.roundToInt
 
 object RoundAvatarSettings {
-    const val PREFS_NAME = "Hchat_round_avatar_config"
+    const val PREFS_NAME = "AeonLab_round_avatar_config"
 
     const val KEY_ENABLE = "round_avatar_enable"
     const val KEY_RADIUS_FACTOR = "round_avatar_radius_factor"

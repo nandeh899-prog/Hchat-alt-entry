@@ -1611,7 +1611,7 @@ private class HomeTextColorRuntime(
 
     private companion object {
         const val TAG = "[Hchat:HomeTextColor]"
-        const val METHOD_CACHE_PREFS = "Hchat_home_text_color_method_cache"
+        const val METHOD_CACHE_PREFS = "AeonLab_home_text_color_method_cache"
         const val CACHE_CONVERSATION_MAIN_LEGACY = "conversation_main_get_views_v4"
         const val CACHE_CONVERSATION_GROUP = "conversation_group_get_views_v2"
         const val CACHE_CONTACTS = "contacts_get_view_v1"

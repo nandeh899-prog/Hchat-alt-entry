@@ -4,7 +4,7 @@ import android.content.Context
 import com.aeonlab.toolkit.preferences.HchatStorage
 
 object CustomFriendAvatarSettings {
-    const val PREFS_NAME = "Hchat_custom_friend_avatar_config"
+    const val PREFS_NAME = "AeonLab_custom_friend_avatar_config"
 
     const val KEY_ENABLE = "enable"
     const val KEY_CHAT = "scope_chat"

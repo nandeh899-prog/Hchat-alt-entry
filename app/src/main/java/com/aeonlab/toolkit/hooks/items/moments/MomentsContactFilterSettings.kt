@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.moments
 
 object MomentsContactFilterSettings {
-    const val PREFS_NAME = "Hchat_moments_contact_filter_config"
+    const val PREFS_NAME = "AeonLab_moments_contact_filter_config"
     const val KEY_ENABLE = "moments_contact_filter_enable"
     const val KEY_MODE = "moments_contact_filter_mode"
     const val KEY_TARGETS = "moments_contact_filter_targets"

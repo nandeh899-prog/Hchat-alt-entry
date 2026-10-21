@@ -15,7 +15,7 @@ internal data class SnsForwardLocalMediaMethods(
 )
 
 internal object SnsForwardLocalMediaLocator {
-    private const val PREFS_NAME = "Hchat_sns_forward_local_media_method_cache"
+    private const val PREFS_NAME = "AeonLab_sns_forward_local_media_method_cache"
     private const val CACHE_ROOT = "sns_root_v1"
     private const val CACHE_DIRECTORY = "media_directory_v1"
     private const val CACHE_BIG_IMAGE = "big_image_name_v1"

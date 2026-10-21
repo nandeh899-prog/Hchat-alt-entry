@@ -202,7 +202,7 @@ class MessageBlockSettings(context: Context?) {
     }
 
     companion object {
-        const val PREFS_NAME = "Hchat_message_block_config"
+        const val PREFS_NAME = "AeonLab_message_block_config"
 
         const val KEY_ENABLE = "message_block_enable"
         const val KEY_TEMPLATES = "message_block_templates"

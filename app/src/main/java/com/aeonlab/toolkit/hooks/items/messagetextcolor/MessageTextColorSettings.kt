@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.messagetextcolor
 
 object MessageTextColorSettings {
-    const val PREFS_NAME = "Hchat_message_text_color_config"
+    const val PREFS_NAME = "AeonLab_message_text_color_config"
 
     const val KEY_ENABLE = "message_text_color_enable"
     const val KEY_LEFT_LIGHT_COLOR = "message_text_color_left_light"

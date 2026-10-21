@@ -77,7 +77,7 @@ private class ChatTimeStyleRuntime(
     )
 
     private val prefs = HchatStorage.preferences(context.hostContext(), ChatTimeStyleSettings.PREFS_NAME)
-    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_chat_time_style_method_cache")
+    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_chat_time_style_method_cache")
     private val rootFieldCache = ConcurrentHashMap<Class<*>, Field>()
     private val timeFieldCache = ConcurrentHashMap<Class<*>, Field>()
     private val unsupportedTimeHolders = ConcurrentHashMap.newKeySet<Class<*>>()

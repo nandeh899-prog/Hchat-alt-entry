@@ -11,7 +11,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
 internal object SnsContextMenuLocator {
-    private const val PREFS_NAME = "Hchat_sns_context_menu_method_cache"
+    private const val PREFS_NAME = "AeonLab_sns_context_menu_method_cache"
     private const val CACHE_CREATE = "menu_create_v1"
     private const val CACHE_CLICK = "menu_click_v1"
     private const val CACHE_FOLD_BIND = "fold_menu_bind_v1"

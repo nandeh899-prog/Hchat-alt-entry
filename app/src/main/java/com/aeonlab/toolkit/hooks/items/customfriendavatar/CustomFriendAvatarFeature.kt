@@ -479,7 +479,7 @@ private class CustomFriendAvatarRuntime(
     private companion object {
         const val CONVERSATION_MENU_ID = 0x7A1001
         const val MENU_TITLE = "设置自定义头像"
-        const val CACHE_PREFS = "Hchat_custom_friend_avatar_method_cache"
+        const val CACHE_PREFS = "AeonLab_custom_friend_avatar_method_cache"
         const val CACHE_SCHEMA = "custom_friend_avatar_v1"
         const val CACHE_LEGACY = "legacy_load"
         const val CACHE_WORKER = "worker_constructor"

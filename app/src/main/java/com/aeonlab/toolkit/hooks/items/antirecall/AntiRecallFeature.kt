@@ -43,7 +43,7 @@ class AntiRecallFeature : BaseFeature() {
     }
 
     override fun onFeatureInstall(context: FeatureContext) {
-        methodCachePrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_anti_recall_method_cache")
+        methodCachePrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_anti_recall_method_cache")
         installMessageCache()
         installSelfRecallUpdateHook(context)
         scheduleDexHooks(context)

@@ -13,7 +13,7 @@ import java.util.UUID
 
 object CodexSettings {
 
-    private const val PREFS_NAME = "Hchat_codex_config"
+    private const val PREFS_NAME = "AeonLab_codex_config"
     private const val KEY_SAVED = "codex_saved"
     private const val KEY_BASE_URL = "codex_base_url"
     private const val KEY_API_KEY = "codex_api_key"

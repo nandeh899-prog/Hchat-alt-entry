@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.moments
 
 object MomentsUploadTailSettings {
-    const val PREFS_NAME = "Hchat_moments_upload_tail_config"
+    const val PREFS_NAME = "AeonLab_moments_upload_tail_config"
     const val KEY_ENABLE = "enable"
     const val KEY_SDK_ID = "sdk_id"
     const val KEY_SDK_APP_NAME = "sdk_app_name"

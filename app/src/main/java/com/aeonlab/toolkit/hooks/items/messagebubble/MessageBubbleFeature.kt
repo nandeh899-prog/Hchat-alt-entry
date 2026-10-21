@@ -1009,7 +1009,7 @@ private class MessageBubbleRenderer(
         const val TEXT_BUBBLE_VIEW_RESOURCE = "bkl"
         const val PAT_BUBBLE_CONTAINER_RESOURCE = "kpw"
         const val PAT_BUBBLE_TEXT_VIEW_CLASS = "com.tencent.mm.ui.widget.MMNeat7extView"
-        const val METHOD_CACHE_PREFS = "Hchat_message_bubble_method_cache"
+        const val METHOD_CACHE_PREFS = "AeonLab_message_bubble_method_cache"
         const val CACHE_SCHEMA = "message_bubble_v3"
         const val CACHE_ADAPTER_BIND = "adapter_bind"
         const val VOICE_MESSAGE_TYPE = 34

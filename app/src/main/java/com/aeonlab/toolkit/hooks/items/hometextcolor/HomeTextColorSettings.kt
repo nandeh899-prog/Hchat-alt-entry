@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.hooks.items.hometextcolor
 import com.aeonlab.toolkit.hooks.items.membertitle.MemberTitleStore
 
 object HomeTextColorSettings {
-    const val PREFS_NAME = "Hchat_home_text_color_config"
+    const val PREFS_NAME = "AeonLab_home_text_color_config"
 
     const val KEY_ENABLE = "home_text_color_enable"
     const val KEY_TITLE_COLOR = "home_text_color_title"

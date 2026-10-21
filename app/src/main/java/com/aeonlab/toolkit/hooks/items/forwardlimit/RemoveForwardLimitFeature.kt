@@ -320,7 +320,7 @@ private class RemoveForwardLimitHooker(
         const val WECHAT_DEFAULT_LIMIT = 9
         const val UNLIMITED_COUNT = Int.MAX_VALUE
         const val UIC_FORWARD_MIN_VERSION_CODE = 2841L
-        const val CACHE_PREFS_NAME = "Hchat_remove_forward_limit_method_cache"
+        const val CACHE_PREFS_NAME = "AeonLab_remove_forward_limit_method_cache"
         const val CACHE_SCHEMA = "remove_forward_limit_v3"
         const val CACHE_LIMIT_METHOD = "select_conversation_limit"
         const val CACHE_UIC_CONFIG_METHOD = "uic_contact_config"

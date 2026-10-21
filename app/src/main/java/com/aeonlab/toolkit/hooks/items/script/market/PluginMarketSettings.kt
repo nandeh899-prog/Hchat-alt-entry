@@ -8,7 +8,7 @@ import java.util.UUID
 object PluginMarketSettings {
     const val DEFAULT_SERVICE_URL = "https://hchat.103.97.179.142.sslip.io"
     private const val LEGACY_SERVICE_URL = "https://hchat.103.189.141.120.sslip.io"
-    const val PREFS_NAME = "Hchat_script_plugin_market"
+    const val PREFS_NAME = "AeonLab_script_plugin_market"
 
     private const val KEY_SERVICE_URL = "service_url"
     private const val KEY_INSTALL_ID = "install_id"

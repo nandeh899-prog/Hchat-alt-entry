@@ -4,7 +4,7 @@ import android.content.Context
 import com.aeonlab.toolkit.preferences.HchatStorage
 
 object HideChatMenuSettings {
-    const val PREFS_NAME = "Hchat_hide_chat_menu_config"
+    const val PREFS_NAME = "AeonLab_hide_chat_menu_config"
     const val KEY_ENABLE = "hide_chat_menu_enable"
     const val KEY_TITLES = "hide_chat_menu_titles"
     const val DEFAULT_ENABLE = false

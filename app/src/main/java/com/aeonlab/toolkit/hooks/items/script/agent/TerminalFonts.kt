@@ -20,7 +20,7 @@ object TerminalFonts {
     // 默认跟随系统等宽字体，与加字体功能之前的表现一致
     const val DEFAULT_ID = "system"
 
-    private const val PREFS_NAME = "Hchat_terminal_config"
+    private const val PREFS_NAME = "AeonLab_terminal_config"
     private const val KEY_FONT_ID = "terminal_font_id"
     private const val FONT_DIR = "fonts"
 

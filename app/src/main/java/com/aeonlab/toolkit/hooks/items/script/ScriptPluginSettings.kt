@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.script
 
 object ScriptPluginSettings {
-    const val PREFS_NAME = "Hchat_script_plugin_config"
+    const val PREFS_NAME = "AeonLab_script_plugin_config"
 
     const val KEY_ENABLE = "script_plugin_enable"
     const val KEY_RUN_ON_START = "script_plugin_run_on_start"

@@ -102,7 +102,7 @@ private class VoiceForwardHooker(
         context.hostContext(),
         MessageForwardSettings.PREFS_NAME
     )
-    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "Hchat_voice_forward_method_cache")
+    private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_voice_forward_method_cache")
     private val hookedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
     private val menuMethodsByClickMethod = ConcurrentHashMap<Method, Method>()
     private val favoriteDataPathMethodCache = ConcurrentHashMap<Class<*>, Method>()
@@ -1842,7 +1842,7 @@ private class VoiceForwardHooker(
         val dir = File(hchatMediaRoot(), "Voice")
         if (!dir.isDirectory && !dir.mkdirs()) return null
         val time = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
-        return File(dir, "Hchat_voice_$time.mp3")
+        return File(dir, "AeonLab_voice_$time.mp3")
     }
 
     private fun hchatMediaRoot(): File {
@@ -1882,7 +1882,7 @@ private class VoiceForwardHooker(
         val target = if (saveOutput) {
             buildMergedSaveFile() ?: return null
         } else {
-            File(cacheRoot, "Hchat_merged_voice_${System.currentTimeMillis()}.silk")
+            File(cacheRoot, "AeonLab_merged_voice_${System.currentTimeMillis()}.silk")
         }
         val workDir = File(cacheRoot, "voice_merge_${System.currentTimeMillis()}_${Thread.currentThread().id}")
         if (!workDir.mkdirs()) {
@@ -1961,7 +1961,7 @@ private class VoiceForwardHooker(
         val dir = File(hchatMediaRoot(), "Voice")
         if (!dir.isDirectory && !dir.mkdirs()) return null
         val time = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
-        return File(dir, "Hchat_merged_voice_$time.mp3")
+        return File(dir, "AeonLab_merged_voice_$time.mp3")
     }
 
     private fun appendFile(source: File, target: File): Boolean {

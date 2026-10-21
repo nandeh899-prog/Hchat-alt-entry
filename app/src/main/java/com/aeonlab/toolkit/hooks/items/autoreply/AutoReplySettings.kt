@@ -249,7 +249,7 @@ class AutoReplySettings(context: Context?) {
         apiBaseUrl.trim().lowercase()
 
     companion object {
-        const val PREFS_NAME = "Hchat_auto_reply_config"
+        const val PREFS_NAME = "AeonLab_auto_reply_config"
 
         const val KEY_ENABLE = "auto_reply_enable"
         const val KEY_RULES = "auto_reply_rules_v1"

@@ -1493,7 +1493,7 @@ internal class AutoMessageForwardRuntime(
         private const val IMAGE_BIG_CDN_FILE_TYPE = 1
         private const val IMAGE_MID_CDN_FILE_TYPE = 2
         private const val VIDEO_CDN_FILE_TYPE = 4
-        private const val MEDIA_CACHE_DIRECTORY = "Hchat_auto_message_forward"
+        private const val MEDIA_CACHE_DIRECTORY = "AeonLab_auto_message_forward"
         private const val REQUIRED_LOCAL_STABLE_CHECKS = 1
     }
 }

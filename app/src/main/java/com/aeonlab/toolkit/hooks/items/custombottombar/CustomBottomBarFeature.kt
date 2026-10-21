@@ -959,7 +959,7 @@ private class CustomBottomBarRuntime(
     )
 
     private companion object {
-        const val METHOD_CACHE_PREFS = "Hchat_custom_bottom_bar_method_cache"
+        const val METHOD_CACHE_PREFS = "AeonLab_custom_bottom_bar_method_cache"
         const val CACHE_SCHEMA = "custom_bottom_bar_v1_main_tab"
         const val CACHE_MAIN_TAB_CREATE = "main_tab_create_method"
         const val MAIN_TAB_CREATE_METHOD = "d"

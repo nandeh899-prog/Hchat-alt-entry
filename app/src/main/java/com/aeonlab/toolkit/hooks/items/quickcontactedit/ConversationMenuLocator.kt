@@ -13,7 +13,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
 internal object ConversationMenuLocator {
-    private const val PREFS_NAME = "Hchat_conversation_menu_method_cache"
+    private const val PREFS_NAME = "AeonLab_conversation_menu_method_cache"
     private const val CACHE_CREATE = "context_menu_create_v2"
     private const val CONVERSATION_PACKAGE = "com.tencent.mm.ui.conversation."
     private const val LONG_CLICK_LOG = "headercount:%d, postion:%d"

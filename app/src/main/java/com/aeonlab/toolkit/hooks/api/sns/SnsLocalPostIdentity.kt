@@ -6,7 +6,7 @@ import java.math.BigInteger
 
 internal object SnsLocalPostIdentity {
     private const val LEGACY_PREFIX = 0x4843L
-    private const val REGISTRY_PREFS = "Hchat_moments_fake_interaction_config"
+    private const val REGISTRY_PREFS = "AeonLab_moments_fake_interaction_config"
     private const val REGISTRY_KEY = "fake_forward_ids_v1"
 
     fun createAbove(maxId: Long, positiveOffset: Long): Long? {

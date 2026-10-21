@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.messagebubble
 
 object MessageBubbleSettings {
-    const val PREFS_NAME = "Hchat_message_bubble_config"
+    const val PREFS_NAME = "AeonLab_message_bubble_config"
 
     const val KEY_ENABLE = "message_bubble_enable"
     const val KEY_SEPARATE_DARK_MODE = "message_bubble_separate_dark_mode"

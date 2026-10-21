@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.swipequote
 
 object SwipeQuoteSettings {
-    const val PREFS_NAME = "Hchat_swipe_quote_config"
+    const val PREFS_NAME = "AeonLab_swipe_quote_config"
     const val KEY_ENABLE = "swipe_quote_enable"
     const val KEY_REPEAT_ENABLE = "swipe_repeat_enable"
     const val KEY_REPEAT_MENU_ENABLE = "repeat_menu_enable"

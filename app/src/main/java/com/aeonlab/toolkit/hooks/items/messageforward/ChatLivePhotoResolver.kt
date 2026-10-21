@@ -226,7 +226,7 @@ private data class ChatLivePhotoMethods(
 )
 
 private object ChatLivePhotoLocator {
-    private const val PREFS_NAME = "Hchat_chat_live_photo_method_cache"
+    private const val PREFS_NAME = "AeonLab_chat_live_photo_method_cache"
     private const val CACHE_STORAGE_GETTER = "storage_getter_v1"
     private const val CACHE_RECORD_QUERY = "record_query_v1"
     private const val CACHE_MEDIA_FACTORY = "media_factory_v1"

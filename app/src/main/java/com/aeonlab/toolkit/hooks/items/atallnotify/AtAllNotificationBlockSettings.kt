@@ -4,7 +4,7 @@ import android.content.Context
 import com.aeonlab.toolkit.preferences.HchatStorage
 
 object AtAllNotificationBlockSettings {
-    const val PREFS_NAME = "Hchat_block_at_all_notification_config"
+    const val PREFS_NAME = "AeonLab_block_at_all_notification_config"
     const val KEY_ENABLE = "block_at_all_notification_enable"
     const val KEY_GROUPS = "block_at_all_notification_groups"
     const val DEFAULT_ENABLE = false

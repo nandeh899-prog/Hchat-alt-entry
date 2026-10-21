@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.typingreport
 
 object TypingReportBlockSettings {
-    const val PREFS_NAME = "Hchat_block_typing_report_config"
+    const val PREFS_NAME = "AeonLab_block_typing_report_config"
 
     const val KEY_ENABLE = "block_typing_report_enable"
 

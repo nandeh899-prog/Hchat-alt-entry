@@ -107,7 +107,7 @@ class CustomNotificationSettings(context: Context?) {
     }
 
     companion object {
-        const val PREFS_NAME = "Hchat_custom_notification"
+        const val PREFS_NAME = "AeonLab_custom_notification"
         const val KEY_ENABLE = "custom_notification_enable"
         const val KEY_RULES = "custom_notification_rules"
         const val KEY_DEFAULT_PRIVATE = "custom_notification_default_private"

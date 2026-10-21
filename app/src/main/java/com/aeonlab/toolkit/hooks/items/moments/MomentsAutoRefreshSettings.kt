@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.moments
 
 object MomentsAutoRefreshSettings {
-    const val PREFS_NAME = "Hchat_moments_auto_refresh_config"
+    const val PREFS_NAME = "AeonLab_moments_auto_refresh_config"
     const val KEY_ENABLE = "enable"
     const val KEY_INTERVAL_SECONDS = "interval_seconds"
     const val KEY_TIME_WINDOW_ENABLE = "time_window_enable"

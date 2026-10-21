@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 object GroupLeaveMonitorSettings {
-    const val PREFS_NAME = "Hchat_group_leave_monitor_config"
+    const val PREFS_NAME = "AeonLab_group_leave_monitor_config"
 
     const val KEY_ENABLE = "group_leave_monitor_enable"
     const val KEY_LEAVE_NOTICE_TEXT = "group_leave_monitor_notice_text"

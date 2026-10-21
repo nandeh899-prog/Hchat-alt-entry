@@ -23,7 +23,7 @@ class TransferSuccessFeedback(
     private val notifier = RedPacketNotifier(
         context,
         "[Hchat:TransferNotifier]",
-        "Hchat_transfer_notify_manual_v1",
+        "AeonLab_transfer_notify_manual_v1",
         "Hchat 自动收款提醒"
     )
     private val handled = ConcurrentHashMap.newKeySet<String>()

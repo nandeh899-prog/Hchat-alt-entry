@@ -49,7 +49,7 @@ class QQMusicOrderSettings(context: Context?) {
     }.getOrDefault(defaultValue)
 
     companion object {
-        const val PREFS_NAME = "Hchat_qq_music_order_config"
+        const val PREFS_NAME = "AeonLab_qq_music_order_config"
 
         const val KEY_ENABLE = "qq_music_order_enable"
         const val KEY_INTERCEPT_OWN_COMMAND = "qq_music_order_intercept_own_command"

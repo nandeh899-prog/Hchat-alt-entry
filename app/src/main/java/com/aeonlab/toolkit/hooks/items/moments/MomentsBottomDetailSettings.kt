@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 object MomentsBottomDetailSettings {
-    const val PREFS_NAME = "Hchat_moments_bottom_detail_config"
+    const val PREFS_NAME = "AeonLab_moments_bottom_detail_config"
     const val KEY_ENABLE = "moments_bottom_detail_enable"
     const val KEY_TEXT_FORMAT = "moments_bottom_detail_text_format"
     const val KEY_TIME_FORMAT = "moments_bottom_detail_time_format"

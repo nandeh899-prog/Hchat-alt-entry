@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 object ConversationGroupRuntime {
     private const val TAG = "[Hchat:ConversationGroup]"
-    private const val CACHE_PREFS = "Hchat_conversation_group_method_cache"
+    private const val CACHE_PREFS = "AeonLab_conversation_group_method_cache"
     private const val CACHE_QUERY = "main_conversation_query"
     private const val CACHE_SHARE_RECENT_ADAPTER_RESET = "share_recent_adapter_reset"
     private const val CACHE_SHARE_RECENT_FORWARD_QUERY = "share_recent_forward_query"

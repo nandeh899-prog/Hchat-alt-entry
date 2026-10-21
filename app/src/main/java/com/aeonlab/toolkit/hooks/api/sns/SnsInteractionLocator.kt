@@ -224,7 +224,7 @@ internal class SnsInteractionLocator(
     companion object {
         const val SNS_INFO_CLASS = "com.tencent.mm.plugin.sns.storage.SnsInfo"
 
-        private const val PREFS_NAME = "Hchat_sns_interaction_method_cache"
+        private const val PREFS_NAME = "AeonLab_sns_interaction_method_cache"
         private const val CACHE_LIKE = "native_like_v1"
         private const val CACHE_COMMENT = "native_comment_v1"
         private const val CACHE_COMMENT_GUARDS = "native_comment_guards_v2"
