@@ -54,7 +54,7 @@ public class SettingsInjector {
 
     private static final String TAG = "[Hchat:SettingsInjector]";
     private static final String PREFS_KEY = "Hchat_settings";
-    private static final String PREFS_TITLE = "Hchat";
+    private static final String PREFS_TITLE = "AeonLab";
     private static final String MODULE_TAG = "Hchat";
     private static final boolean VERBOSE = false;
 

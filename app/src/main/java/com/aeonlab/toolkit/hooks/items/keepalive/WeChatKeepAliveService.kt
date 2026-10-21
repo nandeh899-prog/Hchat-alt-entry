@@ -48,7 +48,7 @@ class WeChatKeepAliveService : Service() {
     private fun buildNotification(): Notification {
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "Hchat 微信保活", NotificationManager.IMPORTANCE_MIN).apply {
+            val channel = NotificationChannel(CHANNEL_ID, "AeonLab 微信保活", NotificationManager.IMPORTANCE_MIN).apply {
                 setShowBadge(false)
                 enableLights(false)
                 enableVibration(false)
@@ -64,7 +64,7 @@ class WeChatKeepAliveService : Service() {
         }
         return builder
             .setSmallIcon(R.drawable.ic_launcher)
-            .setContentTitle("Hchat 微信强保活")
+            .setContentTitle("AeonLab 微信强保活")
             .setContentText("正在尝试保持微信息屏运行")
             .setOngoing(true)
             .setShowWhen(false)

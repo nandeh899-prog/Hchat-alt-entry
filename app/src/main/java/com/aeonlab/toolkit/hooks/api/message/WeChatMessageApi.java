@@ -771,7 +771,7 @@ public final class WeChatMessageApi {
                     callback.onResult(success, error);
                 } catch (Throwable ignored) {}
             }
-        }, "HchatTextSender").start();
+        }, "AeonLabTextSender").start();
     }
 
     private Object newTextRequest(String talker, String text) throws Throwable {
@@ -953,7 +953,7 @@ public final class WeChatMessageApi {
         args[3] = talker;
         args[4] = "";
         args[5] = cachedThumbData(xml);
-        args[6] = "Hchat_xml_" + System.currentTimeMillis();
+        args[6] = "AeonLab_xml_" + System.currentTimeMillis();
         args[7] = "";
         args[8] = msgSource != null ? msgSource : "";
 

@@ -155,7 +155,7 @@ internal class ChatLivePhotoResolver(
     private fun materializeVideo(path: String, msgId: Long): String? {
         val direct = File(path)
         if (direct.isFile && direct.length() > 0L) return direct.absolutePath
-        val directory = File(context.hostContext().cacheDir, "Hchat_live_photo")
+        val directory = File(context.hostContext().cacheDir, "AeonLab_live_photo")
         if (!directory.isDirectory && !directory.mkdirs()) return null
         val target = File(directory, "live_${msgId}_${Integer.toHexString(path.hashCode())}.mp4")
         if (target.isFile && target.length() > 0L) return target.absolutePath

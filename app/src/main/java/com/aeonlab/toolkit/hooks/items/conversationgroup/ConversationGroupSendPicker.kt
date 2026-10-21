@@ -89,7 +89,7 @@ internal object ConversationGroupSendPicker {
     }
 
     fun materialize(context: Context, picked: PickedFile): MaterializedFile {
-        val root = File(context.cacheDir, "hchat_conversation_group_send").apply { mkdirs() }
+        val root = File(context.cacheDir, "aeonlab_conversation_group_send").apply { mkdirs() }
         cleanup(root)
         val target = uniqueFile(root, picked.displayName)
         context.contentResolver.openInputStream(picked.uri)?.use { input ->

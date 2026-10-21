@@ -1704,7 +1704,7 @@ private object ScriptPluginAgentAttachmentPickerBridge {
                         if (attachments.isNotEmpty()) {
                             Handler(Looper.getMainLooper()).post { pending.callback(attachments) }
                         }
-                    }, "Hchat-Agent-Attachment-Copy").start()
+                    }, "AeonLab-Agent-Attachment-Copy").start()
                 }
             })
             hookedClasses.add(clazz)
@@ -1859,7 +1859,7 @@ private object PluginMarketExtraFilePickerBridge {
                         if (files.isNotEmpty()) {
                             Handler(Looper.getMainLooper()).post { result.callback(files) }
                         }
-                    }, "Hchat-Plugin-Market-Files").start()
+                    }, "AeonLab-Plugin-Market-Files").start()
                 }
             })
         }.onFailure {
@@ -2952,8 +2952,8 @@ private fun MainSettingsPage(
     }
     val activeTab = tabs.getOrElse(pagerState.currentPage) { MainTab.PRACTICAL }
     PageScaffold(
-        title = "Hchat",
-        largeTitle = "Hchat",
+        title = "AeonLab",
+        largeTitle = "AeonLab",
         scrollBehavior = scrollBehavior,
         bottomBar = {
             MainNavigationBar(
@@ -3074,7 +3074,7 @@ private fun MainSettingsPage(
                         item {
                             Text(
                                 modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
-                                text = "Hchat",
+                                text = "AeonLab",
                                 color = MiuixTheme.colorScheme.onBackgroundVariant,
                                 textAlign = TextAlign.Center
                             )
@@ -8918,7 +8918,7 @@ private fun showMomentsFakeLikeExclusionPicker(
                 )
             }
         }
-    }, "Hchat-MomentsFakeLikeExclude").apply { isDaemon = true }.start()
+    }, "AeonLab-MomentsFakeLikeExclude").apply { isDaemon = true }.start()
 }
 
 private fun confirmClearMomentsFakeInteractions(
@@ -24275,7 +24275,7 @@ private object AudioTransformSettingsPage {
                 running = false
                 updateResult(message, toast = true)
             }
-        }, "Hchat-AudioTransform-Send")
+        }, "AeonLab-AudioTransform-Send")
         if (shouldSplit) splitWorker.set(worker)
         worker.start()
     }
@@ -24338,7 +24338,7 @@ private object AudioTransformSettingsPage {
                 running = false
                 updateResult(result.second, toast = true)
             }
-        }, "Hchat-AudioTransform-Save").start()
+        }, "AeonLab-AudioTransform-Save").start()
     }
 
     fun launchSavePicker() {
@@ -30880,7 +30880,7 @@ fun ScriptPluginAgentWorkspacePage(
                         error
                     )
                 }
-            }, "Hchat-Agent-Empty-Session-Delete").start()
+            }, "AeonLab-Agent-Empty-Session-Delete").start()
             return
         }
         ScriptPluginAgentSessionStore.revive(activeSessionId)
@@ -31145,7 +31145,7 @@ fun ScriptPluginAgentWorkspacePage(
                     Toast.makeText(context, "$reason\n暂存修改已保留，可直接重试", Toast.LENGTH_LONG).show()
                 }
             }
-        }, "Hchat-Script-Agent-Workspace-Apply").start()
+        }, "AeonLab-Script-Agent-Workspace-Apply").start()
     }
 
     fun prepareWorkspaceChange(
@@ -31227,7 +31227,7 @@ fun ScriptPluginAgentWorkspacePage(
                     Toast.makeText(context, error.message ?: "写入插件失败", Toast.LENGTH_LONG).show()
                 }
             }
-        }, "Hchat-Script-Agent-Write").start()
+        }, "AeonLab-Script-Agent-Write").start()
     }
 
     fun prepareAgentDraft(
@@ -31306,7 +31306,7 @@ fun ScriptPluginAgentWorkspacePage(
                     Toast.makeText(context, error.message ?: "删除插件失败", Toast.LENGTH_LONG).show()
                 }
             }
-        }, "Hchat-Script-Agent-Delete").start()
+        }, "AeonLab-Script-Agent-Delete").start()
     }
 
     fun preparePluginDelete(messageIndex: Int, requestedId: String, requireConfirmation: Boolean) {
@@ -31338,7 +31338,7 @@ fun ScriptPluginAgentWorkspacePage(
                 .onFailure { error ->
                     com.aeonlab.toolkit.utils.HLog.e("[Hchat:ScriptAgent] 清理恢复工作区失败", error)
                 }
-        }, "Hchat-Script-Agent-Workspace-Discard").start()
+        }, "AeonLab-Script-Agent-Workspace-Discard").start()
     }
 
     fun sendMessage(
@@ -31972,7 +31972,7 @@ fun ScriptPluginAgentWorkspacePage(
                     }
                 }
             }
-        }, "Hchat-Script-Agent-Chat").start()
+        }, "AeonLab-Script-Agent-Chat").start()
         return true
     }
 
@@ -32087,7 +32087,7 @@ fun ScriptPluginAgentWorkspacePage(
                     Toast.makeText(context, it.message ?: "上下文压缩失败", Toast.LENGTH_LONG).show()
                 }
             }
-        }, "Hchat-Script-Agent-Compact").start()
+        }, "AeonLab-Script-Agent-Compact").start()
     }
 
     fun saveConfig() {
@@ -32175,7 +32175,7 @@ fun ScriptPluginAgentWorkspacePage(
                     Toast.makeText(context, CodexSettings.friendlyError(it), Toast.LENGTH_LONG).show()
                 }
             }
-        }, "Hchat-Codex-Test").start()
+        }, "AeonLab-Codex-Test").start()
     }
 
     fun selectProfile(profile: ScriptPluginAgentProfile) {
@@ -32289,7 +32289,7 @@ fun ScriptPluginAgentWorkspacePage(
                     Toast.makeText(context, it.message ?: "连接失败", Toast.LENGTH_LONG).show()
                 }
             }
-        }, "Hchat-Script-Agent-Test").start()
+        }, "AeonLab-Script-Agent-Test").start()
     }
 
     fun draftForMessages(messages: List<ScriptPluginAgentChatMessage>): ScriptPluginAgentDraft? {
@@ -32374,7 +32374,7 @@ fun ScriptPluginAgentWorkspacePage(
                                         ).show()
                                     }
                                 }
-                            }, "Hchat-Agent-History-Save").start()
+                            }, "AeonLab-Agent-History-Save").start()
                         }
                     },
                     onFailure = { error ->
@@ -32384,7 +32384,7 @@ fun ScriptPluginAgentWorkspacePage(
                     }
                 )
             }
-        }, "Hchat-Agent-History-Change").start()
+        }, "AeonLab-Agent-History-Change").start()
     }
 
     fun removeMessageTree(index: Int): Pair<List<ScriptPluginAgentChatMessage>, List<ScriptPluginAgentChatMessage>> {
@@ -32449,7 +32449,7 @@ fun ScriptPluginAgentWorkspacePage(
                     Toast.makeText(context, error.message ?: "创建分支失败", Toast.LENGTH_LONG).show()
                 }
             }
-        }, "Hchat-Agent-Create-Branch").start()
+        }, "AeonLab-Agent-Create-Branch").start()
     }
 
     fun editAndResendMessage(index: Int) {
@@ -32716,7 +32716,7 @@ fun ScriptPluginAgentWorkspacePage(
             }.onFailure { error ->
                 com.aeonlab.toolkit.utils.HLog.e("[Hchat:ScriptAgent] 保存历史会话排序失败", error)
             }
-        }, "Hchat-Agent-Session-Order").start()
+        }, "AeonLab-Agent-Session-Order").start()
     }
 
     fun deleteSession(session: ScriptPluginAgentSession) {
@@ -32892,7 +32892,7 @@ fun ScriptPluginAgentWorkspacePage(
             resumeState = null
             Thread({
                 ScriptPluginAgentWorkspaceTools.discard(context, pending.change)
-            }, "Hchat-Script-Agent-Workspace-Discard").start()
+            }, "AeonLab-Script-Agent-Workspace-Discard").start()
             recordFileOperation(pending.messageIndex, "已取消插件工作区变更")
         }
         WindowDialog(
@@ -37492,7 +37492,7 @@ fun ScriptPluginSettingsContent(
                             pluginListVersion++
                         }
                     }
-                }, "Hchat-Script-Global").start()
+                }, "AeonLab-Script-Global").start()
             }
         }
         if (showPluginRootDialog) {
@@ -37577,7 +37577,7 @@ fun ScriptPluginSettingsContent(
                                         ).show()
                                     }
                                 }
-                            }, "Hchat-Script-${plugin.id}").start()
+                            }, "AeonLab-Script-${plugin.id}").start()
                         }
                     )
                     if (index != plugins.lastIndex) InsetDivider()
@@ -37726,7 +37726,7 @@ fun ScriptPluginManagerPage(
         onDispose {
             pageActive.set(false)
             activeImportSessionId.getAndSet(null)?.let { sessionId ->
-                Thread({ ScriptPluginManager.discardImport(context, sessionId) }, "Hchat-Plugin-Import-Cleanup").start()
+                Thread({ ScriptPluginManager.discardImport(context, sessionId) }, "AeonLab-Plugin-Import-Cleanup").start()
             }
         }
     }
@@ -37820,7 +37820,7 @@ fun ScriptPluginManagerPage(
                         result.getOrNull()?.let { inspection ->
                             Thread(
                                 { ScriptPluginManager.discardImport(context, inspection.sessionId) },
-                                "Hchat-Plugin-Import-Late-Cleanup"
+                                "AeonLab-Plugin-Import-Late-Cleanup"
                             ).start()
                         }
                         return@post
@@ -37835,7 +37835,7 @@ fun ScriptPluginManagerPage(
                         onFailure = { showScriptPluginManagerError(context, it) }
                     )
                 }
-            }, "Hchat-Plugin-Import-Inspect").start()
+            }, "AeonLab-Plugin-Import-Inspect").start()
         }
     }
 
@@ -38091,7 +38091,7 @@ fun ScriptPluginManagerPage(
                 importInspection = null
                 Thread(
                     { ScriptPluginManager.discardImport(context, inspection.sessionId) },
-                    "Hchat-Plugin-Import-Discard"
+                    "AeonLab-Plugin-Import-Discard"
                 ).start()
             },
             onConfirm = {
@@ -38654,7 +38654,7 @@ private fun launchScriptPluginExport(
                     onFailure = { showScriptPluginManagerError(context, it) }
                 )
             }
-        }, "Hchat-Plugin-Export").start()
+        }, "AeonLab-Plugin-Export").start()
     }
 }
 
@@ -44571,7 +44571,7 @@ private fun ConfigBackupCard(
 @Composable
 private fun GroupLinksCard(context: Context) {
     SettingsCard {
-        InfoRow(label = "Telegram Channel", value = "Hchat_ci", onClick = {
+        InfoRow(label = "Telegram Channel", value = "AeonLab_ci", onClick = {
             openExternalLink(context, "https://t.me/Hchat_ci")
         })
         InsetDivider()

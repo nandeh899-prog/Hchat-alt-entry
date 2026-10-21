@@ -1112,7 +1112,7 @@ class WeChatSnsApi(
 
     private fun buildVideoThumb(videoPath: String): String? {
         val context = hostContext ?: return null
-        val thumbDir = File(context.cacheDir, "Hchat_sns_thumb")
+        val thumbDir = File(context.cacheDir, "AeonLab_sns_thumb")
         if (!thumbDir.exists() && !thumbDir.mkdirs()) return null
         val thumb = File(thumbDir, md5(videoPath) + ".jpg")
         if (thumb.isFile && thumb.length() > 0L) return thumb.absolutePath

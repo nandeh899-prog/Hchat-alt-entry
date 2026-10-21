@@ -597,7 +597,7 @@ private class QuickContactEditRuntime(
                     showLabelPicker(target, labels)
                 }
             }
-        }, "Hchat-QuickContactLabels").start()
+        }, "AeonLab-QuickContactLabels").start()
     }
 
     private fun showLabelPicker(target: MenuTarget, labels: List<ContactLabelBean>) {
@@ -682,7 +682,7 @@ private class QuickContactEditRuntime(
                 loading.close()
                 postAfterOverlay(activity) { toast(activity, result.message) }
             }
-        }, "Hchat-QuickContactUpdate").start()
+        }, "AeonLab-QuickContactUpdate").start()
     }
 
     private fun postAfterOverlay(activity: Activity, action: () -> Unit) {

@@ -94,7 +94,7 @@ object CustomFriendAvatarPicker {
                             result.trackConfiguredFriend
                         )
                         result.activity.runOnUiThread { result.callback(success) }
-                    }, "Hchat-CustomAvatarSave").start()
+                    }, "AeonLab-CustomAvatarSave").start()
                 }
             })
         }.onFailure { hookedClasses.remove(clazz) }

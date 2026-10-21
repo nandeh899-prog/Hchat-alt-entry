@@ -49,13 +49,13 @@ import java.util.regex.Pattern
 object KeywordNotificationRuntime {
     private const val TAG = "[Hchat:KeywordNotification]"
     private const val CHANNEL_PREFIX = "Hchat_keyword_notification_"
-    private const val CHANNEL_NAME = "Hchat 关键词通知"
+    private const val CHANNEL_NAME = "AeonLab 关键词通知"
     private const val EXTRA_KEYWORD_NOTIFY = "hchat_keyword_notification"
     private const val AVATAR_CACHE_MAX_ENTRIES = 64
     private val notifySeq = AtomicInteger(0)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-KeywordNotify").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-KeywordNotify").apply { isDaemon = true }
     }
     private val avatarCache = Collections.synchronizedMap(
         object : LinkedHashMap<String, Bitmap?>(AVATAR_CACHE_MAX_ENTRIES, 0.75f, true) {

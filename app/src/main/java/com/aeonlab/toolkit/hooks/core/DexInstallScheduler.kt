@@ -27,7 +27,7 @@ object DexInstallScheduler {
     private val dexKitExecutionLock = Any()
     private val executor = ThreadPoolExecutor(
         1, 1, 0L, TimeUnit.MILLISECONDS, LinkedBlockingQueue<Runnable>(),
-        { runnable -> Thread(runnable, "Hchat-DexInstall").apply { isDaemon = true } }
+        { runnable -> Thread(runnable, "AeonLab-DexInstall").apply { isDaemon = true } }
     )
 
     fun schedule(

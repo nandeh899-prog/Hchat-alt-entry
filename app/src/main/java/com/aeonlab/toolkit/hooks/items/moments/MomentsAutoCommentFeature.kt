@@ -56,7 +56,7 @@ private class MomentsAutoCommentRuntime(
 
     private val prefs = HchatStorage.preferences(context.hostContext(), MomentsAutoCommentSettings.PREFS_NAME)
     private val worker = ScheduledThreadPoolExecutor(1) { runnable ->
-        Thread(runnable, "Hchat-MomentsAutoComment").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-MomentsAutoComment").apply { isDaemon = true }
     }.apply { removeOnCancelPolicy = true }
     private val stateLock = Any()
     private val dailyCommentLock = Any()

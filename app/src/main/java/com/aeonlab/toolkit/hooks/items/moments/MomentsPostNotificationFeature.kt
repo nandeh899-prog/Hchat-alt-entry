@@ -62,7 +62,7 @@ private class MomentsPostNotificationRuntime(
     private val prefs = HchatStorage.preferences(context, MomentsPostNotificationSettings.PREFS_NAME)
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-MomentsPostNotify").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-MomentsPostNotify").apply { isDaemon = true }
     }
     private val observed = LinkedHashSet<String>()
     private val avatarCache = LinkedHashMap<String, Bitmap>()

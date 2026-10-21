@@ -102,10 +102,10 @@ object CustomNotificationRuntime {
     private val receiverRegistered = java.util.concurrent.atomic.AtomicBoolean(false)
     private val notifySeq = AtomicInteger(0)
     private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-CustomNotify").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-CustomNotify").apply { isDaemon = true }
     }
     private val quickReplyExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-QuickReply").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-QuickReply").apply { isDaemon = true }
     }
     private val mainHandler = Handler(Looper.getMainLooper())
     private val avatarCache = ConcurrentHashMap<String, Bitmap?>()
@@ -1023,7 +1023,7 @@ object CustomNotificationRuntime {
         val channelId = CHANNEL_PREFIX + "s${if (rule.sound) "1" else "0"}_v${if (rule.vibrate) "1" else "0"}_${rule.ringtone.hashCode()}"
         if (Build.VERSION.SDK_INT >= 26) {
             trimOldChannels(manager)
-            val channel = NotificationChannel(channelId, "Hchat 自定义通知", NotificationManager.IMPORTANCE_HIGH)
+            val channel = NotificationChannel(channelId, "AeonLab 自定义通知", NotificationManager.IMPORTANCE_HIGH)
             channel.enableVibration(rule.vibrate)
             channel.vibrationPattern = if (rule.vibrate) longArrayOf(0, 250, 250, 250) else longArrayOf(0)
             channel.setSound(null, null)

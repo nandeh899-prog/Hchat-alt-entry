@@ -74,7 +74,7 @@ private class MomentsAutoRefreshRuntime(
         if (scheduler?.isShutdown == false) return
         lastAttemptAt = 0L
         scheduler = Executors.newSingleThreadScheduledExecutor { runnable ->
-            Thread(runnable, "Hchat-MomentsAutoRefresh").apply { isDaemon = true }
+            Thread(runnable, "AeonLab-MomentsAutoRefresh").apply { isDaemon = true }
         }.also { it.scheduleWithFixedDelay(::tick, 1, 1, TimeUnit.SECONDS) }
     }
 

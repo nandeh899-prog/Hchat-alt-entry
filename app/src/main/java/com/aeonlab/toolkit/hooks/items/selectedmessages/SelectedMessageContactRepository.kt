@@ -35,7 +35,7 @@ internal object SelectedMessageContactRepository {
         Thread({
             runCatching { load(friendsOnly = false) }
             warming.set(false)
-        }, "Hchat-SelectedMessageContactsWarmup").start()
+        }, "AeonLab-SelectedMessageContactsWarmup").start()
     }
 
     private fun loadFresh(friendsOnly: Boolean): List<VoiceForwardMiuixDialog.ContactItem> {

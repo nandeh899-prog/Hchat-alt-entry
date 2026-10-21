@@ -18,11 +18,11 @@ internal class ScriptAsyncScope(private val pluginName: () -> String) {
     private var disposed = false
     private val executor = ThreadPoolExecutor(
         2, 2, 30L, TimeUnit.SECONDS, ArrayBlockingQueue<Runnable>(128),
-        { runnable -> Thread(runnable, "Hchat-Script-Async").apply { isDaemon = true } },
+        { runnable -> Thread(runnable, "AeonLab-Script-Async").apply { isDaemon = true } },
         ThreadPoolExecutor.AbortPolicy()
     ).apply { allowCoreThreadTimeOut(true) }
     private val timer = ScheduledThreadPoolExecutor(1) { runnable ->
-        Thread(runnable, "Hchat-Script-Timeout").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-Script-Timeout").apply { isDaemon = true }
     }.apply {
         removeOnCancelPolicy = true
         setKeepAliveTime(30L, TimeUnit.SECONDS)

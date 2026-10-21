@@ -27,7 +27,7 @@ internal object ConversationGroupTask {
     private val jobs = ConcurrentHashMap.newKeySet<Job<*>>()
     private val executor = ThreadPoolExecutor(
         1, 1, 30L, TimeUnit.SECONDS, ArrayBlockingQueue<Runnable>(8),
-        { runnable -> Thread(runnable, "Hchat-ConversationGroupMenu").apply { isDaemon = true } },
+        { runnable -> Thread(runnable, "AeonLab-ConversationGroupMenu").apply { isDaemon = true } },
         ThreadPoolExecutor.AbortPolicy()
     )
 

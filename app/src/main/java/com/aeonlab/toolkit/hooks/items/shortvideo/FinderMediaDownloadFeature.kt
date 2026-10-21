@@ -287,8 +287,8 @@ private class FinderMediaDownloadHooker(
 
     private fun downloadMedia(media: FinderMediaDownloadSupport.FinderMedia) {
         val threadName = when (media.type) {
-            FinderMediaDownloadSupport.MEDIA_TYPE_IMAGE -> "Hchat-FinderImageDownload"
-            FinderMediaDownloadSupport.MEDIA_TYPE_VIDEO -> "Hchat-FinderVideoDownload"
+            FinderMediaDownloadSupport.MEDIA_TYPE_IMAGE -> "AeonLab-FinderImageDownload"
+            FinderMediaDownloadSupport.MEDIA_TYPE_VIDEO -> "AeonLab-FinderVideoDownload"
             else -> {
                 toast("未知的媒体类型，无法下载")
                 return

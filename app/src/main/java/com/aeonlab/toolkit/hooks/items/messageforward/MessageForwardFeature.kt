@@ -115,7 +115,7 @@ private class MessageForwardHooker(
     @Volatile private var lastFavoriteHandledAt = 0L
     private val messageIdMethods = ConcurrentHashMap<Class<*>, Method>()
     private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-MessageForward").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-MessageForward").apply { isDaemon = true }
     }
     private val systemShare = MessageForwardSystemShare(context)
     private val chatLivePhotoResolver = ChatLivePhotoResolver(context, logger)

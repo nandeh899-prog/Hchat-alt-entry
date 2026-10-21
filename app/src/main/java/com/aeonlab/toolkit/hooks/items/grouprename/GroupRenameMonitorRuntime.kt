@@ -255,7 +255,7 @@ class GroupRenameMonitorRuntime(
             }.onFailure {
                 logger("改名提醒发送异常: $groupId/${rename.memberId}", it)
             }
-        }, "Hchat-GroupRenameMonitor").start()
+        }, "AeonLab-GroupRenameMonitor").start()
     }
 
     private fun replyVariables(groupId: String, rename: MemberRename): ReplyVariables {

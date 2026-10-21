@@ -589,7 +589,7 @@ class GroupLeaveMonitorRuntime(
             }.onFailure {
                 logger("进退群自动回复异常: $groupId/$memberId/$type", it)
             }
-        }, "Hchat-GroupMemberReply").start()
+        }, "AeonLab-GroupMemberReply").start()
     }
 
     private fun resolveReplyMemberDisplay(

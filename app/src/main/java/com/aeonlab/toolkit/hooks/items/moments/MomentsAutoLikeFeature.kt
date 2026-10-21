@@ -56,7 +56,7 @@ private class MomentsAutoLikeRuntime(
 
     private val prefs = HchatStorage.preferences(context.hostContext(), MomentsAutoLikeSettings.PREFS_NAME)
     private val worker = ScheduledThreadPoolExecutor(1) { runnable ->
-        Thread(runnable, "Hchat-MomentsAutoLike").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-MomentsAutoLike").apply { isDaemon = true }
     }.apply { removeOnCancelPolicy = true }
     private val stateLock = Any()
     private val dailyLikeLock = Any()

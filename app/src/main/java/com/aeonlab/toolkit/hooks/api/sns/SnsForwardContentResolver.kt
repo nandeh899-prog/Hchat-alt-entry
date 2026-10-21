@@ -545,7 +545,7 @@ internal class SnsForwardContentResolver(
         if (path.isBlank()) return null
         val file = File(path)
         if (file.isFile && file.length() in 1..maxBytes) return file.absolutePath
-        val dir = File(context.hostContext().cacheDir, "Hchat_sns_forward")
+        val dir = File(context.hostContext().cacheDir, "AeonLab_sns_forward")
         if (!dir.isDirectory && !dir.mkdirs()) return null
         val target = File(dir, "local_${Integer.toHexString(cacheKey.hashCode())}.$extension")
         if (target.isFile && target.length() in 1..maxBytes) return target.absolutePath
@@ -608,7 +608,7 @@ internal class SnsForwardContentResolver(
         canceled: AtomicBoolean
     ): String? {
         if (canceled.get()) throw InterruptedException("已取消")
-        val dir = File(context.hostContext().cacheDir, "Hchat_sns_forward")
+        val dir = File(context.hostContext().cacheDir, "AeonLab_sns_forward")
         if (!dir.isDirectory && !dir.mkdirs()) return null
         val target = File(dir, "video_thumb_${Integer.toHexString(cacheKey.hashCode())}.jpg")
         if (target.isFile && isUsableImage(target.absolutePath)) return target.absolutePath
@@ -779,7 +779,7 @@ internal class SnsForwardContentResolver(
         maxBytes: Long,
         canceled: AtomicBoolean
     ): String? {
-        val dir = File(context.hostContext().cacheDir, "Hchat_sns_forward")
+        val dir = File(context.hostContext().cacheDir, "AeonLab_sns_forward")
         if (!dir.isDirectory && !dir.mkdirs()) return null
         val safeKey = Integer.toHexString(cacheKey.hashCode())
         val target = File(dir, "remote_v2_$safeKey.$extension")

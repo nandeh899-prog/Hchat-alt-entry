@@ -42,7 +42,7 @@ internal object FavoriteVoiceResolver {
         scanFavoriteVoicePath(classLoader, data)?.let { rawPaths += it }
         scanFavoriteVoicePath(classLoader, favorite)?.let { rawPaths += it }
         val path = rawPaths.asSequence()
-            .mapNotNull { materializePath(hostContext, classLoader, it, "Hchat_fav_voice", "silk") }
+            .mapNotNull { materializePath(hostContext, classLoader, it, "AeonLab_fav_voice", "silk") }
             .firstOrNull()
             ?: return null
         val duration = normalizeVoiceDurationMillis(firstNumberField(data, "y", "duration", "length")?.toLong())
@@ -74,7 +74,7 @@ internal object FavoriteVoiceResolver {
                     hostContext,
                     classLoader,
                     it,
-                    "Hchat_fav_preview",
+                    "AeonLab_fav_preview",
                     fallbackExtension
                 )
             }

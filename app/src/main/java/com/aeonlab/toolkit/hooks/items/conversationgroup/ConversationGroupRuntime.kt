@@ -128,7 +128,7 @@ object ConversationGroupRuntime {
     private val automaticAvatarSources = ConcurrentHashMap<String, String>()
     @Volatile private var effectiveConversationSnapshot: EffectiveConversationSnapshot? = null
     private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-ConversationGroup").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-ConversationGroup").apply { isDaemon = true }
     }
     private val lifecycleLock = Any()
     private val installGeneration = AtomicLong()

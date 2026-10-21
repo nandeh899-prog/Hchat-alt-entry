@@ -1598,7 +1598,7 @@ object ScriptPluginAgentLocalReverseTools {
     ) : AutoCloseable {
         val smaliExporter = ScriptPluginAgentSmaliExporter(
             apkPath = apkPath,
-            cacheRoot = File(context.cacheDir, "Hchat_agent_reverse")
+            cacheRoot = File(context.cacheDir, "AeonLab_agent_reverse")
         )
         val javaExporter = ScriptPluginAgentJavaExporter(apkPath, smaliExporter)
         private val resourceModuleLazy = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {

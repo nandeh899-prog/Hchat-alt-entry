@@ -55,7 +55,7 @@ object CodexWebGuard {
     private fun schedule(context: Context) {
         if (timer?.isShutdown == false) return
         val executor = Executors.newSingleThreadScheduledExecutor { runnable ->
-            Thread(runnable, "Hchat-CodexWebGuard").apply { isDaemon = true }
+            Thread(runnable, "AeonLab-CodexWebGuard").apply { isDaemon = true }
         }
         timer = executor
         executor.scheduleWithFixedDelay(
@@ -114,7 +114,7 @@ object CodexWebGuard {
             } finally {
                 starting.set(false)
             }
-        }, "Hchat-CodexWebStart").apply { isDaemon = true }.start()
+        }, "AeonLab-CodexWebStart").apply { isDaemon = true }.start()
     }
 
     private fun app(context: Context): Context = context.applicationContext ?: context

@@ -143,7 +143,7 @@ internal class MomentsFakeForwardRuntime(
                 trace("清空伪转发发现页本地重载=$reloaded")
                 onComplete(saved && remaining.isEmpty() && reloaded)
             }
-        }, "Hchat-MomentsFakeForwardClear").apply { isDaemon = true }.start()
+        }, "AeonLab-MomentsFakeForwardClear").apply { isDaemon = true }.start()
         return true
     }
 

@@ -78,7 +78,7 @@ object MessageBubblePicker {
                                 if (success) MessageBubblePickResult.SAVED else MessageBubblePickResult.FAILED
                             )
                         }
-                    }, "Hchat-MessageBubbleSave").start()
+                    }, "AeonLab-MessageBubbleSave").start()
                 }
             })
         }.onFailure { hookedClasses.remove(clazz) }

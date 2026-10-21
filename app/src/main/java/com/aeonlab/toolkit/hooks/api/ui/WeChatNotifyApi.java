@@ -22,7 +22,7 @@ public final class WeChatNotifyApi {
     }
 
     private static final String CHANNEL_ID = "Hchat_wechat_api_notify_high";
-    private static final String CHANNEL_NAME = "Hchat 通知";
+    private static final String CHANNEL_NAME = "AeonLab 通知";
 
     private final Context hostContext;
     private final Logger logger;

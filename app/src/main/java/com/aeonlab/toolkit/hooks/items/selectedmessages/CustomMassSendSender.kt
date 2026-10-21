@@ -25,7 +25,7 @@ internal class CustomMassSendModuleSender(
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-CustomMassSend").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-CustomMassSend").apply { isDaemon = true }
     }
     private val operations = ConcurrentHashMap<String, SendOperation>()
 

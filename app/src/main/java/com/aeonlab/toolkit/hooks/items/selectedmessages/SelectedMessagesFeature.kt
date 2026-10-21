@@ -505,7 +505,7 @@ private class SelectedMessagesHooker(
                     }
                 }
             }
-        }, "Hchat-SelectedMessageContacts").start()
+        }, "AeonLab-SelectedMessageContacts").start()
     }
 
     private fun showDateTimePicker(activity: Activity, onPicked: (Long) -> Unit) {

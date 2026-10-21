@@ -57,10 +57,10 @@ object AutoReplyRuntime {
     private const val XIAOZHI_OPUS_PCM_SAMPLE_RATE = 48000
     private const val XIAOZHI_SILK_SAMPLE_RATE = 24000
     private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-AutoReply").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-AutoReply").apply { isDaemon = true }
     }
     private val scheduler = Executors.newSingleThreadScheduledExecutor { runnable ->
-        Thread(runnable, "Hchat-AutoReply-Timer").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-AutoReply-Timer").apply { isDaemon = true }
     }
     private val httpClient = OkHttpClient.Builder()
         .pingInterval(30, TimeUnit.SECONDS)
@@ -1049,7 +1049,7 @@ object AutoReplyRuntime {
     }
 
     private fun synthesizeQuestionOpusFrames(context: Context, question: String): List<ByteArray> {
-        val dir = File(context.cacheDir, "hchat_xiaozhi_question").apply { mkdirs() }
+        val dir = File(context.cacheDir, "aeonlab_xiaozhi_question").apply { mkdirs() }
         val wavFile = File.createTempFile("question_", ".wav", dir)
         return try {
             val wavOk = synthesizeQuestionWav(context.applicationContext, question, wavFile)
@@ -1080,7 +1080,7 @@ object AutoReplyRuntime {
     private fun synthesizeXiaozhiReplyVoice(context: Context, text: String): XiaozhiVoiceSegment? {
         val content = text.cleanAiText()
         if (content.isBlank()) return null
-        val dir = File(context.cacheDir, "hchat_xiaozhi_reply").apply { mkdirs() }
+        val dir = File(context.cacheDir, "aeonlab_xiaozhi_reply").apply { mkdirs() }
         val wavFile = File.createTempFile("reply_", ".wav", dir)
         val pcmFile = File.createTempFile("reply_", ".pcm", dir)
         val silkFile = File.createTempFile("reply_", ".silk", dir)
@@ -1343,7 +1343,7 @@ object AutoReplyRuntime {
         if (keyword.isBlank() || (!config.musicMcpEnabled && !config.mcpKugouEnabled)) return question
         val tools = buildList {
             if (config.musicMcpEnabled) add("官方 Music MCP")
-            if (config.mcpKugouEnabled && config.mcpKugouPluginId.trim().isNotBlank()) add("Hchat 点歌工具")
+            if (config.mcpKugouEnabled && config.mcpKugouPluginId.trim().isNotBlank()) add("AeonLab 点歌工具")
         }.joinToString(" 或 ")
         if (tools.isBlank()) return question
         return "用户想听歌，关键词是「$keyword」。请优先调用${tools}播放或发送音乐卡片；不要先说你不能播放、没有找到或需要用户自己打开播放器。原始请求：$question"
@@ -1398,7 +1398,7 @@ object AutoReplyRuntime {
         frameDurationMs: Int
     ): File? {
         return runCatching {
-            val dir = File(context.cacheDir, "hchat_xiaozhi_voice").apply { mkdirs() }
+            val dir = File(context.cacheDir, "aeonlab_xiaozhi_voice").apply { mkdirs() }
             val oggFile = File.createTempFile("xiaozhi_", ".ogg", dir)
             val pcmFile = File.createTempFile("xiaozhi_", ".pcm", dir)
             val silkFile = File.createTempFile("xiaozhi_", ".silk", dir)
@@ -1487,7 +1487,7 @@ object AutoReplyRuntime {
     }
 
     private fun opusTags(): ByteArray {
-        val vendor = "Hchat Xiaozhi".toByteArray(Charsets.UTF_8)
+        val vendor = "AeonLab Xiaozhi".toByteArray(Charsets.UTF_8)
         val out = ByteArrayOutputStream()
         out.writeAscii("OpusTags")
         out.writeLe32(vendor.size)
@@ -1714,7 +1714,7 @@ object AutoReplyRuntime {
                     idleClosing.set(false)
                     HLog.e("$TAG 小智MCP空闲检查失败: ${it.message}", it)
                 }
-            }, "Hchat-Xiaozhi-MCP-Idle").apply { isDaemon = true }.start()
+            }, "AeonLab-Xiaozhi-MCP-Idle").apply { isDaemon = true }.start()
         }
 
         private fun scheduleReconnect() {
@@ -1728,7 +1728,7 @@ object AutoReplyRuntime {
                     reconnecting.set(false)
                     HLog.e("$TAG 小智MCP桥接重连失败: ${it.message}", it)
                 }
-            }, "Hchat-Xiaozhi-MCP-Reconnect").apply { isDaemon = true }.start()
+            }, "AeonLab-Xiaozhi-MCP-Reconnect").apply { isDaemon = true }.start()
         }
 
         private fun handleMessage(webSocket: WebSocket, text: String) {
@@ -1774,7 +1774,7 @@ object AutoReplyRuntime {
                     put("tools", JSONObject())
                 })
                 put("serverInfo", JSONObject().apply {
-                    put("name", "Hchat")
+                    put("name", "AeonLab")
                     put("version", "1.0")
                 })
             }

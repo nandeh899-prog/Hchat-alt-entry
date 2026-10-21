@@ -92,7 +92,7 @@ object WeChatKeepAliveRuntime {
                 HLog.e("$TAG 网络心跳失败: ${it.message}")
             }
         }.apply {
-            name = "Hchat-KeepAlive-Heartbeat"
+            name = "AeonLab-KeepAlive-Heartbeat"
             isDaemon = true
         }.start()
     }
@@ -131,7 +131,7 @@ object WeChatKeepAliveRuntime {
                 HLog.e("$TAG Root Doze 白名单执行失败")
             }
         }.apply {
-            name = "Hchat-KeepAlive-RootWhitelist"
+            name = "AeonLab-KeepAlive-RootWhitelist"
             isDaemon = true
         }.start()
     }
@@ -151,7 +151,7 @@ object WeChatKeepAliveRuntime {
                 HLog.e("$TAG Root AppOps 放行执行不完整")
             }
         }.apply {
-            name = "Hchat-KeepAlive-RootAppOps"
+            name = "AeonLab-KeepAlive-RootAppOps"
             isDaemon = true
         }.start()
     }

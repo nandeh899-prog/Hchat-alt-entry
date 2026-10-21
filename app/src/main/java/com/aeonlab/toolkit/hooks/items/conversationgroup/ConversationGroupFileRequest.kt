@@ -139,7 +139,7 @@ internal class ConversationGroupFileRequest<T> private constructor(
         private val active = ConcurrentHashMap.newKeySet<ConversationGroupFileRequest<*>>()
         private val executor = ThreadPoolExecutor(
             1, 1, 30L, TimeUnit.SECONDS, ArrayBlockingQueue<Runnable>(8),
-            { runnable -> Thread(runnable, "Hchat-ConversationGroupFile").apply { isDaemon = true } },
+            { runnable -> Thread(runnable, "AeonLab-ConversationGroupFile").apply { isDaemon = true } },
             ThreadPoolExecutor.AbortPolicy()
         )
 

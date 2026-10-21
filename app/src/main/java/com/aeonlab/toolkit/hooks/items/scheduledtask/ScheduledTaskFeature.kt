@@ -178,7 +178,7 @@ class ScheduledTaskRuntime(
             }
             finishImmediateTask(running, result.first, result.second)
         }
-        taskApi()?.runAsync(job) ?: Thread(job, "Hchat-ScheduledTask-Now-$taskId").apply {
+        taskApi()?.runAsync(job) ?: Thread(job, "AeonLab-ScheduledTask-Now-$taskId").apply {
             isDaemon = true
             start()
         }
@@ -232,7 +232,7 @@ class ScheduledTaskRuntime(
                 releaseExecutionWakeLock(wakeLock)
             }
         }
-        taskApi()?.runAsync(job) ?: Thread(job, "Hchat-ScheduledTask-$taskId").apply {
+        taskApi()?.runAsync(job) ?: Thread(job, "AeonLab-ScheduledTask-$taskId").apply {
             isDaemon = true
             start()
         }

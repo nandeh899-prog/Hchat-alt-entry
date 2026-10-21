@@ -52,7 +52,7 @@ internal object SnsContextMenuDispatcher {
     private val bindings = Collections.synchronizedMap(WeakHashMap<MenuItem, SnsContextMenuTarget>())
     private val pendingByItemId = ConcurrentHashMap<Int, WeakReference<SnsContextMenuTarget>>()
     private val foldResolverExecutor = Executors.newSingleThreadExecutor { task ->
-        Thread(task, "Hchat-SnsFoldMenu").apply { isDaemon = true }
+        Thread(task, "AeonLab-SnsFoldMenu").apply { isDaemon = true }
     }
     @Volatile private var resolver: SnsForwardContentResolver? = null
     @Volatile private var logger: ((String, Throwable?) -> Unit)? = null

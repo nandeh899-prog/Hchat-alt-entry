@@ -70,7 +70,7 @@ internal class MomentsFakeInteractionRuntime(
     private val guardedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
     private val mainHandler = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-MomentsFake").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-MomentsFake").apply { isDaemon = true }
     }
     private val suppressAutoMerge = ThreadLocal<Boolean>()
     private val persistenceLock = Any()

@@ -129,7 +129,7 @@ object CustomBottomBarIconPicker {
                                     ?: CustomBottomBarIconPickResult.FAILED
                             )
                         }
-                    }, "Hchat-CustomBottomBarIcon").start()
+                    }, "AeonLab-CustomBottomBarIcon").start()
                 }
             })
         }.onFailure { resultHookedClasses.remove(clazz) }

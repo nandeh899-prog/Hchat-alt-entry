@@ -182,7 +182,7 @@ object CrashReportRuntime : Application.ActivityLifecycleCallbacks {
             crashDir.mkdirs()
             FileOutputStream(javaPendingFile, false).use { stream ->
                 PrintWriter(OutputStreamWriter(stream, StandardCharsets.UTF_8), false).use { writer ->
-                    writer.println("Hchat 捕获到 Java 层异常")
+                    writer.println("AeonLab 捕获到 Java 层异常")
                     writer.println("时间: ${formatTime(System.currentTimeMillis())}")
                     writer.print(environmentHeader)
                     writer.println("线程: ${thread.name} (id=${thread.id})")
@@ -229,7 +229,7 @@ object CrashReportRuntime : Application.ActivityLifecycleCallbacks {
                 ?: nativeCapturedAt.takeIf { it > 0L }
                 ?: System.currentTimeMillis()
             sections += buildString {
-                appendLine("Hchat 捕获到 Native 层异常")
+                appendLine("AeonLab 捕获到 Native 层异常")
                 appendLine("时间: ${formatTime(timestamp)}")
                 append(environmentHeader)
                 if (!nativeBody.isNullOrBlank()) {
@@ -252,7 +252,7 @@ object CrashReportRuntime : Application.ActivityLifecycleCallbacks {
         )
         if (systemAnr != null) {
             sections += buildString {
-                appendLine("Hchat 捕获到 ANR 异常")
+                appendLine("AeonLab 捕获到 ANR 异常")
                 appendLine("时间: ${formatTime(systemAnr.timestamp)}")
                 append(environmentHeader)
                 appendLine()

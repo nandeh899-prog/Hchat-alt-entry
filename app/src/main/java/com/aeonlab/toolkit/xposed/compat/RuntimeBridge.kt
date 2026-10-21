@@ -18,7 +18,7 @@ internal interface RuntimeBridge {
 }
 
 internal object CompatRuntime {
-    private const val TAG = "Hchat"
+    private const val TAG = "AeonLab"
 
     @Volatile
     private var bridge: RuntimeBridge? = null
@@ -43,7 +43,7 @@ internal object CompatRuntime {
 
     fun log(throwable: Throwable) {
         val current = bridge
-        if (current != null) current.log(throwable) else Log.e(TAG, "Hchat", throwable)
+        if (current != null) current.log(throwable) else Log.e(TAG, "AeonLab", throwable)
     }
 }
 
@@ -148,4 +148,4 @@ private class LegacyBridge : RuntimeBridge {
     }
 }
 
-private const val CompatRuntimeTag = "Hchat"
+private const val CompatRuntimeTag = "AeonLab"

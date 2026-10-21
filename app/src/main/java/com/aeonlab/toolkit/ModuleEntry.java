@@ -129,7 +129,7 @@ public class ModuleEntry {
                             }
                         }
                         installCustomBottomBarEarly(app, resolveHostClassLoader(app, lpparam));
-                        new Thread(() -> initModule(app, lpparam), "Hchat-Init").start();
+                        new Thread(() -> initModule(app, lpparam), "AeonLab-Init").start();
                     }
                 }
         ));
@@ -289,7 +289,7 @@ public class ModuleEntry {
                         HLog.e(TAG + " 热更新后置安装失败: " + e.getMessage(), e);
                     }
                 });
-            }, "Hchat-HotUpdateHook").start();
+            }, "AeonLab-HotUpdateHook").start();
         } catch (SecurityException e) {
             throw e;
         } catch (Throwable e) {

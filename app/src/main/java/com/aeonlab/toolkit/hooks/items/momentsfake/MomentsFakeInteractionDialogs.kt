@@ -52,7 +52,7 @@ internal class MomentsFakeInteractionDialogs(
                                 if (success) runtime.refreshTimelineViews(activity, target.anchorView?.get())
                                 toast(activity, if (success) "伪转发已保存到本机" else "伪转发失败，请查看错误日志")
                             }
-                        }, "Hchat-MomentsFakeForward").apply { isDaemon = true }.start()
+                        }, "AeonLab-MomentsFakeForward").apply { isDaemon = true }.start()
                     },
                     onDismiss = {}
                 )
@@ -342,7 +342,7 @@ internal class MomentsFakeInteractionDialogs(
                     if (!activity.isFinishing && !activity.isDestroyed) onLoaded(contacts)
                 }
             }
-        }, "Hchat-MomentsFakeLikeContacts").apply { isDaemon = true }.start()
+        }, "AeonLab-MomentsFakeLikeContacts").apply { isDaemon = true }.start()
     }
 
     private fun showFakeLikePicker(
@@ -659,7 +659,7 @@ internal class MomentsFakeInteractionDialogs(
                     if (contacts.isEmpty()) toast(activity, "没有可选择的好友") else onLoaded(contacts)
                 }
             }
-        }, "Hchat-MomentsFakeContacts").apply { isDaemon = true }.start()
+        }, "AeonLab-MomentsFakeContacts").apply { isDaemon = true }.start()
     }
 
     private fun formatTime(timeMillis: Long): String {

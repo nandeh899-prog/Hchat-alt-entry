@@ -160,7 +160,7 @@ private class EmojiSaveRuntime(
                 result.file?.let { "表情已保存: ${it.absolutePath}" }
                     ?: result.error.ifBlank { "表情保存失败" }
             )
-        }, "Hchat-EmojiSave").start()
+        }, "AeonLab-EmojiSave").start()
     }
 
     private fun buildSaveFile(data: ByteArray): File? {

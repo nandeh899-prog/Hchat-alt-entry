@@ -109,7 +109,7 @@ object FloatingShortcutIconPicker {
                                 }
                             )
                         }
-                    }, "Hchat-FloatingShortcutIcon").start()
+                    }, "AeonLab-FloatingShortcutIcon").start()
                 }
             })
         }.onFailure { hookedClasses.remove(clazz) }

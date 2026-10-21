@@ -242,7 +242,7 @@ private class VoicePreviewRuntime(
     }
 
     private fun cacheDirectory(): File {
-        return File(context.hostContext().cacheDir, "hchat_voice_preview").apply {
+        return File(context.hostContext().cacheDir, "aeonlab_voice_preview").apply {
             if (!isDirectory) mkdirs()
         }
     }

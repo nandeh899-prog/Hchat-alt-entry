@@ -25,7 +25,7 @@ internal class AutoMessageForwardRuntime(
 ) {
     private val appContext = context.applicationContext ?: context
     private val executor = ScheduledThreadPoolExecutor(1) { runnable ->
-        Thread(runnable, "Hchat-AutoMessageForward").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-AutoMessageForward").apply { isDaemon = true }
     }.apply {
         removeOnCancelPolicy = true
     }

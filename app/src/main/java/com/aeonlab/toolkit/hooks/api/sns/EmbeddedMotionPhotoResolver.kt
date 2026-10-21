@@ -50,7 +50,7 @@ internal object EmbeddedMotionPhotoResolver {
                 ?: scanForMp4(raf, source.length())
         } ?: return null
 
-        val cacheRoot = File(cacheDirectory, "Hchat_sns_live_photo")
+        val cacheRoot = File(cacheDirectory, "AeonLab_sns_live_photo")
         if (!cacheRoot.exists() && !cacheRoot.mkdirs()) return null
         val key = cacheKey(source, video)
         val imageExtension = if (isJpeg(source)) "jpg" else imageExtension(source)

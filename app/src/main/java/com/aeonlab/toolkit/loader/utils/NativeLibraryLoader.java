@@ -183,7 +183,7 @@ public class NativeLibraryLoader {
         String moduleApk = getModuleApkPath(moduleClassLoader);
         String abi = "arm64-v8a";
         String entryPath = "lib/" + abi + "/" + soName;
-        File cacheDir = new File(new File(ctx.getCacheDir(), "Hchat_native"), abi);
+        File cacheDir = new File(new File(ctx.getCacheDir(), "AeonLab_native"), abi);
 
         try {
             if (moduleApk == null || moduleApk.length() == 0) {

@@ -123,7 +123,7 @@ private class VoiceForwardHooker(
     )
     private val favoriteFilterClasses = ConcurrentHashMap.newKeySet<Class<*>>()
     private val forwardExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-VoiceForwardSend").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-VoiceForwardSend").apply { isDaemon = true }
     }
     @Volatile
     private var recentContactsCache: CachedContacts? = null
@@ -908,7 +908,7 @@ private class VoiceForwardHooker(
                     }
                 }
             }
-        }, "Hchat-VoiceMerge").start()
+        }, "AeonLab-VoiceMerge").start()
     }
 
     private fun rememberFavoriteItem(owner: Any?, view: View?, favorite: Any) {
@@ -1274,7 +1274,7 @@ private class VoiceForwardHooker(
         val ext = File(path).extension
             .takeIf { it.isNotBlank() && it.length <= 8 }
             ?: "silk"
-        val dir = File(context.hostContext().cacheDir, "Hchat_fav_voice")
+        val dir = File(context.hostContext().cacheDir, "AeonLab_fav_voice")
         if (!dir.isDirectory && !dir.mkdirs()) return null
         val target = File(dir, "fav_${Integer.toHexString(path.hashCode())}.$ext")
         return runCatching {
@@ -1588,7 +1588,7 @@ private class VoiceForwardHooker(
                     toast(activity, "联系人列表不可用")
                 }
             }
-        }, "Hchat-VoiceForwardContacts").start()
+        }, "AeonLab-VoiceForwardContacts").start()
     }
 
     private fun showLoadedContactPicker(activity: Activity, source: VoiceSource, contacts: List<ContactRow>) {
@@ -1647,7 +1647,7 @@ private class VoiceForwardHooker(
                     toast(activity, "联系人列表不可用")
                 }
             }
-        }, "Hchat-VoiceForwardContacts").start()
+        }, "AeonLab-VoiceForwardContacts").start()
     }
 
     private fun showLoadedContactPicker(
@@ -1825,7 +1825,7 @@ private class VoiceForwardHooker(
                     result.error.ifBlank { "语音保存失败" }
                 }
             )
-        }, "Hchat-VoiceSave").start()
+        }, "AeonLab-VoiceSave").start()
     }
 
     private fun preparePreviewVoice(source: VoiceSource): String? {

@@ -26,7 +26,7 @@ object ScriptPluginAgentSessionStore {
     private val queuedAsyncSaves = ConcurrentHashMap.newKeySet<String>()
     private val deletedSessions = ConcurrentHashMap.newKeySet<String>()
     private val asyncSaveExecutor = Executors.newSingleThreadExecutor { task ->
-        Thread(task, "Hchat-Agent-Session-Save").apply { isDaemon = true }
+        Thread(task, "AeonLab-Agent-Session-Save").apply { isDaemon = true }
     }
 
     fun list(context: Context): List<ScriptPluginAgentSession> {

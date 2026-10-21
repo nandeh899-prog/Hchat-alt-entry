@@ -41,7 +41,7 @@ object TerminalFonts {
         .callTimeout(120, TimeUnit.SECONDS)
         .build()
     private val worker = Executors.newSingleThreadExecutor { r ->
-        Thread(r, "hchat-term-font").apply { isDaemon = true }
+        Thread(r, "aeonlab-term-font").apply { isDaemon = true }
     }
 
     fun byId(id: String?): Font = ALL.firstOrNull { it.id == id } ?: ALL.first()

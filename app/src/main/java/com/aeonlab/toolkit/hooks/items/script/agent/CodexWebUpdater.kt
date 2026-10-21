@@ -37,7 +37,7 @@ object CodexWebUpdater {
 
     // 下载跑在模块自己的线程上：离开设置页（界面协程被取消）也继续，中断后下次从断点续传
     private val worker = java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "hchat-codex-web").apply { isDaemon = true }
+        Thread(runnable, "aeonlab-codex-web").apply { isDaemon = true }
     }
 
     @Volatile

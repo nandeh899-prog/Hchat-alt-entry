@@ -75,7 +75,7 @@ public final class WeChatFileApi {
                 log("发送文件失败: WXMediaMessage创建失败");
                 return false;
             }
-            String session = "Hchat_file_" + System.currentTimeMillis();
+            String session = "AeonLab_file_" + System.currentTimeMillis();
             Object result = KavaReflector.invoke(method, null, mediaMessage, "wx4310bbd51be7d979",
                     "WeChat", talker, 2, session);
             if (result instanceof Number && ((Number) result).intValue() < 0) {
@@ -109,7 +109,7 @@ public final class WeChatFileApi {
                 return false;
             }
             String safeAppId = TextUtils.isEmpty(appId) ? "wx4310bbd51be7d979" : appId;
-            String session = "Hchat_media_" + System.currentTimeMillis();
+            String session = "AeonLab_media_" + System.currentTimeMillis();
             Object result = KavaReflector.invoke(
                     method,
                     null,

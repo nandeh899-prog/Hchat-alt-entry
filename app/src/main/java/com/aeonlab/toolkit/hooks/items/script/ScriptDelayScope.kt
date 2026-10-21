@@ -26,7 +26,7 @@ internal class ScriptDelayScope(
         val delayMainHandler by lazy { Handler(Looper.getMainLooper()) }
         val backgroundDelays by lazy {
             ScheduledThreadPoolExecutor(2) { runnable ->
-                Thread(runnable, "Hchat-Script-Delay").apply { isDaemon = true }
+                Thread(runnable, "AeonLab-Script-Delay").apply { isDaemon = true }
             }.apply { removeOnCancelPolicy = true }
         }
     }

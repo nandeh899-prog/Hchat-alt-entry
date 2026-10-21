@@ -130,7 +130,7 @@ object ScriptPluginRuntime {
         TimeUnit.MILLISECONDS,
         ArrayBlockingQueue(SNS_PREPARE_QUEUE_CAPACITY),
         { runnable ->
-            Thread(runnable, "Hchat-Script-SnsPrepare").apply { isDaemon = true }
+            Thread(runnable, "AeonLab-Script-SnsPrepare").apply { isDaemon = true }
         },
         ThreadPoolExecutor.AbortPolicy()
     )
@@ -141,7 +141,7 @@ object ScriptPluginRuntime {
         TimeUnit.MILLISECONDS,
         ArrayBlockingQueue(PROTOBUF_CALLBACK_QUEUE_CAPACITY),
         { runnable ->
-            Thread(runnable, "Hchat-Script-Protobuf").apply { isDaemon = true }
+            Thread(runnable, "AeonLab-Script-Protobuf").apply { isDaemon = true }
         },
         ThreadPoolExecutor.AbortPolicy()
     )
@@ -152,7 +152,7 @@ object ScriptPluginRuntime {
         TimeUnit.MILLISECONDS,
         ArrayBlockingQueue(IMAGE_DOWNLOAD_CALLBACK_QUEUE_CAPACITY),
         { runnable ->
-            Thread(runnable, "Hchat-Script-ImageDownload").apply { isDaemon = true }
+            Thread(runnable, "AeonLab-Script-ImageDownload").apply { isDaemon = true }
         },
         ThreadPoolExecutor.AbortPolicy()
     )
@@ -163,7 +163,7 @@ object ScriptPluginRuntime {
         TimeUnit.MILLISECONDS,
         ArrayBlockingQueue(VIDEO_DOWNLOAD_CALLBACK_QUEUE_CAPACITY),
         { runnable ->
-            Thread(runnable, "Hchat-Script-VideoDownload").apply { isDaemon = true }
+            Thread(runnable, "AeonLab-Script-VideoDownload").apply { isDaemon = true }
         },
         ThreadPoolExecutor.AbortPolicy()
     )
@@ -174,7 +174,7 @@ object ScriptPluginRuntime {
         TimeUnit.MILLISECONDS,
         ArrayBlockingQueue(FINDER_MEDIA_DOWNLOAD_CALLBACK_QUEUE_CAPACITY),
         { runnable ->
-            Thread(runnable, "Hchat-Script-FinderDownload").apply { isDaemon = true }
+            Thread(runnable, "AeonLab-Script-FinderDownload").apply { isDaemon = true }
         },
         ThreadPoolExecutor.AbortPolicy()
     )
@@ -300,7 +300,7 @@ object ScriptPluginRuntime {
                     error
                 )
             }
-        }, "Hchat-Script-AppBrand").apply {
+        }, "AeonLab-Script-AppBrand").apply {
             isDaemon = true
             start()
         }
@@ -329,7 +329,7 @@ object ScriptPluginRuntime {
             } catch (error: Throwable) {
                 com.aeonlab.toolkit.utils.HLog.e("$TAG 自动加载线程异常: ${error.message}", error)
             }
-        }, "Hchat-Script-InitialLoad").apply {
+        }, "AeonLab-Script-InitialLoad").apply {
             isDaemon = true
             start()
         }
@@ -484,7 +484,7 @@ object ScriptPluginRuntime {
                     result.exceptionOrNull()
                 )
             }
-        }, "Hchat-Script-Reload-$pluginId").start()
+        }, "AeonLab-Script-Reload-$pluginId").start()
     }
 
     @Synchronized
@@ -2360,7 +2360,7 @@ object ScriptPluginRuntime {
                 }
             }
             notifyPluginCatalogChanged()
-        }, "Hchat-Script-AutoReload-$pluginId").start()
+        }, "AeonLab-Script-AutoReload-$pluginId").start()
     }
 
     private fun notifyPluginCatalogChanged() {

@@ -62,7 +62,7 @@ internal class TextVoiceRuntime(
         0L,
         TimeUnit.MILLISECONDS,
         ArrayBlockingQueue(8),
-        { runnable -> Thread(runnable, "Hchat-TextVoice").apply { isDaemon = true } }
+        { runnable -> Thread(runnable, "AeonLab-TextVoice").apply { isDaemon = true } }
     )
     private var player: MediaPlayer? = null
     private var playerFile: File? = null
@@ -420,7 +420,7 @@ internal class TextVoiceRuntime(
     }
 
     private fun cacheDirectory(): File {
-        return File(context.hostContext().cacheDir, "hchat_text_voice").apply {
+        return File(context.hostContext().cacheDir, "aeonlab_text_voice").apply {
             if (!isDirectory) mkdirs()
         }
     }

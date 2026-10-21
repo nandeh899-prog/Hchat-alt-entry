@@ -34,7 +34,7 @@ internal object FloatingShortcutIconLoader {
     private val bindings = WeakHashMap<ImageView, Any>()
     private val worker = ThreadPoolExecutor(
         0, 1, 30L, TimeUnit.SECONDS, LinkedBlockingQueue<Runnable>(MAX_PENDING),
-        { task -> Thread(task, "Hchat-FloatingIcons").apply { isDaemon = true } }
+        { task -> Thread(task, "AeonLab-FloatingIcons").apply { isDaemon = true } }
     )
 
     fun bind(view: ImageView, path: String, fallback: Drawable) {

@@ -45,7 +45,7 @@ internal object ConversationTabsRuntime {
     private val main = Handler(Looper.getMainLooper())
     private val worker = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
         ArrayBlockingQueue<Runnable>(1),
-        { task -> Thread(task, "Hchat-ConversationTabs").apply { isDaemon = true } },
+        { task -> Thread(task, "AeonLab-ConversationTabs").apply { isDaemon = true } },
         ThreadPoolExecutor.DiscardOldestPolicy())
     private val reloadLock = Any()
     private val revision = AtomicLong()

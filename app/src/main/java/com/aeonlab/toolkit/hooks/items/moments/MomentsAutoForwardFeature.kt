@@ -82,7 +82,7 @@ private class MomentsAutoForwardRuntime(
     private val prefs = HchatStorage.preferences(context.hostContext(), MomentsAutoForwardSettings.PREFS_NAME)
     private val resolver = SnsForwardContentResolver(context, logger)
     private val worker = ScheduledThreadPoolExecutor(1) { runnable ->
-        Thread(runnable, "Hchat-MomentsAutoForward").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-MomentsAutoForward").apply { isDaemon = true }
     }.apply { removeOnCancelPolicy = true }
     private val lifecycleLock = Any()
     private val handledLock = Any()

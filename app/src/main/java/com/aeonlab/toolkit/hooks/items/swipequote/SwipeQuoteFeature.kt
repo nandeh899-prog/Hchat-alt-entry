@@ -97,7 +97,7 @@ private class SwipeQuoteAdapter(
     private val voiceContentGetterCache = ConcurrentHashMap<Class<*>, Method?>()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val repeatVoiceExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Hchat-SwipeRepeatVoice").apply { isDaemon = true }
+        Thread(runnable, "AeonLab-SwipeRepeatVoice").apply { isDaemon = true }
     }
     @Volatile private var dexQuoteMethod: Method? = null
     @Volatile private var lastFooterRef = WeakReference<Any>(null)

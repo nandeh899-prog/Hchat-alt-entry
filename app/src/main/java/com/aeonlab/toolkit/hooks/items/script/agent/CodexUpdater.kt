@@ -37,7 +37,7 @@ object CodexUpdater {
 
     // 下载跑在模块自己的线程上：离开设置页也继续，中断后下次从断点续传
     private val worker = java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "hchat-codex-pkg").apply { isDaemon = true }
+        Thread(runnable, "aeonlab-codex-pkg").apply { isDaemon = true }
     }
 
     @Volatile
