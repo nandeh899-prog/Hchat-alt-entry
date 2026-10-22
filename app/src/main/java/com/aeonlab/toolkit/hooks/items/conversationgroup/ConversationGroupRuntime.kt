@@ -723,17 +723,67 @@ object ConversationGroupRuntime {
             suspendingParentExtra = true
             runCatching { activity.intent?.removeExtra(CONTACT_USER_EXTRA) }
             main.postDelayed({ suspendingParentExtra = false }, 5000)
-            // 微信在折叠页销毁时会把 LauncherUI 切到“父会话”的聊天视图；我们的父会话是虚拟分组，
-            // 于是一个空白聊天页（“对方还不是你的朋友 / N 条新消息”）会留在屏幕上，用户得再按一次返回。
-            // 这里在页面关掉后检测一次：若 LauncherUI 停在聊天视图，就主动退回会话列表。
-            main.postDelayed({
-                val resumed = WeChatApis.currentActivity()?.currentActivity() ?: return@postDelayed
-                if (!resumed.javaClass.name.endsWith("ui.LauncherUI")) return@postDelayed
-                if (!hasChattingView(resumed.window?.decorView)) return@postDelayed
-                runCatching { resumed.onBackPressed() }.onFailure {
-                    HLog.e("$TAG 退出虚拟会话聊天视图失败: ${it.message}", it)
+            // 微信在折叠页销毁后“稍晚”才会把 LauncherUI 切到父会话聊天视图（实测是内嵌视图，
+            // 不是独立 ChattingUI），单次延迟检测会错过；这里短轮询并逐步升级退出方式。
+            var sweepTries = 0
+            var backAttempts = 0
+            val sweepAction = object : Runnable {
+                override fun run() {
+                    sweepTries++
+                    val resumed = runCatching {
+                        WeChatApis.currentActivity()?.currentActivity()
+                    }.getOrNull()
+                    val name = resumed?.javaClass?.name ?: "null"
+                    if (resumed == null || !name.endsWith("ui.LauncherUI")) {
+                        HLog.e(
+                            "$TAG sweep#$sweepTries 跳过: activity=$name",
+                            RuntimeException("sweepProbe")
+                        )
+                    } else {
+                        val hit = hasChattingView(resumed.window?.decorView)
+                        HLog.e(
+                            "$TAG sweep#$sweepTries activity=$name chattingView=$hit",
+                            RuntimeException("sweepProbe")
+                        )
+                        if (hit) {
+                            backAttempts++
+                            HLog.e(
+                                "$TAG 命中虚拟分组空白聊天视图，第 $backAttempts 次尝试退出",
+                                RuntimeException("sweepVirtualGroupChat")
+                            )
+                            if (backAttempts > 2) {
+                                HLog.e(
+                                    "$TAG 两次退出尝试无效，放弃",
+                                    RuntimeException("sweepGiveUp")
+                                )
+                                return
+                            }
+                            runCatching {
+                                if (backAttempts == 1) {
+                                    resumed.onBackPressed()
+                                } else {
+                                    resumed.dispatchKeyEvent(
+                                        KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
+                                    )
+                                    resumed.dispatchKeyEvent(
+                                        KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK)
+                                    )
+                                }
+                            }.onFailure {
+                                HLog.e("$TAG 退出虚拟会话聊天视图失败: ${it.message}", it)
+                            }
+                        } else if (backAttempts > 0) {
+                            HLog.e(
+                                "$TAG 已退出虚拟会话聊天视图，停止轮询",
+                                RuntimeException("sweepDone")
+                            )
+                            return
+                        }
+                    }
+                    if (sweepTries < 20) main.postDelayed(this, 300)
                 }
-            }, 700)
+            }
+            main.postDelayed(sweepAction, 300)
         }
         val fragmentClass = KavaReflector.loadClass(NATIVE_GROUP_FRAGMENT, context.hostClassLoader())
             ?: return false
