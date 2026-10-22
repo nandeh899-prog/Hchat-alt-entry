@@ -128,6 +128,13 @@ object ConversationGroupRuntime {
      */
     @Volatile
     private var launcherViewRef: WeakReference<Activity>? = null
+
+    /**
+     * 刚退出分组页、可能残留虚拟会话空白聊天视图。用于在 LauncherUI 重新回到前台时再兜一次，
+     * 避免微信被系统切到后台期间轮询窗口已经过期。
+     */
+    @Volatile
+    private var pendingVirtualChatExit = false
     private val menuBindings = Collections.synchronizedMap(
         WeakHashMap<MenuItem, ConversationMenuTarget>()
     )
@@ -728,8 +735,10 @@ object ConversationGroupRuntime {
         // 分组页退出前先切断“父会话”：清 intent 并让 getStringExtra 在退出窗口内返回 null。
         fun beginGroupPageExit(activity: Activity) {
             suspendingParentExtra = true
+            pendingVirtualChatExit = true
             runCatching { activity.intent?.removeExtra(CONTACT_USER_EXTRA) }
             main.postDelayed({ suspendingParentExtra = false }, 5000)
+            main.postDelayed({ pendingVirtualChatExit = false }, 20000)
             // 微信在折叠页销毁后“稍晚”才把 LauncherUI 切到父会话聊天视图（实测是内嵌视图，
             // 不是独立 ChattingUI），单次延迟检测会错过；这里短轮询，每次命中都下发一次返回键。
             var sweepTries = 0
@@ -766,6 +775,7 @@ object ConversationGroupRuntime {
                                     "$TAG 返回键未能退出虚拟会话聊天视图，放弃",
                                     RuntimeException("sweepGiveUp")
                                 )
+                                pendingVirtualChatExit = false
                                 return
                             }
                             backAttempts++
@@ -788,6 +798,7 @@ object ConversationGroupRuntime {
                                 "$TAG 已退出虚拟会话聊天视图，停止轮询",
                                 RuntimeException("sweepDone")
                             )
+                            pendingVirtualChatExit = false
                             return
                         }
                     }
@@ -803,15 +814,38 @@ object ConversationGroupRuntime {
                 "com.tencent.mm.ui.LauncherUI",
                 context.hostClassLoader()
             ) ?: return@runCatching false
-            KavaReflector.findMethodRecursive(launcherClass, "onCreate", Bundle::class.java)
-                ?.let { method ->
-                    hook(method, object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            val activity = param.thisObject as? Activity ?: return
-                            launcherViewRef = WeakReference(activity)
+            val remember = object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val activity = param.thisObject as? Activity ?: return
+                    launcherViewRef = WeakReference(activity)
+                    if (!pendingVirtualChatExit || activity.isFinishing) return
+                    // 刚退出分组页：如果 LauncherUI 恢复时还挂着虚拟会话聊天视图，
+                    // 说明退出期间的轮询没赶上（微信被切到后台等），这里再下发一次返回键。
+                    main.postDelayed({
+                        if (!pendingVirtualChatExit || activity.isFinishing) return@postDelayed
+                        if (!hasChattingView(activity.window?.decorView)) return@postDelayed
+                        HLog.e(
+                            "$TAG LauncherUI 恢复时仍是虚拟分组空白聊天视图，下发返回键",
+                            RuntimeException("resumeVirtualGroupChat")
+                        )
+                        runCatching {
+                            activity.dispatchKeyEvent(
+                                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
+                            )
+                            activity.dispatchKeyEvent(
+                                KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK)
+                            )
+                        }.onFailure {
+                            HLog.e("$TAG 恢复时退出虚拟会话聊天视图失败: ${it.message}", it)
                         }
-                    })
+                    }, 400)
                 }
+            }
+            listOf(
+                KavaReflector.findMethodRecursive(launcherClass, "onCreate", Bundle::class.java),
+                KavaReflector.findMethodRecursive(launcherClass, "onResume"),
+                KavaReflector.findMethodRecursive(launcherClass, "onNewIntent", Intent::class.java)
+            ).filterNotNull().forEach { hook(it, remember) }
         }
         val fragmentClass = KavaReflector.loadClass(NATIVE_GROUP_FRAGMENT, context.hostClassLoader())
             ?: return false
