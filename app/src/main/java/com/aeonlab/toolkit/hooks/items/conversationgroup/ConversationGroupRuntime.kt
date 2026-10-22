@@ -89,6 +89,8 @@ object ConversationGroupRuntime {
         "com.tencent.mm.ui.conversation.ConvBoxServiceConversationUI\$ConvBoxServiceConversationFmUI"
     private const val FRAGMENT_ACTIVITY_SUPPORT = "com.tencent.mm.ui.FragmentActivitySupport"
     private const val CONTACT_USER_EXTRA = "Contact_User"
+    private const val CHATTING_UI = "com.tencent.mm.ui.chatting.ChattingUI"
+    private const val CHAT_USER_EXTRA = "Chat_User"
     private const val NATIVE_GROUP_TAG = "MicroMsg.ConvBoxServiceConversationFmUI"
     private const val NATIVE_GROUP_PLACEHOLDER = "@placeholder_foldgroup"
     private const val VIRTUAL_PREFIX = "wxid_hchat_group_"
@@ -768,35 +770,60 @@ object ConversationGroupRuntime {
                             HLog.e("$TAG 关闭微信原生分组页面失败: ${it.message}", it)
                         }
                     }
-                })
+                }) || backHookInstalled
             }
-            if (!backHookInstalled) {
-                KavaReflector.findMethodRecursive(
-                    groupActivityClass,
-                    "dispatchKeyEvent",
-                    KeyEvent::class.java
-                )?.let { method ->
-                    backHookInstalled = hook(method, object : XC_MethodHook() {
-                        override fun beforeHookedMethod(param: MethodHookParam) {
-                            val event = param.args?.firstOrNull { it is KeyEvent } as? KeyEvent
-                                ?: return
-                            if (event.keyCode != KeyEvent.KEYCODE_BACK) return
-                            val activity = param.thisObject as? Activity ?: return
-                            if (!isVirtualGroupPage(activity)) return
-                            if (event.action == KeyEvent.ACTION_UP) {
-                                runCatching { activity.finish() }.onFailure {
-                                    HLog.e("$TAG 关闭微信原生分组页面失败: ${it.message}", it)
-                                }
+            // 手势/按键返回未必都经过 onBackPressed，dispatchKeyEvent 一并收口。
+            KavaReflector.findMethodRecursive(
+                groupActivityClass,
+                "dispatchKeyEvent",
+                KeyEvent::class.java
+            )?.let { method ->
+                backHookInstalled = hook(method, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val event = param.args?.firstOrNull { it is KeyEvent } as? KeyEvent
+                            ?: return
+                        if (event.keyCode != KeyEvent.KEYCODE_BACK) return
+                        val activity = param.thisObject as? Activity ?: return
+                        if (!isVirtualGroupPage(activity)) return
+                        if (event.action == KeyEvent.ACTION_UP) {
+                            runCatching { activity.finish() }.onFailure {
+                                HLog.e("$TAG 关闭微信原生分组页面失败: ${it.message}", it)
                             }
-                            param.result = true
                         }
-                    })
-                }
+                        param.result = true
+                    }
+                }) || backHookInstalled
             }
         }
         if (!backHookInstalled) {
             HLog.e("$TAG 微信原生分组页返回收口 Hook 安装失败，返回时可能打开空白聊天页")
         }
+        // 兜底：虚拟分组会话（wxid_hchat_group_*）没有真实会话数据，任何入口打开它的聊天页
+        // 都只能得到一个“对方还不是你的朋友 / N 条新消息”的空白页，这里直接关掉并记录来源。
+        val chattingUiClass = KavaReflector.loadClass(CHATTING_UI, context.hostClassLoader())
+        val virtualChatBlocked = if (chattingUiClass != null) {
+            KavaReflector.findMethodRecursive(chattingUiClass, "onCreate", Bundle::class.java)
+                ?.let { method ->
+                    hook(method, object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            val activity = param.thisObject as? Activity ?: return
+                            val talker = activity.intent?.getStringExtra(CHAT_USER_EXTRA) ?: return
+                            if (!isVirtualTalker(talker)) return
+                            val callers = Throwable().stackTrace
+                                .drop(1).take(6)
+                                .joinToString(" | ") { it.className.substringAfterLast('.') + "." + it.methodName }
+                            HLog.e("$TAG 拦截虚拟分组会话聊天页: talker=$talker callers=$callers")
+                            runCatching { activity.finish() }
+                        }
+                    })
+                } ?: false
+        } else {
+            false
+        }
+        if (!virtualChatBlocked) {
+            HLog.e("$TAG 虚拟分组会话聊天页拦截 Hook 安装失败")
+        }
+
         val lifecycleContextInstalled = listOf("onPause", "onResume").all { name ->
             val method = KavaReflector.findDeclaredMethod(fragmentClass, name) ?: return@all false
             hook(method, object : XC_MethodHook() {
