@@ -121,6 +121,13 @@ object ConversationGroupRuntime {
      */
     @Volatile
     private var suspendingParentExtra = false
+
+    /**
+     * 微信主界面实例。折叠页退出后微信有可能被系统切到后台，此时 currentActivity() 为 null，
+     * 但空白聊天视图仍挂在 LauncherUI 上，所以保留一个弱引用继续检测并退出。
+     */
+    @Volatile
+    private var launcherViewRef: WeakReference<Activity>? = null
     private val menuBindings = Collections.synchronizedMap(
         WeakHashMap<MenuItem, ConversationMenuTarget>()
     )
@@ -733,8 +740,12 @@ object ConversationGroupRuntime {
                     val resumed = runCatching {
                         WeChatApis.currentActivity()?.currentActivity()
                     }.getOrNull()
-                    val name = resumed?.javaClass?.name ?: "null"
-                    if (resumed == null || !name.endsWith("ui.LauncherUI")) {
+                    // 微信可能已经被系统切到后台（此时 currentActivity() 为 null），
+                    // 但空白聊天视图仍挂在 LauncherUI 上，所以取不到前景 Activity 时用弱引用兜底。
+                    val launcher = resumed?.takeIf { it.javaClass.name.endsWith("ui.LauncherUI") }
+                        ?: launcherViewRef?.get()?.takeIf { !it.isFinishing }
+                    val name = launcher?.javaClass?.name ?: resumed?.javaClass?.name ?: "null"
+                    if (launcher == null) {
                         if (sweepTries % 3 == 1) {
                             HLog.e(
                                 "$TAG sweep#$sweepTries 跳过: activity=$name",
@@ -742,7 +753,7 @@ object ConversationGroupRuntime {
                             )
                         }
                     } else {
-                        val hit = hasChattingView(resumed.window?.decorView)
+                        val hit = hasChattingView(launcher.window?.decorView)
                         if (hit || sweepTries % 3 == 1) {
                             HLog.e(
                                 "$TAG sweep#$sweepTries activity=$name chattingView=$hit",
@@ -750,7 +761,7 @@ object ConversationGroupRuntime {
                             )
                         }
                         if (hit) {
-                            if (backAttempts >= 3) {
+                            if (backAttempts >= 5) {
                                 HLog.e(
                                     "$TAG 返回键未能退出虚拟会话聊天视图，放弃",
                                     RuntimeException("sweepGiveUp")
@@ -762,13 +773,11 @@ object ConversationGroupRuntime {
                                 "$TAG 命中虚拟分组空白聊天视图，第 $backAttempts 次下发返回键",
                                 RuntimeException("sweepVirtualGroupChat")
                             )
-                            // 微信这个内嵌聊天视图是在按键事件上处理返回的；直接调 Activity.onBackPressed
-                            // 会被默认实现当成“退出应用”（实测微信直接被退到后台），所以下发真实返回键。
                             runCatching {
-                                resumed.dispatchKeyEvent(
+                                launcher.dispatchKeyEvent(
                                     KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
                                 )
-                                resumed.dispatchKeyEvent(
+                                launcher.dispatchKeyEvent(
                                     KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK)
                                 )
                             }.onFailure {
@@ -782,10 +791,27 @@ object ConversationGroupRuntime {
                             return
                         }
                     }
-                    if (sweepTries < 33) main.postDelayed(this, 300)
+                    if (sweepTries < 50) main.postDelayed(this, 300)
                 }
             }
             main.postDelayed(sweepAction, 300)
+        }
+        // 记录 LauncherUI 实例：折叠页退出后微信可能被系统切到后台（currentActivity() 为 null），
+        // 但空白聊天视图仍挂在 LauncherUI 上，靠这个弱引用继续检测并退出。
+        runCatching {
+            val launcherClass = KavaReflector.loadClass(
+                "com.tencent.mm.ui.LauncherUI",
+                context.hostClassLoader()
+            ) ?: return@runCatching false
+            KavaReflector.findMethodRecursive(launcherClass, "onCreate", Bundle::class.java)
+                ?.let { method ->
+                    hook(method, object : XC_MethodHook() {
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            val activity = param.thisObject as? Activity ?: return
+                            launcherViewRef = WeakReference(activity)
+                        }
+                    })
+                }
         }
         val fragmentClass = KavaReflector.loadClass(NATIVE_GROUP_FRAGMENT, context.hostClassLoader())
             ?: return false
