@@ -21,6 +21,7 @@ import android.widget.Adapter
 import android.widget.AdapterView
 import android.widget.TextView
 import android.widget.Toast
+import com.aeonlab.toolkit.xposed.compat.CompatRuntime
 import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
@@ -884,7 +885,7 @@ object ConversationGroupRuntime {
                         Context::class.java,
                         android.util.AttributeSet::class.java
                     )
-                ).filterNotNull().forEach { hook(it, probe) }
+                ).filterNotNull().forEach { CompatRuntime.hook(it, probe) }
                 editTextProbeInstalled = true
             }.onFailure {
                 HLog.e("$TAG EditText 探针安装失败: ${it.message}", it)
