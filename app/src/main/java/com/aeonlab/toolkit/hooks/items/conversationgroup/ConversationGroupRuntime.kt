@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.ContextMenu
+import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
 import android.widget.Adapter
@@ -742,6 +743,60 @@ object ConversationGroupRuntime {
                 customizeNativeGroupPage(param.thisObject, context.hostContext())
             }
         })
+        // 微信这个“折叠聊天”页原生的返回语义是“回到父会话”。我们借它承载聊天分组时，
+        // 父会话是虚拟 talker（wxid_hchat_group_*），它并不真实存在，于是返回会打开一个
+        // 空白聊天页（“对方还不是你的朋友 / N 条新消息”），用户必须再按一次返回才能退出分组页。
+        // 这里把分组页的返回收口为 finish：嵌套子分组时自然退回上一层分组页。
+        val groupActivityClass = KavaReflector.loadClass(
+            NATIVE_GROUP_ACTIVITY,
+            context.hostClassLoader()
+        )
+        fun isVirtualGroupPage(activity: Any?): Boolean {
+            val target = activity as? Activity ?: return false
+            if (target.isFinishing) return false
+            return target.intent?.getStringExtra(CONTACT_USER_EXTRA)?.let(::isVirtualTalker) == true
+        }
+        var backHookInstalled = false
+        if (groupActivityClass != null) {
+            KavaReflector.findMethodRecursive(groupActivityClass, "onBackPressed")?.let { method ->
+                backHookInstalled = hook(method, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val activity = param.thisObject as? Activity ?: return
+                        if (!isVirtualGroupPage(activity)) return
+                        param.result = null
+                        runCatching { activity.finish() }.onFailure {
+                            HLog.e("$TAG 关闭微信原生分组页面失败: ${it.message}", it)
+                        }
+                    }
+                })
+            }
+            if (!backHookInstalled) {
+                KavaReflector.findMethodRecursive(
+                    groupActivityClass,
+                    "dispatchKeyEvent",
+                    KeyEvent::class.java
+                )?.let { method ->
+                    backHookInstalled = hook(method, object : XC_MethodHook() {
+                        override fun beforeHookedMethod(param: MethodHookParam) {
+                            val event = param.args?.firstOrNull { it is KeyEvent } as? KeyEvent
+                                ?: return
+                            if (event.keyCode != KeyEvent.KEYCODE_BACK) return
+                            val activity = param.thisObject as? Activity ?: return
+                            if (!isVirtualGroupPage(activity)) return
+                            if (event.action == KeyEvent.ACTION_UP) {
+                                runCatching { activity.finish() }.onFailure {
+                                    HLog.e("$TAG 关闭微信原生分组页面失败: ${it.message}", it)
+                                }
+                            }
+                            param.result = true
+                        }
+                    })
+                }
+            }
+        }
+        if (!backHookInstalled) {
+            HLog.e("$TAG 微信原生分组页返回收口 Hook 安装失败，返回时可能打开空白聊天页")
+        }
         val lifecycleContextInstalled = listOf("onPause", "onResume").all { name ->
             val method = KavaReflector.findDeclaredMethod(fragmentClass, name) ?: return@all false
             hook(method, object : XC_MethodHook() {

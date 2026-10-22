@@ -1115,7 +1115,11 @@ object MiuixSettingsPage {
             } else if (selected == null) {
                 closePage()
             } else {
+                // 详情栈只剩初始项时 popDetail() 是空转，但返回键已被这里吞掉，
+                // 外部（如首页分组入口）直接打开详情页会出现“要按两次返回”的观感。
+                val depth = detailBackStack.size
                 popDetail()
+                if (detailBackStack.size == depth) closePage()
             }
             page.post { consumingBack = false }
         }
