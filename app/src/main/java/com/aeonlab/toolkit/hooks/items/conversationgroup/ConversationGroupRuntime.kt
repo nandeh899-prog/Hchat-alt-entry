@@ -16,6 +16,7 @@ import android.view.ContextMenu
 import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Adapter
 import android.widget.AdapterView
 import android.widget.TextView
@@ -722,6 +723,17 @@ object ConversationGroupRuntime {
             suspendingParentExtra = true
             runCatching { activity.intent?.removeExtra(CONTACT_USER_EXTRA) }
             main.postDelayed({ suspendingParentExtra = false }, 5000)
+            // 微信在折叠页销毁时会把 LauncherUI 切到“父会话”的聊天视图；我们的父会话是虚拟分组，
+            // 于是一个空白聊天页（“对方还不是你的朋友 / N 条新消息”）会留在屏幕上，用户得再按一次返回。
+            // 这里在页面关掉后检测一次：若 LauncherUI 停在聊天视图，就主动退回会话列表。
+            main.postDelayed({
+                val resumed = WeChatApis.currentActivity()?.currentActivity() ?: return@postDelayed
+                if (!resumed.javaClass.name.endsWith("ui.LauncherUI")) return@postDelayed
+                if (!hasChattingView(resumed.window?.decorView)) return@postDelayed
+                runCatching { resumed.onBackPressed() }.onFailure {
+                    HLog.e("$TAG 退出虚拟会话聊天视图失败: ${it.message}", it)
+                }
+            }, 700)
         }
         val fragmentClass = KavaReflector.loadClass(NATIVE_GROUP_FRAGMENT, context.hostClassLoader())
             ?: return false
@@ -906,6 +918,19 @@ object ConversationGroupRuntime {
             HLog.e("$TAG 微信原生分组页面 Hook 安装不完整: fragment=$NATIVE_GROUP_FRAGMENT")
         }
         return parentExtraInstalled && lifecycleInstalled && lifecycleContextInstalled
+    }
+
+    /**判断当前视图里是否已经有聊天页（聊天输入框或 Chatting* 容器）。首页会话列表不含 EditText。 */
+    private fun hasChattingView(view: View?): Boolean {
+        val target = view ?: return false
+        if (target.javaClass.name.contains("Chatting", ignoreCase = true)) return true
+        if (target is android.widget.EditText) return true
+        if (target is ViewGroup) {
+            for (index in 0 until target.childCount) {
+                if (hasChattingView(target.getChildAt(index))) return true
+            }
+        }
+        return false
     }
 
     private fun customizeNativeGroupPage(fragment: Any?, context: Context) {
