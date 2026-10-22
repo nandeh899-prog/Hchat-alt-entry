@@ -8,7 +8,7 @@ import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 
 import com.aeonlab.toolkit.hooks.api.runtime.WeChatVersionApi;
-import com.aeonlab.toolkit.preferences.HchatStorage;
+import com.aeonlab.toolkit.preferences.AeonLabStorage;
 import com.aeonlab.toolkit.utils.KavaReflector;
 
 import org.luckypray.dexkit.DexKitBridge;
@@ -37,7 +37,7 @@ import com.aeonlab.toolkit.xposed.compat.XposedBridge;
  */
 public class SettingsDexFinder {
 
-    private static final String TAG = "[Hchat:SettingsDex]";
+    private static final String TAG = "[AeonLab:SettingsDex]";
     private static final String PREF_CLASS = "com.tencent.mm.ui.base.preference.Preference";
     private static final String CACHE_PREFS = "AeonLab_settings_dex_cache";
     private static final String CACHE_COMPLETE = "cache.complete";
@@ -103,7 +103,7 @@ public class SettingsDexFinder {
     public SettingsDexFinder(DexKitBridge dexKit, ClassLoader classLoader, Context context) {
         this.dexKit = dexKit;
         this.classLoader = classLoader;
-        this.cachePrefs = context != null ? HchatStorage.preferences(context, CACHE_PREFS) : null;
+        this.cachePrefs = context != null ? AeonLabStorage.preferences(context, CACHE_PREFS) : null;
         this.runtimeCacheKey = WeChatVersionApi.buildCacheKey(context, classLoader);
     }
 

@@ -46,7 +46,7 @@ import java.util.regex.Pattern
 import kotlin.random.Random
 
 object AutoReplyRuntime {
-    private const val TAG = "[Hchat:AutoReply]"
+    private const val TAG = "[AeonLab:AutoReply]"
     private const val AT_ALL_WXID = "notify@all"
     private const val XIAOZHI_INPUT_SAMPLE_RATE = 16000
     private const val XIAOZHI_INPUT_CHANNELS = 1
@@ -1793,7 +1793,7 @@ object AutoReplyRuntime {
                             })
                             put("session_id", JSONObject().apply {
                                 put("type", "string")
-                                put("description", "当前 Hchat 会话 session_id；如果你拿得到，请使用用户消息里的原值")
+                                put("description", "当前 AeonLab 会话 session_id；如果你拿得到，请使用用户消息里的原值")
                             })
                         },
                         JSONArray().put("text")
@@ -1824,7 +1824,7 @@ object AutoReplyRuntime {
                             })
                             put("session_id", JSONObject().apply {
                                 put("type", "string")
-                                put("description", "当前 Hchat 会话 session_id；如果你拿得到，请使用用户消息里的原值")
+                                put("description", "当前 AeonLab 会话 session_id；如果你拿得到，请使用用户消息里的原值")
                             })
                         },
                         JSONArray().put("title").put("musicUrl").put("musicDataUrl")
@@ -1832,7 +1832,7 @@ object AutoReplyRuntime {
                     if (kugouEnabled && kugouPluginId.isNotBlank()) {
                         put(mcpTool(
                             "hchat_kugou_order_music",
-                            "当用户表达想听歌、放一首歌、播放音乐、来一首某歌手或某歌曲时，先从用户话里提取歌曲名、歌手名或组合关键词，然后使用此工具调用 Hchat 配置的点歌工具，在当前微信会话搜索并发送音乐卡片。",
+                            "当用户表达想听歌、放一首歌、播放音乐、来一首某歌手或某歌曲时，先从用户话里提取歌曲名、歌手名或组合关键词，然后使用此工具调用 AeonLab 配置的点歌工具，在当前微信会话搜索并发送音乐卡片。",
                             JSONObject().apply {
                                 put("keyword", JSONObject().apply {
                                     put("type", "string")
@@ -1840,7 +1840,7 @@ object AutoReplyRuntime {
                                 })
                                 put("session_id", JSONObject().apply {
                                     put("type", "string")
-                                    put("description", "当前 Hchat 会话 session_id；如果你拿得到，请使用用户消息里的原值")
+                                    put("description", "当前 AeonLab 会话 session_id；如果你拿得到，请使用用户消息里的原值")
                                 })
                             },
                             JSONArray().put("keyword")

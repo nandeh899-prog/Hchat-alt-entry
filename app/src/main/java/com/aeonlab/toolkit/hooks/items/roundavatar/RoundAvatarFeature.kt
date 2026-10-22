@@ -350,7 +350,7 @@ private class RoundAvatarRuntime(
     )
 
     private companion object {
-        const val TAG = "[Hchat:RoundAvatar]"
+        const val TAG = "[AeonLab:RoundAvatar]"
         const val CACHE_SCHEMA = "round_avatar_v1"
         const val CACHE_LEGACY_LOAD = "legacy_load"
         const val CACHE_WORKER_CONSTRUCTOR = "worker_constructor"
@@ -396,7 +396,7 @@ private object RoundAvatarBitmapProcessor {
             originals[output] = WeakReference(original)
             output
         }.getOrElse {
-            HLog.e("[Hchat:RoundAvatar] 处理通知头像失败: ${it.message}", it)
+            HLog.e("[AeonLab:RoundAvatar] 处理通知头像失败: ${it.message}", it)
             source
         }
     }

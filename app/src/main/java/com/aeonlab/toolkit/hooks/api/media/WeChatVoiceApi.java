@@ -451,7 +451,7 @@ public final class WeChatVoiceApi {
             if (method.getDeclaringClass() == Object.class) {
                 if ("hashCode".equals(method.getName())) return System.identityHashCode(proxy);
                 if ("equals".equals(method.getName())) return proxy == (args != null && args.length > 0 ? args[0] : null);
-                if ("toString".equals(method.getName())) return "HchatVoicePlaybackCallback";
+                if ("toString".equals(method.getName())) return "AeonLabVoicePlaybackCallback";
                 return null;
             }
             if (callbackName.equals(method.getName())) {

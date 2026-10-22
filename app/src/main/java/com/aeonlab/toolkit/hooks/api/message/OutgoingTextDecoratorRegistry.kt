@@ -65,7 +65,7 @@ object OutgoingTextDecoratorRegistry {
                 )
             } catch (throwable: Throwable) {
                 HLog.e(
-                    "[Hchat:TextDecorator] 格式化回调失败: ${entry.id} ${throwable.message}",
+                    "[AeonLab:TextDecorator] 格式化回调失败: ${entry.id} ${throwable.message}",
                     throwable
                 )
                 null

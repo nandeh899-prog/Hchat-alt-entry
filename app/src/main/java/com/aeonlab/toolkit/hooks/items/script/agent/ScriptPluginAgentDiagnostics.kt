@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.hooks.items.script.agent
 import android.content.Context
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginRuntime
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginSettings
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import org.json.JSONArray
 import org.json.JSONObject
@@ -75,7 +75,7 @@ internal object ScriptPluginAgentDiagnostics {
 
     private fun readRuntime(context: Context, pluginId: String): JSONObject = try {
         val snapshot = ScriptPluginRuntime.pluginRuntimeSnapshot(pluginId)
-        val preferences = HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
+        val preferences = AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
         val globalEnabled = preferences.getBoolean(ScriptPluginSettings.KEY_ENABLE, ScriptPluginSettings.DEFAULT_ENABLE)
         val pluginEnabled = preferences.getBoolean(
             ScriptPluginSettings.pluginEnableKey(pluginId), ScriptPluginSettings.DEFAULT_PLUGIN_ENABLE
@@ -173,7 +173,7 @@ internal object ScriptPluginAgentDiagnostics {
     }
 
     private fun readError(stage: String, error: Exception): JSONObject {
-        HLog.e("[Hchat:ScriptAgent] 读取插件诊断失败: $stage", error)
+        HLog.e("[AeonLab:ScriptAgent] 读取插件诊断失败: $stage", error)
         return JSONObject().put("stage", stage).put("type", error.javaClass.name)
             .put("message", error.message.orEmpty().take(1000))
     }

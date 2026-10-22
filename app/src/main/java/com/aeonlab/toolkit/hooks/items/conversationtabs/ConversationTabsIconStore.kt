@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.AtomicFile
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
@@ -45,7 +45,7 @@ object ConversationTabsIconStore {
                 null
             }
         } catch (error: Throwable) {
-            com.aeonlab.toolkit.utils.HLog.e("[Hchat:ConversationTabs] 导入标签图标失败", error)
+            com.aeonlab.toolkit.utils.HLog.e("[AeonLab:ConversationTabs] 导入标签图标失败", error)
             output?.let { runCatching { atomicFile.failWrite(it) } }
             atomicFile.delete()
             null
@@ -108,7 +108,7 @@ object ConversationTabsIconStore {
     }
 
     private fun iconDirectory(context: Context): File {
-        return File(HchatStorage.storageDir(context), DIRECTORY_NAME)
+        return File(AeonLabStorage.storageDir(context), DIRECTORY_NAME)
     }
 
     private const val DIRECTORY_NAME = "conversation_tab_icons"

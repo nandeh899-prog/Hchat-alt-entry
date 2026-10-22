@@ -21,7 +21,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.matchers.MethodMatcher
@@ -41,7 +41,7 @@ class FinderMediaDownloadFeature : BaseFeature() {
     }
 
     override fun isEnabled(context: FeatureContext): Boolean {
-        val sp = HchatStorage.preferences(context.hostContext(), FinderMediaDownloadSettings.PREFS_NAME)
+        val sp = AeonLabStorage.preferences(context.hostContext(), FinderMediaDownloadSettings.PREFS_NAME)
         return sp.getBoolean(FinderMediaDownloadSettings.KEY_ENABLE, FinderMediaDownloadSettings.DEFAULT_ENABLE)
     }
 
@@ -128,14 +128,14 @@ private class FinderMediaDownloadHooker(
                 MENU_COPY_LINK,
                 "复制链接",
                 "icons_filled_link",
-                R.drawable.ic_hchat_copy_link
+                R.drawable.ic_aeonlab_copy_link
             )
             addFinderMenuItem(
                 menu,
                 MENU_DOWNLOAD,
                 "下载视频",
                 "icons_filled_download",
-                R.drawable.ic_hchat_download_video
+                R.drawable.ic_aeonlab_download_video
             )
         }.onFailure {
             logger("视频号菜单注入失败", it)
@@ -281,7 +281,7 @@ private class FinderMediaDownloadHooker(
             return
         }
         val clipboard = context.hostContext().getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        clipboard?.setPrimaryClip(ClipData.newPlainText("Hchat Finder Media", text))
+        clipboard?.setPrimaryClip(ClipData.newPlainText("AeonLab Finder Media", text))
         toast("已复制")
     }
 

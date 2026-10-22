@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 object ScriptSendButtonHook {
-    private const val TAG = "[Hchat:Script]"
+    private const val TAG = "[AeonLab:Script]"
     private const val CHAT_FOOTER = "com.tencent.mm.pluginsdk.ui.chat.ChatFooter"
     private const val TEXT_DECORATION_EXTRA = "hchat_send_text_decoration"
     private const val INPUT_SESSION_EXTRA = "hchat_send_input_session"

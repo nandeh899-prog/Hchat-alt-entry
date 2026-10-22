@@ -17,7 +17,7 @@ import java.util.Locale
 import java.util.UUID
 
 object PluginMarketInstaller {
-    private const val TAG = "[Hchat:PluginMarket]"
+    private const val TAG = "[AeonLab:PluginMarket]"
 
     const val MAIN_FILE = "main.java"
     const val SNAPSHOT_FILE = "main.java.bshs"

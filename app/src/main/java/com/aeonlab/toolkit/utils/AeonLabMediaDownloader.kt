@@ -13,7 +13,7 @@ import java.math.BigInteger
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-object HchatMediaDownloader {
+object AeonLabMediaDownloader {
     private const val FINDER_VIDEO_DECRYPT_BYTES = 128 * 1024
 
     private val httpClient by lazy {
@@ -115,7 +115,7 @@ object HchatMediaDownloader {
         }.onFailure {
             tmpFile.delete()
             finalFile.delete()
-            HLog.e("[Hchat:MediaDownloader] 视频号视频下载解密失败: ${it.message}", it)
+            HLog.e("[AeonLab:MediaDownloader] 视频号视频下载解密失败: ${it.message}", it)
         }.getOrNull()
     }
 
@@ -170,7 +170,7 @@ object HchatMediaDownloader {
                     ?.listFiles { file -> file.name.startsWith(".${target.name}.download.") && file.name.endsWith(".tmp") }
                     ?.forEach { file -> runCatching { file.delete() } }
             }
-            HLog.e("[Hchat:MediaDownloader] 下载失败: ${it.message}", it)
+            HLog.e("[AeonLab:MediaDownloader] 下载失败: ${it.message}", it)
         }.getOrNull()
     }
 

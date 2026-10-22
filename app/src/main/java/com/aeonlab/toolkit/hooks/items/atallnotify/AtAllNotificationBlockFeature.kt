@@ -36,6 +36,6 @@ class AtAllNotificationBlockFeature : BaseFeature() {
 
     companion object {
         const val ID = "block_at_all_notification"
-        private const val TAG = "[Hchat:BlockAtAllNotification]"
+        private const val TAG = "[AeonLab:BlockAtAllNotification]"
     }
 }

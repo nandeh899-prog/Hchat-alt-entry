@@ -73,7 +73,7 @@ class ScriptPluginAgentMcpClient(
                 put("protocolVersion", REQUESTED_PROTOCOL_VERSION)
                 put("capabilities", JSONObject())
                 put("clientInfo", JSONObject().apply {
-                    put("name", "Hchat Plugin Agent")
+                    put("name", "AeonLab Plugin Agent")
                     put("version", "1.0")
                 })
             }

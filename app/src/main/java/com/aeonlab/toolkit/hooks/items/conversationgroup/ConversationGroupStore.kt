@@ -2,7 +2,7 @@ package com.aeonlab.toolkit.hooks.items.conversationgroup
 
 import android.content.Context
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import org.json.JSONArray
 import org.json.JSONObject
@@ -32,11 +32,12 @@ object ConversationGroupStore {
     private const val KEY_AUTOMATIC_SEEN_GROUPS = "automaticSeenGroups"
     private const val KEY_AUTOMATIC_SEEN_INITIALIZED = "automaticSeenInitialized"
     private const val SCHEMA_VERSION = 3
-    private const val EXPORT_FORMAT = "HchatConversationGroups"
+    private const val EXPORT_FORMAT = "AeonLabConversationGroups"
+    private const val LEGACY_EXPORT_FORMAT = "HchatConversationGroups"
     private const val MIN_EXPORT_SCHEMA_VERSION = 1
     private const val EXPORT_SCHEMA_VERSION = 2
     private const val VIRTUAL_TALKER_PREFIX = "wxid_hchat_group_"
-    private const val TAG = "[Hchat:ConversationGroup]"
+    private const val TAG = "[AeonLab:ConversationGroup]"
     private val lock = Any()
     @Volatile private var cachedSnapshot: CachedSnapshot? = null
 
@@ -520,13 +521,13 @@ object ConversationGroupStore {
 
     @JvmStatic
     fun isEnabled(context: Context): Boolean {
-        return HchatStorage.preferences(context, PREFS_NAME)
+        return AeonLabStorage.preferences(context, PREFS_NAME)
             .getBoolean(KEY_ENABLE, DEFAULT_ENABLE)
     }
 
     @JvmStatic
     fun setEnabled(context: Context, enabled: Boolean) {
-        val committed = HchatStorage.preferences(context, PREFS_NAME)
+        val committed = AeonLabStorage.preferences(context, PREFS_NAME)
             .edit()
             .putBoolean(KEY_ENABLE, enabled)
             .commit()
@@ -537,7 +538,7 @@ object ConversationGroupStore {
     fun loadAutomaticSeenGroupIds(context: Context): Set<String> = synchronized(lock) {
         val account = accountKey()
         if (account.isBlank()) return@synchronized emptySet()
-        val raw = HchatStorage.preferences(context, PREFS_NAME)
+        val raw = AeonLabStorage.preferences(context, PREFS_NAME)
             .getString(KEY_AUTOMATIC_SEEN_GROUPS, "").orEmpty()
         runCatching {
             val root = if (raw.isBlank()) JSONObject() else JSONObject(raw)
@@ -557,7 +558,7 @@ object ConversationGroupStore {
     fun automaticSeenBaselineInitialized(context: Context): Boolean = synchronized(lock) {
         val account = accountKey()
         if (account.isBlank()) return@synchronized false
-        val raw = HchatStorage.preferences(context, PREFS_NAME)
+        val raw = AeonLabStorage.preferences(context, PREFS_NAME)
             .getString(KEY_AUTOMATIC_SEEN_GROUPS, "").orEmpty()
         runCatching {
             val root = if (raw.isBlank()) JSONObject() else JSONObject(raw)
@@ -573,7 +574,7 @@ object ConversationGroupStore {
     fun saveAutomaticSeenGroupIds(context: Context, ids: Collection<String>): Boolean = synchronized(lock) {
         val account = accountKey()
         if (account.isBlank()) return@synchronized false
-        val prefs = HchatStorage.preferences(context, PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context, PREFS_NAME)
         val raw = prefs.getString(KEY_AUTOMATIC_SEEN_GROUPS, "").orEmpty()
         val root = if (raw.isBlank()) JSONObject() else runCatching { JSONObject(raw) }
             .getOrElse { JSONObject() }
@@ -819,7 +820,7 @@ object ConversationGroupStore {
         account: String,
         persistRepairs: Boolean
     ): List<ConversationGroup> {
-        val prefs = HchatStorage.preferences(context, PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context, PREFS_NAME)
         val raw = prefs.getString(KEY_DATA, "").orEmpty()
         cachedSnapshot?.takeIf { it.account == account && it.raw == raw }
             ?.let { return it.groups }
@@ -863,7 +864,7 @@ object ConversationGroupStore {
         account: String,
         groups: List<ConversationGroup>
     ): Boolean {
-        val prefs = HchatStorage.preferences(context, PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context, PREFS_NAME)
         val raw = prefs.getString(KEY_DATA, "").orEmpty()
         val root = if (raw.isBlank()) {
             JSONObject()
@@ -885,7 +886,7 @@ object ConversationGroupStore {
     }
 
     private fun resetAutomaticSeenBaselineLocked(context: Context, account: String): Boolean {
-        val prefs = HchatStorage.preferences(context, PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context, PREFS_NAME)
         val raw = prefs.getString(KEY_AUTOMATIC_SEEN_GROUPS, "").orEmpty()
         if (raw.isBlank()) return true
         val root = runCatching { JSONObject(raw) }.getOrElse {
@@ -1044,9 +1045,11 @@ object ConversationGroupStore {
     private fun parseImport(raw: String): List<ConversationGroup> {
         require(raw.isNotBlank()) { "导入文件为空" }
         val root = JSONObject(raw)
-        require(root.optString("format") == EXPORT_FORMAT &&
-            root.opt("schema") is String && root.optString("schema") == EXPORT_FORMAT
-        ) { "不是 Hchat 聊天分组文件" }
+        val fmt = root.optString("format")
+        val sch = root.optString("schema")
+        require((fmt == EXPORT_FORMAT || fmt == LEGACY_EXPORT_FORMAT) &&
+            sch == fmt
+        ) { "不是 AeonLab 聊天分组文件" }
         val version = root.optInt("version", -1)
         require(root.opt("version") is Number &&
             version in MIN_EXPORT_SCHEMA_VERSION..EXPORT_SCHEMA_VERSION

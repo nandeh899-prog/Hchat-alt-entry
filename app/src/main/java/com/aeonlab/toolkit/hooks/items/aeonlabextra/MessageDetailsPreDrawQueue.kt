@@ -1,4 +1,4 @@
-package com.aeonlab.toolkit.hooks.items.hchatextra
+package com.aeonlab.toolkit.hooks.items.aeonlabextra
 
 import android.view.View
 import android.view.ViewTreeObserver

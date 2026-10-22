@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.script.agent
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import org.json.JSONArray
 import org.json.JSONObject
@@ -39,7 +39,7 @@ object CodexSettings {
         val url: String = "",
         val token: String = ""
     ) {
-        val envName: String get() = "HCHAT_MCP_" + id.uppercase(Locale.ROOT)
+        val envName: String get() = "AEONLAB_MCP_" + id.uppercase(Locale.ROOT)
     }
 
     data class Profile(
@@ -110,7 +110,7 @@ object CodexSettings {
     fun setActive(context: Context, id: String) {
         runCatching {
             prefs(context)?.edit()?.putString(KEY_ACTIVE_PROFILE, id)?.apply()
-        }.onFailure { HLog.e("[Hchat:codex] 切换配置失败: ${it.message}", it) }
+        }.onFailure { HLog.e("[AeonLab:codex] 切换配置失败: ${it.message}", it) }
     }
 
     fun adoptLegacyKey(context: Context, key: String) {
@@ -129,7 +129,7 @@ object CodexSettings {
         writeProfiles(context, if (exists) list.map { if (it.id == next.id) next else it } else list + next)
         runCatching {
             prefs(context)?.edit()?.putBoolean(KEY_SAVED, true)?.apply()
-        }.onFailure { HLog.e("[Hchat:codex] 保存 codex 设置失败: ${it.message}", it) }
+        }.onFailure { HLog.e("[AeonLab:codex] 保存 codex 设置失败: ${it.message}", it) }
         if (setActiveProfile) setActive(context, next.id)
         apply(context)
     }
@@ -159,7 +159,7 @@ object CodexSettings {
         val next = if (blocks.isBlank()) patched.trimEnd() + "\n" else patched.trimEnd() + "\n\n" + blocks + "\n"
         if (next == existing) return
         runCatching { file.writeText(next) }
-            .onFailure { HLog.e("[Hchat:codex] 写 config.toml 失败: ${it.message}", it) }
+            .onFailure { HLog.e("[AeonLab:codex] 写 config.toml 失败: ${it.message}", it) }
     }
 
     fun fetchModels(baseUrl: String, apiKey: String): Result<List<String>> = runCatching {
@@ -181,7 +181,7 @@ object CodexSettings {
         }
         fetched ?: lastError?.let { throw it } ?: emptyList()
     }.onFailure {
-        HLog.e("[Hchat:codex] 拉取模型列表失败: ${it.message}", it)
+        HLog.e("[AeonLab:codex] 拉取模型列表失败: ${it.message}", it)
     }
 
     fun testConnection(baseUrl: String, apiKey: String): Result<String> = runCatching {
@@ -203,7 +203,7 @@ object CodexSettings {
         }
         throw lastError ?: IllegalStateException("连接失败，请检查地址和网络")
     }.onFailure {
-        HLog.e("[Hchat:codex] 测试连接失败: ${it.message}", it)
+        HLog.e("[AeonLab:codex] 测试连接失败: ${it.message}", it)
     }.recoverCatching {
         throw IllegalStateException(friendlyError(it))
     }
@@ -463,9 +463,9 @@ object CodexSettings {
         }
         runCatching {
             prefs(context)?.edit()?.putString(KEY_PROFILES, array.toString())?.apply()
-        }.onFailure { HLog.e("[Hchat:codex] 写入 codex 配置失败: ${it.message}", it) }
+        }.onFailure { HLog.e("[AeonLab:codex] 写入 codex 配置失败: ${it.message}", it) }
     }
 
     private fun prefs(context: Context) =
-        runCatching { HchatStorage.preferences(context, PREFS_NAME) }.getOrNull()
+        runCatching { AeonLabStorage.preferences(context, PREFS_NAME) }.getOrNull()
 }

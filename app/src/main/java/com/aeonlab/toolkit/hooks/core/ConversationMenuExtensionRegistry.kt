@@ -26,7 +26,7 @@ internal interface ConversationMenuExtension {
 }
 
 internal object ConversationMenuExtensionRegistry {
-    private const val TAG = "[Hchat:ConversationMenuExtension]"
+    private const val TAG = "[AeonLab:ConversationMenuExtension]"
     private val extensions = ConcurrentHashMap<Int, ConversationMenuExtension>()
 
     fun register(extension: ConversationMenuExtension) {

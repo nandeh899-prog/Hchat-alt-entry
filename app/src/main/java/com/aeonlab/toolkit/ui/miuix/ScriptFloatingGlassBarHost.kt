@@ -391,7 +391,7 @@ internal object ScriptFloatingGlassBarHost {
                     barHost = barHost
                 )
             }.onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 恢复模块悬浮底栏失败: ${it.message}", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 恢复模块悬浮底栏失败: ${it.message}", it)
             }
             owner.clear(composeView)
             owner.destroy()

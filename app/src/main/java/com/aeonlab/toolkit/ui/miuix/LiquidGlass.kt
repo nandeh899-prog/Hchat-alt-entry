@@ -36,7 +36,7 @@ internal fun BackdropEffectScope.lens(
     } else {
         ROUNDED_RECT_REFRACTION_SHADER
     }
-    val key = if (dispersionEnabled) "HchatLiquidGlassLensDispersion" else "HchatLiquidGlassLens"
+    val key = if (dispersionEnabled) "AeonLabLiquidGlassLensDispersion" else "AeonLabLiquidGlassLens"
 
     val scale = downscaleFactor.coerceAtLeast(1).toFloat()
     val scaledPadding = padding / scale

@@ -32,7 +32,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -1531,17 +1531,17 @@ private class SwipeQuoteAdapter(
     }
 
     private fun isQuoteEnabled(): Boolean {
-        val sp = HchatStorage.preferences(context.hostContext(), SwipeQuoteSettings.PREFS_NAME)
+        val sp = AeonLabStorage.preferences(context.hostContext(), SwipeQuoteSettings.PREFS_NAME)
         return sp.getBoolean(SwipeQuoteSettings.KEY_ENABLE, SwipeQuoteSettings.DEFAULT_ENABLE)
     }
 
     private fun isRepeatEnabled(): Boolean {
-        val sp = HchatStorage.preferences(context.hostContext(), SwipeQuoteSettings.PREFS_NAME)
+        val sp = AeonLabStorage.preferences(context.hostContext(), SwipeQuoteSettings.PREFS_NAME)
         return sp.getBoolean(SwipeQuoteSettings.KEY_REPEAT_ENABLE, SwipeQuoteSettings.DEFAULT_REPEAT_ENABLE)
     }
 
     private fun isRepeatMenuEnabled(): Boolean {
-        val sp = HchatStorage.preferences(context.hostContext(), SwipeQuoteSettings.PREFS_NAME)
+        val sp = AeonLabStorage.preferences(context.hostContext(), SwipeQuoteSettings.PREFS_NAME)
         return sp.getBoolean(
             SwipeQuoteSettings.KEY_REPEAT_MENU_ENABLE,
             SwipeQuoteSettings.DEFAULT_REPEAT_MENU_ENABLE
@@ -1600,7 +1600,7 @@ private class SwipeQuoteAdapter(
         const val CHAT_FOOTER = "com.tencent.mm.pluginsdk.ui.chat.ChatFooter"
         const val MSG_RETRANSMIT_UI = "com.tencent.mm.ui.transmit.MsgRetransmitUI"
         const val EXTRA_HCHAT_SILENT_REPEAT = "hchat_silent_repeat"
-        const val MENU_REPEAT_ID = SingleMessageMenuLocator.HCHAT_REPEAT_MENU_ITEM_ID
+        const val MENU_REPEAT_ID = SingleMessageMenuLocator.AEONLAB_REPEAT_MENU_ITEM_ID
         const val MENU_REPEAT_TITLE = "复读[H]"
         const val DEFAULT_VOICE_DURATION_MS = 1000
         val RECYCLER_VIEW_CLASSES = arrayOf(

@@ -29,7 +29,7 @@ import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.membertitle.MemberTitleStore
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindClass
@@ -80,7 +80,7 @@ class HomeTextColorFeature : BaseFeature() {
 private class HomeTextColorRuntime(
     private val context: FeatureContext
 ) {
-    private val prefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(
         context.hostContext(),
         HomeTextColorSettings.PREFS_NAME
     )
@@ -1610,7 +1610,7 @@ private class HomeTextColorRuntime(
     }
 
     private companion object {
-        const val TAG = "[Hchat:HomeTextColor]"
+        const val TAG = "[AeonLab:HomeTextColor]"
         const val METHOD_CACHE_PREFS = "AeonLab_home_text_color_method_cache"
         const val CACHE_CONVERSATION_MAIN_LEGACY = "conversation_main_get_views_v4"
         const val CACHE_CONVERSATION_GROUP = "conversation_group_get_views_v2"

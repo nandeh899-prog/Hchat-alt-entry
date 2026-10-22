@@ -18,7 +18,7 @@ import com.aeonlab.toolkit.hooks.api.model.WeChatSnsPrepareResult
 import com.aeonlab.toolkit.hooks.api.runtime.WeChatDatabaseApi
 import com.aeonlab.toolkit.hooks.items.quickread.QuickMarkReadRuntime
 import com.aeonlab.toolkit.hooks.items.shortvideo.FinderMediaDownloadSupport
-import com.aeonlab.toolkit.utils.HchatMediaDownloader
+import com.aeonlab.toolkit.utils.AeonLabMediaDownloader
 import me.hd.wauxv.data.bean.MsgInfoBean
 import me.hd.wauxv.data.bean.info.FriendInfo
 import me.hd.wauxv.data.bean.info.GroupInfo
@@ -1044,14 +1044,14 @@ class ScriptWaBridge @JvmOverloads internal constructor(
 
     fun downloadImage(url: String?, callback: Consumer<File?>?) {
         async(callback) { completion ->
-            val result = HchatMediaDownloader.downloadImage(bridge.hostContext, url)
+            val result = AeonLabMediaDownloader.downloadImage(bridge.hostContext, url)
             completion.complete { it.accept(result) }
         }
     }
 
     fun downloadImage(url: String?, fileName: String?, callback: Consumer<File?>?) {
         async(callback) { completion ->
-            val result = HchatMediaDownloader.downloadImage(bridge.hostContext, url, fileName)
+            val result = AeonLabMediaDownloader.downloadImage(bridge.hostContext, url, fileName)
             completion.complete { it.accept(result) }
         }
     }
@@ -1263,7 +1263,7 @@ class ScriptWaBridge @JvmOverloads internal constructor(
                 ?: return@runCatching null
             val target = targetFile(savePath, md5, url)
             if (isHttpUrl(url)) {
-                val file = HchatMediaDownloader.downloadToFileAtomically(url, target)
+                val file = AeonLabMediaDownloader.downloadToFileAtomically(url, target)
                 if (file == null || !file.isFile || file.length() <= 0L) {
                     logDownload("downloadImg失败: ${url.take(120)} -> ${target.absolutePath}")
                 }
@@ -1454,7 +1454,7 @@ class ScriptWaBridge @JvmOverloads internal constructor(
             return
         }
         if (isHttpUrl(url) && request.aesKey.isBlank()) {
-            val file = HchatMediaDownloader.downloadToFileAtomically(url, target)
+            val file = AeonLabMediaDownloader.downloadToFileAtomically(url, target)
             if (file != null && file.isFile && file.length() > 0L &&
                 (request.expectedLength <= 0L || file.length() >= request.expectedLength)
             ) {
@@ -1571,14 +1571,14 @@ class ScriptWaBridge @JvmOverloads internal constructor(
 
     fun downloadImages(urlList: List<*>?, callback: Consumer<List<File>>?) {
         async(callback) { completion ->
-            val result = HchatMediaDownloader.downloadImages(bridge.hostContext, urlList)
+            val result = AeonLabMediaDownloader.downloadImages(bridge.hostContext, urlList)
             completion.complete { it.accept(result) }
         }
     }
 
     fun downloadImages(urlList: List<*>?, prefix: String?, callback: Consumer<List<File>>?) {
         async(callback) { completion ->
-            val result = HchatMediaDownloader.downloadImages(bridge.hostContext, urlList, prefix)
+            val result = AeonLabMediaDownloader.downloadImages(bridge.hostContext, urlList, prefix)
             completion.complete { it.accept(result) }
         }
     }
@@ -1596,7 +1596,7 @@ class ScriptWaBridge @JvmOverloads internal constructor(
         }
         val name = firstNotBlank(md5, "image_${System.currentTimeMillis()}") +
             "." + extensionFromUrl(url)
-        return File(HchatMediaDownloader.hchatDir(bridge.hostContext, "Image"), name)
+        return File(AeonLabMediaDownloader.hchatDir(bridge.hostContext, "Image"), name)
     }
 
     private fun videoTargetFile(savePath: String?, md5: String?): File {
@@ -1606,7 +1606,7 @@ class ScriptWaBridge @JvmOverloads internal constructor(
             val file = File(path)
             return if (path.endsWith("/") || file.isDirectory) File(file, name) else file
         }
-        return File(HchatMediaDownloader.hchatDir(bridge.hostContext, "Video"), name)
+        return File(AeonLabMediaDownloader.hchatDir(bridge.hostContext, "Video"), name)
     }
 
     private fun extensionFromUrl(url: String): String {

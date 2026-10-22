@@ -9,7 +9,7 @@ import com.aeonlab.toolkit.hooks.api.sns.WeChatSnsApi
 import com.aeonlab.toolkit.hooks.api.sns.WeChatSnsPostObserver
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -54,7 +54,7 @@ private class MomentsAutoCommentRuntime(
 ) {
     private data class State(val until: Long)
 
-    private val prefs = HchatStorage.preferences(context.hostContext(), MomentsAutoCommentSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), MomentsAutoCommentSettings.PREFS_NAME)
     private val worker = ScheduledThreadPoolExecutor(1) { runnable ->
         Thread(runnable, "AeonLab-MomentsAutoComment").apply { isDaemon = true }
     }.apply { removeOnCancelPolicy = true }

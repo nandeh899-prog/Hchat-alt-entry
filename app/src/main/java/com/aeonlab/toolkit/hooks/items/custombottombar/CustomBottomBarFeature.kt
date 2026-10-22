@@ -46,7 +46,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.EmbeddedComposeOwnerInstaller
 import com.aeonlab.toolkit.ui.miuix.EmbeddedComposeRuntime
 import com.aeonlab.toolkit.utils.HLog
@@ -124,7 +124,7 @@ class CustomBottomBarFeature : BaseFeature() {
         }
 
         private fun logFeatureError(message: String, throwable: Throwable?) {
-            HLog.e("[Hchat:自定义底栏] $message", throwable)
+            HLog.e("[AeonLab:自定义底栏] $message", throwable)
         }
     }
 }
@@ -142,8 +142,8 @@ private class CustomBottomBarRuntime(
         logger
     )
 
-    private val customPrefs = HchatStorage.preferences(hostContext, CustomBottomBarSettings.PREFS_NAME)
-    private val floatingPrefs = HchatStorage.preferences(hostContext, FloatingBottomBarSettings.PREFS_NAME)
+    private val customPrefs = AeonLabStorage.preferences(hostContext, CustomBottomBarSettings.PREFS_NAME)
+    private val floatingPrefs = AeonLabStorage.preferences(hostContext, FloatingBottomBarSettings.PREFS_NAME)
     private val methodPrefs = DexMethodCache.prefs(hostContext, METHOD_CACHE_PREFS)
     private val knownViews = Collections.synchronizedMap(
         WeakHashMap<ViewGroup, WeakReference<Activity>>()

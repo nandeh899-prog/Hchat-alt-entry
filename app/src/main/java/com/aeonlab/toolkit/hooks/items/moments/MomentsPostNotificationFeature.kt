@@ -20,7 +20,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.items.customfriendavatar.CustomFriendAvatarSettings
 import com.aeonlab.toolkit.hooks.items.customfriendavatar.CustomFriendAvatarStore
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import java.io.File
 import java.net.URL
@@ -59,7 +59,7 @@ private class MomentsPostNotificationRuntime(
     private val logger: (String, Throwable?) -> Unit
 ) {
     private val context = featureContext.hostContext()
-    private val prefs = HchatStorage.preferences(context, MomentsPostNotificationSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context, MomentsPostNotificationSettings.PREFS_NAME)
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "AeonLab-MomentsPostNotify").apply { isDaemon = true }

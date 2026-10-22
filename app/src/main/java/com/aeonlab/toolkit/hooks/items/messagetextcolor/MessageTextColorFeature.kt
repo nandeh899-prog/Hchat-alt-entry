@@ -20,7 +20,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
@@ -59,7 +59,7 @@ class MessageTextColorFeature : BaseFeature() {
 private class MessageTextColorRenderer(
     private val context: FeatureContext
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), MessageTextColorSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), MessageTextColorSettings.PREFS_NAME)
     private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_message_text_color_method_cache")
     private val itemMethodCache = ConcurrentHashMap<Class<*>, Method>()
     private val itemListFieldCache = ConcurrentHashMap<Class<*>, Field>()
@@ -1137,7 +1137,7 @@ private class MessageTextColorRenderer(
     private data class TextMatch(val target: TextTarget, val candidate: TextCandidate, val exact: Boolean)
 
     private companion object {
-        const val TAG = "[Hchat:MessageTextColor]"
+        const val TAG = "[AeonLab:MessageTextColor]"
         val ITEM_METHOD_NAMES = arrayOf("getItem", "K0")
         const val HOST_PACKAGE = "com.tencent.mm"
         const val MESSAGE_BODY_VIEW_RESOURCE = "bkl"

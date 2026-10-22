@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.automessageforward
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -62,7 +62,7 @@ internal object AutoMessageForwardRecallStore {
     }
 
     private fun read(context: Context): List<StoredRecallRecord> {
-        val raw = HchatStorage.preferences(context, AutoMessageForwardSettings.PREFS_NAME)
+        val raw = AeonLabStorage.preferences(context, AutoMessageForwardSettings.PREFS_NAME)
             .getString(KEY_RECORDS, "")
             .orEmpty()
         if (raw.isBlank()) return emptyList()
@@ -113,7 +113,7 @@ internal object AutoMessageForwardRecallStore {
                 })
             }
         }.toString()
-        HchatStorage.preferences(context, AutoMessageForwardSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context, AutoMessageForwardSettings.PREFS_NAME)
             .edit()
             .putString(KEY_RECORDS, encoded)
             .commit()

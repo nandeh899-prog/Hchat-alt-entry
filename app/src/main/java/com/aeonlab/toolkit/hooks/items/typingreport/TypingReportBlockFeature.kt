@@ -7,7 +7,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.matchers.MethodMatcher
 import java.lang.reflect.Method
@@ -53,7 +53,7 @@ private class TypingReportBlockHooker(
     private val context: FeatureContext,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val settingsPrefs = HchatStorage.preferences(
+    private val settingsPrefs = AeonLabStorage.preferences(
         context.hostContext(),
         TypingReportBlockSettings.PREFS_NAME
     )

@@ -13,7 +13,7 @@ import com.aeonlab.toolkit.hooks.api.model.WeChatMessageTypes
 import com.aeonlab.toolkit.hooks.api.runtime.WeChatDatabaseApi
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
@@ -21,7 +21,7 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher
 import java.lang.reflect.Method
 
 object QuickMarkReadRuntime {
-    private const val TAG = "[Hchat:QuickRead]"
+    private const val TAG = "[AeonLab:QuickRead]"
     private const val CACHE_PREFS = "AeonLab_quick_mark_read_method_cache"
     private const val CACHE_SCHEMA = "quick_mark_read_native_v1"
     private const val CACHE_NATIVE_MARK_READ = "native_mark_read"
@@ -81,7 +81,7 @@ object QuickMarkReadRuntime {
     @JvmStatic
     fun isDragEnabled(context: Context?): Boolean {
         if (context == null) return false
-        val prefs = HchatStorage.preferences(context, QuickMarkReadSettings.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context, QuickMarkReadSettings.PREFS_NAME)
         return prefs.getBoolean(
             QuickMarkReadSettings.KEY_DRAG_READ,
             QuickMarkReadSettings.DEFAULT_DRAG_READ
@@ -91,7 +91,7 @@ object QuickMarkReadRuntime {
     @JvmStatic
     fun isPlusMenuEnabled(context: Context?): Boolean {
         if (context == null) return false
-        val prefs = HchatStorage.preferences(context, QuickMarkReadSettings.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context, QuickMarkReadSettings.PREFS_NAME)
         return prefs.getBoolean(
             QuickMarkReadSettings.KEY_PLUS_MENU_READ,
             QuickMarkReadSettings.DEFAULT_PLUS_MENU_READ

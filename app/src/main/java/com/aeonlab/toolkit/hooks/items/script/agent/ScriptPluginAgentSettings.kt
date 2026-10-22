@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginSettings
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -47,18 +47,18 @@ object ScriptPluginAgentSettings {
     fun load(context: Context): ScriptPluginAgentConfig = loadActiveProfile(context).config
 
     fun loadProfiles(context: Context): List<ScriptPluginAgentProfile> {
-        return ensureProfiles(HchatStorage.preferences(context, PREFS_NAME))
+        return ensureProfiles(AeonLabStorage.preferences(context, PREFS_NAME))
     }
 
     fun loadActiveProfile(context: Context): ScriptPluginAgentProfile {
-        val sp = HchatStorage.preferences(context, PREFS_NAME)
+        val sp = AeonLabStorage.preferences(context, PREFS_NAME)
         val profiles = ensureProfiles(sp)
         val activeId = sp.getString(KEY_ACTIVE_PROFILE, "").orEmpty()
         return profiles.firstOrNull { it.id == activeId } ?: profiles.first()
     }
 
     fun setActiveProfile(context: Context, id: String): ScriptPluginAgentProfile {
-        val sp = HchatStorage.preferences(context, PREFS_NAME)
+        val sp = AeonLabStorage.preferences(context, PREFS_NAME)
         val profiles = ensureProfiles(sp)
         val selected = profiles.firstOrNull { it.id == id }
             ?: throw IllegalArgumentException("配置不存在")
@@ -72,7 +72,7 @@ object ScriptPluginAgentSettings {
     }
 
     fun saveProfile(context: Context, profile: ScriptPluginAgentProfile) {
-        val sp = HchatStorage.preferences(context, PREFS_NAME)
+        val sp = AeonLabStorage.preferences(context, PREFS_NAME)
         val profiles = ensureProfiles(sp).toMutableList()
         val normalized = profile.copy(
             name = cleanProfileName(profile.name),
@@ -115,7 +115,7 @@ object ScriptPluginAgentSettings {
     }
 
     fun deleteProfile(context: Context, id: String): ScriptPluginAgentProfile {
-        val sp = HchatStorage.preferences(context, PREFS_NAME)
+        val sp = AeonLabStorage.preferences(context, PREFS_NAME)
         val profiles = ensureProfiles(sp)
         require(profiles.size > 1) { "至少保留一个配置" }
         val remaining = profiles.filterNot { it.id == id }

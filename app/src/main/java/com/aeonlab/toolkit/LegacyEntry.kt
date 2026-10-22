@@ -26,7 +26,7 @@ class LegacyEntry : IXposedHookLoadPackage {
         try {
             ModuleEntry().handleLoadPackage(compat)
         } catch (t: Throwable) {
-            HLog.e("[Hchat:Entry] legacy 入口初始化失败", t)
+            HLog.e("[AeonLab:Entry] legacy 入口初始化失败", t)
         }
     }
 }

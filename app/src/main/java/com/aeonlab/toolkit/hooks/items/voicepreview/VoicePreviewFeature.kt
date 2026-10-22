@@ -17,7 +17,7 @@ import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.selectedmessages.SelectedMessageSnapshot
 import com.aeonlab.toolkit.media.AudioTransformBridge
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.io.File
@@ -72,7 +72,7 @@ private class VoicePreviewRuntime(
 ) {
     private data class MenuMessageBinding(val msgId: Long, val nativeMessage: Any)
 
-    private val prefs = HchatStorage.preferences(context.hostContext(), VoicePreviewSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), VoicePreviewSettings.PREFS_NAME)
     private val main = Handler(Looper.getMainLooper())
     private val hookedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
     private val messagesByMenuItem = Collections.synchronizedMap(

@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.gameemoji
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 object GameEmojiSettings {
     const val PREFS_NAME = "AeonLab_game_emoji_config"
@@ -40,5 +40,5 @@ object GameEmojiSettings {
         else -> "剪刀"
     }
 
-    private fun preferences(context: Context) = HchatStorage.preferences(context, PREFS_NAME)
+    private fun preferences(context: Context) = AeonLabStorage.preferences(context, PREFS_NAME)
 }

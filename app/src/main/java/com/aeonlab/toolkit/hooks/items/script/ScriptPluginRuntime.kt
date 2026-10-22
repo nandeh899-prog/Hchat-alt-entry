@@ -22,7 +22,7 @@ import com.aeonlab.toolkit.hooks.api.runtime.WeChatVersionApi
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.items.protobuf.ProtobufPacketRuntime
 import com.aeonlab.toolkit.hooks.items.shortvideo.FinderMediaDownloadSupport
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import me.yun.silk.AacCodec
 import me.yun.silk.SilkCodec
@@ -55,7 +55,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
 
 object ScriptPluginRuntime {
-    private const val TAG = "[Hchat:Script]"
+    private const val TAG = "[AeonLab:Script]"
     private const val MAIN_FILE = "main.java"
     private const val INFO_FILE = "info.prop"
     private const val README_FILE = "README.md"
@@ -308,7 +308,7 @@ object ScriptPluginRuntime {
 
     fun loadEnabledPluginsWhenReady(context: Context) {
         val hostAppContext = context.applicationContext ?: context
-        val prefs = HchatStorage.preferences(hostAppContext, ScriptPluginSettings.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(hostAppContext, ScriptPluginSettings.PREFS_NAME)
         if (!prefs.getBoolean(ScriptPluginSettings.KEY_ENABLE, ScriptPluginSettings.DEFAULT_ENABLE)) return
         if (!initialLoadStarted.compareAndSet(false, true)) return
         Thread({
@@ -358,7 +358,7 @@ object ScriptPluginRuntime {
     }
 
     private fun isPluginRuntimeEnabled(context: Context): Boolean {
-        return HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
+        return AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
             .getBoolean(ScriptPluginSettings.KEY_ENABLE, ScriptPluginSettings.DEFAULT_ENABLE)
     }
 
@@ -378,7 +378,7 @@ object ScriptPluginRuntime {
         if (enabled && !isScriptApiReady()) {
             return Result.failure(IllegalStateException("微信联系人数据库尚未就绪，请稍后重试"))
         }
-        val prefs = HchatStorage.preferences(appContext, ScriptPluginSettings.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(appContext, ScriptPluginSettings.PREFS_NAME)
         val result = if (enabled) {
             prefs.edit().putBoolean(ScriptPluginSettings.KEY_ENABLE, true).apply()
             loadEnabledPlugins(appContext, currentBridge(appContext))
@@ -409,7 +409,7 @@ object ScriptPluginRuntime {
         this.appContext = appContext
         ensureDirs(appContext)
         startPluginObservers(appContext)
-        val prefs = HchatStorage.preferences(appContext, ScriptPluginSettings.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(appContext, ScriptPluginSettings.PREFS_NAME)
         val plugin = if (enabled) {
             listPlugins(appContext).firstOrNull { it.id == pluginId }
                 ?: return Result.failure(IllegalArgumentException("未找到插件: $pluginId"))
@@ -451,7 +451,7 @@ object ScriptPluginRuntime {
     fun reloadPlugin(context: Context, pluginId: String): Result<Unit> {
         val appContext = context.applicationContext ?: context
         this.appContext = appContext
-        val prefs = HchatStorage.preferences(appContext, ScriptPluginSettings.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(appContext, ScriptPluginSettings.PREFS_NAME)
         if (!prefs.getBoolean(ScriptPluginSettings.KEY_ENABLE, ScriptPluginSettings.DEFAULT_ENABLE) ||
             !prefs.getBoolean(
                 ScriptPluginSettings.pluginEnableKey(pluginId),
@@ -767,7 +767,7 @@ object ScriptPluginRuntime {
         }
         return runCatching {
             withInterpreterLock(loaded.interpreter) {
-                val names = args.indices.map { "__hchat_call_arg_$it" }
+                val names = args.indices.map { "__aeonlab_call_arg_$it" }
                 args.forEachIndexed { index, value ->
                     loaded.interpreter.set(names[index], value)
                 }
@@ -813,9 +813,9 @@ object ScriptPluginRuntime {
             val startedAt = SystemClock.elapsedRealtime()
             try {
                 if (loadedPlugins[loaded.plugin.id] !== loaded) continue
-                loaded.interpreter.set("__hchat_send_text", text)
+                loaded.interpreter.set("__aeonlab_send_text", text)
                 val callbackName = if (longClick) "onLongClickSendBtn" else "onClickSendBtn"
-                val result = loaded.interpreter.eval("$callbackName(__hchat_send_text);")
+                val result = loaded.interpreter.eval("$callbackName(__aeonlab_send_text);")
                 if (result == true) {
                     intercepted = true
                     handledBy += loaded.plugin.name
@@ -866,11 +866,11 @@ object ScriptPluginRuntime {
                 try {
                     withInterpreterLock(loaded.interpreter) {
                         if (loadedPlugins[loaded.plugin.id] !== loaded) return@withInterpreterLock
-                        loaded.interpreter.set("__hchat_msg_info", msgInfoBean)
+                        loaded.interpreter.set("__aeonlab_msg_info", msgInfoBean)
                         try {
-                            loaded.interpreter.eval("onHandleMsg(__hchat_msg_info);")
+                            loaded.interpreter.eval("onHandleMsg(__aeonlab_msg_info);")
                         } finally {
-                            loaded.interpreter.unset("__hchat_msg_info")
+                            loaded.interpreter.unset("__aeonlab_msg_info")
                         }
                     }
                 } catch (t: Throwable) {
@@ -914,15 +914,15 @@ object ScriptPluginRuntime {
                         try {
                             withInterpreterLock(loaded.interpreter) {
                                 if (loadedPlugins[loaded.plugin.id] !== loaded) return@withInterpreterLock
-                                loaded.interpreter.set("__hchat_image_msg_info", msgInfoBean)
-                                loaded.interpreter.set("__hchat_image_path", path)
-                                loaded.interpreter.set("__hchat_image_talker", talker)
-                                loaded.interpreter.set("__hchat_image_sender", senderWxid)
+                                loaded.interpreter.set("__aeonlab_image_msg_info", msgInfoBean)
+                                loaded.interpreter.set("__aeonlab_image_path", path)
+                                loaded.interpreter.set("__aeonlab_image_talker", talker)
+                                loaded.interpreter.set("__aeonlab_image_sender", senderWxid)
                                 loaded.interpreter.eval(
-                                    "onImageDownload(__hchat_image_msg_info, " +
-                                        "__hchat_image_path, " +
-                                        "__hchat_image_talker, " +
-                                        "__hchat_image_sender);"
+                                    "onImageDownload(__aeonlab_image_msg_info, " +
+                                        "__aeonlab_image_path, " +
+                                        "__aeonlab_image_talker, " +
+                                        "__aeonlab_image_sender);"
                                 )
                             }
                         } catch (t: Throwable) {
@@ -1017,15 +1017,15 @@ object ScriptPluginRuntime {
                             try {
                                 withInterpreterLock(loaded.interpreter) {
                                     if (loadedPlugins[loaded.plugin.id] !== loaded) return@withInterpreterLock
-                                    loaded.interpreter.set("__hchat_video_msg_info", msgInfoBean)
-                                    loaded.interpreter.set("__hchat_video_path", path)
-                                    loaded.interpreter.set("__hchat_video_talker", talker)
-                                    loaded.interpreter.set("__hchat_video_sender", senderWxid)
+                                    loaded.interpreter.set("__aeonlab_video_msg_info", msgInfoBean)
+                                    loaded.interpreter.set("__aeonlab_video_path", path)
+                                    loaded.interpreter.set("__aeonlab_video_talker", talker)
+                                    loaded.interpreter.set("__aeonlab_video_sender", senderWxid)
                                     loaded.interpreter.eval(
-                                        "onVideoDownload(__hchat_video_msg_info, " +
-                                            "__hchat_video_path, " +
-                                            "__hchat_video_talker, " +
-                                            "__hchat_video_sender);"
+                                        "onVideoDownload(__aeonlab_video_msg_info, " +
+                                            "__aeonlab_video_path, " +
+                                            "__aeonlab_video_talker, " +
+                                            "__aeonlab_video_sender);"
                                     )
                                 }
                             } catch (t: Throwable) {
@@ -1124,15 +1124,15 @@ object ScriptPluginRuntime {
                                 try {
                                     withInterpreterLock(loaded.interpreter) {
                                         if (loadedPlugins[loaded.plugin.id] !== loaded) return@withInterpreterLock
-                                        loaded.interpreter.set("__hchat_finder_msg_info", msgInfoBean)
-                                        loaded.interpreter.set("__hchat_finder_media_path", path)
-                                        loaded.interpreter.set("__hchat_finder_talker", talker)
-                                        loaded.interpreter.set("__hchat_finder_sender", senderWxid)
+                                        loaded.interpreter.set("__aeonlab_finder_msg_info", msgInfoBean)
+                                        loaded.interpreter.set("__aeonlab_finder_media_path", path)
+                                        loaded.interpreter.set("__aeonlab_finder_talker", talker)
+                                        loaded.interpreter.set("__aeonlab_finder_sender", senderWxid)
                                         loaded.interpreter.eval(
-                                            "onFinderMediaDownload(__hchat_finder_msg_info, " +
-                                                "__hchat_finder_media_path, " +
-                                                "__hchat_finder_talker, " +
-                                                "__hchat_finder_sender);"
+                                            "onFinderMediaDownload(__aeonlab_finder_msg_info, " +
+                                                "__aeonlab_finder_media_path, " +
+                                                "__aeonlab_finder_talker, " +
+                                                "__aeonlab_finder_sender);"
                                         )
                                     }
                                 } catch (t: Throwable) {
@@ -1291,8 +1291,8 @@ object ScriptPluginRuntime {
                     if (loadedPlugins[loaded.plugin.id] !== loaded) continue
                     try {
                         withInterpreterLock(loaded.interpreter) {
-                            loaded.interpreter.set("__hchat_protobuf_packet", packet)
-                            loaded.interpreter.eval("onProtobufPacket(__hchat_protobuf_packet);")
+                            loaded.interpreter.set("__aeonlab_protobuf_packet", packet)
+                            loaded.interpreter.eval("onProtobufPacket(__aeonlab_protobuf_packet);")
                         }
                     } catch (t: Throwable) {
                         if (!isMissingCallbackError(t, "onProtobufPacket")) {
@@ -1327,15 +1327,15 @@ object ScriptPluginRuntime {
             try {
                 withInterpreterLock(loaded.interpreter) {
                     if (loadedPlugins[loaded.plugin.id] !== loaded) return@withInterpreterLock
-                    loaded.interpreter.set("__hchat_member_change_type", type)
-                    loaded.interpreter.set("__hchat_member_change_group", groupWxid)
-                    loaded.interpreter.set("__hchat_member_change_user", userWxid)
-                    loaded.interpreter.set("__hchat_member_change_name", userName)
+                    loaded.interpreter.set("__aeonlab_member_change_type", type)
+                    loaded.interpreter.set("__aeonlab_member_change_group", groupWxid)
+                    loaded.interpreter.set("__aeonlab_member_change_user", userWxid)
+                    loaded.interpreter.set("__aeonlab_member_change_name", userName)
                     loaded.interpreter.eval(
-                        "onMemberChange(__hchat_member_change_type, " +
-                            "__hchat_member_change_group, " +
-                            "__hchat_member_change_user, " +
-                            "__hchat_member_change_name);"
+                        "onMemberChange(__aeonlab_member_change_type, " +
+                            "__aeonlab_member_change_group, " +
+                            "__aeonlab_member_change_user, " +
+                            "__aeonlab_member_change_name);"
                     )
                 }
             } catch (t: Throwable) {
@@ -1367,13 +1367,13 @@ object ScriptPluginRuntime {
             try {
                 withInterpreterLock(loaded.interpreter) {
                     if (loadedPlugins[loaded.plugin.id] !== loaded) return@withInterpreterLock
-                    loaded.interpreter.set("__hchat_new_friend_wxid", cleanWxid)
-                    loaded.interpreter.set("__hchat_new_friend_ticket", cleanTicket)
-                    loaded.interpreter.set("__hchat_new_friend_scene", scene)
+                    loaded.interpreter.set("__aeonlab_new_friend_wxid", cleanWxid)
+                    loaded.interpreter.set("__aeonlab_new_friend_ticket", cleanTicket)
+                    loaded.interpreter.set("__aeonlab_new_friend_scene", scene)
                     loaded.interpreter.eval(
-                        "onNewFriend(__hchat_new_friend_wxid, " +
-                            "__hchat_new_friend_ticket, " +
-                            "__hchat_new_friend_scene);"
+                        "onNewFriend(__aeonlab_new_friend_wxid, " +
+                            "__aeonlab_new_friend_ticket, " +
+                            "__aeonlab_new_friend_scene);"
                     )
                 }
             } catch (t: Throwable) {
@@ -1446,7 +1446,7 @@ object ScriptPluginRuntime {
     }
 
     fun isPluginEnabled(context: Context, pluginId: String): Boolean {
-        val prefs = HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
         return prefs.getBoolean(
             ScriptPluginSettings.pluginEnableKey(pluginId),
             ScriptPluginSettings.DEFAULT_PLUGIN_ENABLE
@@ -1458,7 +1458,7 @@ object ScriptPluginRuntime {
         return runCatching {
             ensureDirs(context)
             startPluginObservers(context)
-            val prefs = HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
+            val prefs = AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
             if (!prefs.getBoolean(ScriptPluginSettings.KEY_ENABLE, ScriptPluginSettings.DEFAULT_ENABLE)) {
                 return@runCatching
             }
@@ -1493,7 +1493,7 @@ object ScriptPluginRuntime {
         currentBridge: ScriptPluginBridge
     ): Result<Unit> {
         return runCatching {
-            val prefs = HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
+            val prefs = AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
             if (!prefs.getBoolean(ScriptPluginSettings.KEY_ENABLE, ScriptPluginSettings.DEFAULT_ENABLE)) {
                 return@runCatching
             }
@@ -1539,7 +1539,7 @@ object ScriptPluginRuntime {
         if (loadedPlugins.containsKey(plugin.id)) return Result.success(Unit)
         var pendingWaBridge: ScriptWaBridge? = null
         return runCatching {
-            val prefs = HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
+            val prefs = AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
             if (!prefs.getBoolean(ScriptPluginSettings.KEY_ENABLE, ScriptPluginSettings.DEFAULT_ENABLE)) {
                 throw IllegalStateException("脚本插件总开关未开启")
             }
@@ -1681,8 +1681,8 @@ object ScriptPluginRuntime {
             set("audioBridge", audioBridge)
             set("http", waBridge)
             set("httpClient", waBridge)
-            set("__hchat_runtime", ScriptPluginRuntime)
-            set("__hchat_interpreter", this)
+            set("__aeonlab_runtime", ScriptPluginRuntime)
+            set("__aeonlab_interpreter", this)
             set("apis", currentBridge.apis)
             set("dexKit", currentBridge.dexKit)
             set("dexKitBridge", currentBridge.dexKit?.bridge())
@@ -1761,12 +1761,12 @@ object ScriptPluginRuntime {
                 Object registerMessageMenu(String title, Consumer callback) { return bridge.registerMessageMenu(pluginId, pluginDirFile, title, null, false, callback); }
                 Object registerMessageMenu(String title, boolean front, Consumer callback) { return bridge.registerMessageMenu(pluginId, pluginDirFile, title, null, front, callback); }
                 void removeMenu(Object handle) { bridge.removeMenu(handle); }
-                String getString(String key, String __hchat_default_string) { return bridge.getString(pluginDirFile, key, __hchat_default_string); }
-                Set getStringSet(String key, Set __hchat_default_set) { return bridge.getStringSet(pluginDirFile, key, __hchat_default_set); }
-                boolean getBoolean(String key, boolean __hchat_default_boolean) { return bridge.getBoolean(pluginDirFile, key, __hchat_default_boolean); }
-                int getInt(String key, int __hchat_default_int) { return bridge.getInt(pluginDirFile, key, __hchat_default_int); }
-                float getFloat(String key, float __hchat_default_float) { return bridge.getFloat(pluginDirFile, key, __hchat_default_float); }
-                long getLong(String key, long __hchat_default_long) { return bridge.getLong(pluginDirFile, key, __hchat_default_long); }
+                String getString(String key, String __aeonlab_default_string) { return bridge.getString(pluginDirFile, key, __aeonlab_default_string); }
+                Set getStringSet(String key, Set __aeonlab_default_set) { return bridge.getStringSet(pluginDirFile, key, __aeonlab_default_set); }
+                boolean getBoolean(String key, boolean __aeonlab_default_boolean) { return bridge.getBoolean(pluginDirFile, key, __aeonlab_default_boolean); }
+                int getInt(String key, int __aeonlab_default_int) { return bridge.getInt(pluginDirFile, key, __aeonlab_default_int); }
+                float getFloat(String key, float __aeonlab_default_float) { return bridge.getFloat(pluginDirFile, key, __aeonlab_default_float); }
+                long getLong(String key, long __aeonlab_default_long) { return bridge.getLong(pluginDirFile, key, __aeonlab_default_long); }
                 void putString(String key, String value) { bridge.putString(pluginDirFile, key, value); }
                 void putStringSet(String key, Set value) { bridge.putStringSet(pluginDirFile, key, value); }
                 void putBoolean(String key, boolean value) { bridge.putBoolean(pluginDirFile, key, value); }
@@ -1800,29 +1800,29 @@ object ScriptPluginRuntime {
                 Object hookAfter(Member member, Consumer callback) { return bridge.hookAfter(pluginId, member, callback); }
                 Object hookReplace(Member member, Function callback) { return bridge.hookReplace(pluginId, member, callback); }
                 void unhook(Object handle) { bridge.unhook(pluginId, handle); }
-                void reloadPlugin() { __hchat_runtime.reloadPluginAsync(hostContext, pluginId); }
-                String compileSnapshot(String path) { return __hchat_runtime.compileSnapshot(pluginId, pluginDirFile, __hchat_interpreter, path); }
-                Object evalSnapshot(String path) { return __hchat_runtime.evalSnapshot(pluginId, pluginDirFile, __hchat_interpreter, path); }
-                Object evalSnapshot(InputStream inputStream) { return __hchat_runtime.evalSnapshot(pluginId, __hchat_interpreter, inputStream); }
-                Object evalSnapshot(byte[] data) { return __hchat_runtime.evalSnapshot(pluginId, __hchat_interpreter, data); }
-                void eval(String code) { __hchat_runtime.evalCode(pluginId, __hchat_interpreter, code); }
-                void loadJava(String path) { __hchat_runtime.loadJava(pluginId, pluginDirFile, __hchat_interpreter, path); }
-                void useCallback(String callbackName, String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, callbackName, methodName); }
-                void useOnLoad(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onLoad", methodName); }
-                void useOnUnload(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onUnload", methodName); }
-                void useOpenSettings(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "openSettings", methodName); }
-                void useOnClickSendBtn(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onClickSendBtn", methodName); }
-                void useOnLongClickSendBtn(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onLongClickSendBtn", methodName); }
-                void useOnHandleMsg(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onHandleMsg", methodName); }
-                void useOnImageDownload(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onImageDownload", methodName); }
-                void useOnVideoDownload(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onVideoDownload", methodName); }
-                void useOnFinderMediaDownload(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onFinderMediaDownload", methodName); }
-                void useOnMemberChange(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onMemberChange", methodName); }
-                void useOnNewFriend(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onNewFriend", methodName); }
-                void useOnProtobufPacket(String methodName) { __hchat_runtime.useCallback(pluginId, __hchat_interpreter, "onProtobufPacket", methodName); }
-                ClassLoader loadDex(String path) { return __hchat_runtime.loadDex(pluginId, pluginDirFile, __hchat_interpreter, classLoader, path); }
-                void loadSo(String path) { __hchat_runtime.loadSo(pluginId, pluginDirFile, classLoader, path); }
-                void loadSo(String path, ClassLoader loader) { __hchat_runtime.loadSo(pluginId, pluginDirFile, loader, path); }
+                void reloadPlugin() { __aeonlab_runtime.reloadPluginAsync(hostContext, pluginId); }
+                String compileSnapshot(String path) { return __aeonlab_runtime.compileSnapshot(pluginId, pluginDirFile, __aeonlab_interpreter, path); }
+                Object evalSnapshot(String path) { return __aeonlab_runtime.evalSnapshot(pluginId, pluginDirFile, __aeonlab_interpreter, path); }
+                Object evalSnapshot(InputStream inputStream) { return __aeonlab_runtime.evalSnapshot(pluginId, __aeonlab_interpreter, inputStream); }
+                Object evalSnapshot(byte[] data) { return __aeonlab_runtime.evalSnapshot(pluginId, __aeonlab_interpreter, data); }
+                void eval(String code) { __aeonlab_runtime.evalCode(pluginId, __aeonlab_interpreter, code); }
+                void loadJava(String path) { __aeonlab_runtime.loadJava(pluginId, pluginDirFile, __aeonlab_interpreter, path); }
+                void useCallback(String callbackName, String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, callbackName, methodName); }
+                void useOnLoad(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onLoad", methodName); }
+                void useOnUnload(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onUnload", methodName); }
+                void useOpenSettings(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "openSettings", methodName); }
+                void useOnClickSendBtn(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onClickSendBtn", methodName); }
+                void useOnLongClickSendBtn(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onLongClickSendBtn", methodName); }
+                void useOnHandleMsg(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onHandleMsg", methodName); }
+                void useOnImageDownload(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onImageDownload", methodName); }
+                void useOnVideoDownload(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onVideoDownload", methodName); }
+                void useOnFinderMediaDownload(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onFinderMediaDownload", methodName); }
+                void useOnMemberChange(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onMemberChange", methodName); }
+                void useOnNewFriend(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onNewFriend", methodName); }
+                void useOnProtobufPacket(String methodName) { __aeonlab_runtime.useCallback(pluginId, __aeonlab_interpreter, "onProtobufPacket", methodName); }
+                ClassLoader loadDex(String path) { return __aeonlab_runtime.loadDex(pluginId, pluginDirFile, __aeonlab_interpreter, classLoader, path); }
+                void loadSo(String path) { __aeonlab_runtime.loadSo(pluginId, pluginDirFile, classLoader, path); }
+                void loadSo(String path, ClassLoader loader) { __aeonlab_runtime.loadSo(pluginId, pluginDirFile, loader, path); }
                 String getLoginWxid() { return wa.getLoginWxid(); }
                 String getLoginAlias() { return wa.getLoginAlias(); }
                 String getTargetTalker() { return wa.getTargetTalker(); }
@@ -1873,14 +1873,14 @@ object ScriptPluginRuntime {
                 String getAvatarUrl(String username, boolean isBigHeadImg) { return wa.getAvatarUrl(username, isBigHeadImg); }
                 void sendText(String talker, String content) { wa.sendText(talker, content); }
                 void sendText(String talker, String content, Consumer callback) { wa.sendText(talker, content, callback); }
-                boolean sendProtobufPacket(String uri, int cgiId, String json) { return __hchat_runtime.sendProtobufPacket(uri, cgiId, json, null); }
-                boolean sendProtobufPacket(String uri, int cgiId, String json, Consumer callback) { return __hchat_runtime.sendProtobufPacket(uri, cgiId, json, callback); }
-                boolean sendProtobufPacket(String uri, int cgiId, JSONObject json) { return __hchat_runtime.sendProtobufPacket(uri, cgiId, json == null ? "{}" : json.toString(), null); }
-                boolean sendProtobufPacket(String uri, int cgiId, JSONObject json, Consumer callback) { return __hchat_runtime.sendProtobufPacket(uri, cgiId, json == null ? "{}" : json.toString(), callback); }
-                boolean sendProtobufPacket(String uri, int cgiId, int funcId, int routeId, String json) { return __hchat_runtime.sendProtobufPacket(uri, cgiId, funcId, routeId, json, null); }
-                boolean sendProtobufPacket(String uri, int cgiId, int funcId, int routeId, String json, Consumer callback) { return __hchat_runtime.sendProtobufPacket(uri, cgiId, funcId, routeId, json, callback); }
-                boolean sendProtobufPacket(String uri, int cgiId, int funcId, int routeId, JSONObject json) { return __hchat_runtime.sendProtobufPacket(uri, cgiId, funcId, routeId, json == null ? "{}" : json.toString(), null); }
-                boolean sendProtobufPacket(String uri, int cgiId, int funcId, int routeId, JSONObject json, Consumer callback) { return __hchat_runtime.sendProtobufPacket(uri, cgiId, funcId, routeId, json == null ? "{}" : json.toString(), callback); }
+                boolean sendProtobufPacket(String uri, int cgiId, String json) { return __aeonlab_runtime.sendProtobufPacket(uri, cgiId, json, null); }
+                boolean sendProtobufPacket(String uri, int cgiId, String json, Consumer callback) { return __aeonlab_runtime.sendProtobufPacket(uri, cgiId, json, callback); }
+                boolean sendProtobufPacket(String uri, int cgiId, JSONObject json) { return __aeonlab_runtime.sendProtobufPacket(uri, cgiId, json == null ? "{}" : json.toString(), null); }
+                boolean sendProtobufPacket(String uri, int cgiId, JSONObject json, Consumer callback) { return __aeonlab_runtime.sendProtobufPacket(uri, cgiId, json == null ? "{}" : json.toString(), callback); }
+                boolean sendProtobufPacket(String uri, int cgiId, int funcId, int routeId, String json) { return __aeonlab_runtime.sendProtobufPacket(uri, cgiId, funcId, routeId, json, null); }
+                boolean sendProtobufPacket(String uri, int cgiId, int funcId, int routeId, String json, Consumer callback) { return __aeonlab_runtime.sendProtobufPacket(uri, cgiId, funcId, routeId, json, callback); }
+                boolean sendProtobufPacket(String uri, int cgiId, int funcId, int routeId, JSONObject json) { return __aeonlab_runtime.sendProtobufPacket(uri, cgiId, funcId, routeId, json == null ? "{}" : json.toString(), null); }
+                boolean sendProtobufPacket(String uri, int cgiId, int funcId, int routeId, JSONObject json, Consumer callback) { return __aeonlab_runtime.sendProtobufPacket(uri, cgiId, funcId, routeId, json == null ? "{}" : json.toString(), callback); }
                 void sendQuoteMsg(String talker, long msgId, String content) { wa.sendQuoteMsg(talker, msgId, content); }
                 void sendQuoteMsg(String talker, String content, long msgId) { wa.sendQuoteMsg(talker, content, msgId); }
                 void revokeMsg(long msgId) { wa.revokeMsg(msgId); }
@@ -1889,7 +1889,7 @@ object ScriptPluginRuntime {
                 Object getSnsPostList(int limit) { return wa.getSnsPostList(limit); }
                 Object getSnsPostList(String userName, int limit) { return wa.getSnsPostList(userName, limit); }
                 Object getSnsPost(String snsId) { return wa.getSnsPost(snsId); }
-                boolean prepareSnsPostMedia(String snsId, Consumer callback) { return __hchat_runtime.prepareSnsPostMedia(pluginId, __hchat_interpreter, snsId, callback); }
+                boolean prepareSnsPostMedia(String snsId, Consumer callback) { return __aeonlab_runtime.prepareSnsPostMedia(pluginId, __aeonlab_interpreter, snsId, callback); }
                 boolean publishSnsPost(Object prepared) { return wa.publishSnsPost(prepared); }
                 boolean refreshSnsTimeline() { return wa.refreshSnsTimeline(); }
                 void uploadText(String content) { wa.uploadText(content); }
@@ -2347,7 +2347,7 @@ object ScriptPluginRuntime {
             val result = reloadPlugin(context, pluginId)
             if (result.isFailure) {
                 val plugin = listPlugins(context).firstOrNull { it.id == pluginId }
-                HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
+                AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME)
                     .edit()
                     .putBoolean(ScriptPluginSettings.pluginEnableKey(pluginId), false)
                     .apply()

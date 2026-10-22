@@ -24,7 +24,7 @@ import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.conversationgroup.ConversationGroupHomeProjection
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.ref.WeakReference
@@ -36,8 +36,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 /** A page-local overlay below the native title; no row hooks or scroll-time tree scans. */
 internal object ConversationTabsRuntime {
-    private const val TAG = "[Hchat:ConversationTabs]"
-    private const val ROOT_TAG = "hchat:conversation-tabs-root"
+    private const val TAG = "[AeonLab:ConversationTabs]"
+    private const val ROOT_TAG = "aeonlab:conversation-tabs-root"
     private const val HOST_TAG_ID = 0x48435401
     private const val MAIN_VIEW_CLASS = "com.tencent.mm.ui.conversation.MainUIView"
     private const val CONTENT_ID_NAME = "jlt"
@@ -98,7 +98,7 @@ internal object ConversationTabsRuntime {
         }
         ConversationGroupHomeProjection.setTabFilter { filter }
         listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> reload() }.also {
-            HchatStorage.preferences(featureContext.hostContext(), ConversationTabsStore.PREFS_NAME)
+            AeonLabStorage.preferences(featureContext.hostContext(), ConversationTabsStore.PREFS_NAME)
                 .registerOnSharedPreferenceChangeListener(it)
         }
         // Hosts created before the DexKit-backed feature initialization are rendered here too.
@@ -547,7 +547,7 @@ internal object ConversationTabsRuntime {
             if (context !== owner) return
             ConversationTabsIconPicker.cancelAll()
             invalidateLoads()
-            listener?.let { HchatStorage.preferences(owner.hostContext(), ConversationTabsStore.PREFS_NAME)
+            listener?.let { AeonLabStorage.preferences(owner.hostContext(), ConversationTabsStore.PREFS_NAME)
                 .unregisterOnSharedPreferenceChangeListener(it) }
             listener = null; context = null; filter = null; ready = false; account = ""
             loadedIcons = emptyMap(); compiledFilters = emptyMap(); bitmaps.evictAll()

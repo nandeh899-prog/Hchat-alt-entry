@@ -5,7 +5,7 @@ import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import com.aeonlab.toolkit.hooks.items.script.market.PluginMarketSettings
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -48,7 +48,7 @@ object TerminalFonts {
 
     fun selectedId(context: Context): String {
         val saved = runCatching {
-            HchatStorage.preferences(context, PREFS_NAME).getString(KEY_FONT_ID, DEFAULT_ID)
+            AeonLabStorage.preferences(context, PREFS_NAME).getString(KEY_FONT_ID, DEFAULT_ID)
         }.getOrNull()
         return if (ALL.any { it.id == saved }) saved!! else DEFAULT_ID
     }
@@ -56,9 +56,9 @@ object TerminalFonts {
     fun select(context: Context, id: String) {
         val target = byId(id).id
         runCatching {
-            HchatStorage.preferences(context, PREFS_NAME).edit()
+            AeonLabStorage.preferences(context, PREFS_NAME).edit()
                 .putString(KEY_FONT_ID, target).apply()
-        }.onFailure { HLog.e("[Hchat:Term] 保存终端字体失败: ${it.message}", it) }
+        }.onFailure { HLog.e("[AeonLab:Term] 保存终端字体失败: ${it.message}", it) }
     }
 
     fun isDownloaded(context: Context, font: Font): Boolean = fontFile(context, font) != null
@@ -73,7 +73,7 @@ object TerminalFonts {
         cache[font.id]?.let { return it }
         val loaded = fontFile(context, font)?.let { file ->
             runCatching { Typeface.createFromFile(file) }
-                .onFailure { HLog.e("[Hchat:Term] 加载字体 ${font.id} 失败: ${it.message}", it) }
+                .onFailure { HLog.e("[AeonLab:Term] 加载字体 ${font.id} 失败: ${it.message}", it) }
                 .getOrNull()
         }
         if (loaded == null) return Typeface.MONOSPACE
@@ -99,7 +99,7 @@ object TerminalFonts {
                     if (!response.isSuccessful) { finish(false, "HTTP ${response.code}"); return@execute }
                     val body = response.body ?: run { finish(false, "响应为空"); return@execute }
                     val bytes = body.bytes()
-                    val dir = File(HchatStorage.storageDir(context), FONT_DIR).apply { mkdirs() }
+                    val dir = File(AeonLabStorage.storageDir(context), FONT_DIR).apply { mkdirs() }
                     val target = File(dir, "${font.fileName}-${bytes.size}")
                     if (target.length() != bytes.size.toLong()) {
                         dir.listFiles()?.forEach { old ->
@@ -113,7 +113,7 @@ object TerminalFonts {
                     finish(true)
                 }
             } catch (e: Throwable) {
-                HLog.e("[Hchat:Term] 下载字体 ${font.id} 失败: ${e.message}", e)
+                HLog.e("[AeonLab:Term] 下载字体 ${font.id} 失败: ${e.message}", e)
                 finish(false, e.message)
             }
         }
@@ -121,7 +121,7 @@ object TerminalFonts {
 
     private fun fontFile(context: Context, font: Font): File? {
         if (font.fileName.isEmpty()) return null
-        val dir = File(HchatStorage.storageDir(context), FONT_DIR)
+        val dir = File(AeonLabStorage.storageDir(context), FONT_DIR)
         if (!dir.isDirectory) return null
         return dir.listFiles()
             ?.firstOrNull { it.name.startsWith("${font.fileName}-") && it.length() > 0L }

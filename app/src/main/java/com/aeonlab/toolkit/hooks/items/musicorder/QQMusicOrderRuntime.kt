@@ -20,7 +20,7 @@ internal class QQMusicOrderRuntime(
     private val settings = QQMusicOrderSettings(context)
     private val client = QQMusicClient()
     private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "HchatQQMusicOrder").apply { isDaemon = true }
+        Thread(runnable, "AeonLabQQMusicOrder").apply { isDaemon = true }
     }
 
     fun install(track: (Any) -> Unit) {

@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.atallnotify
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 object AtAllNotificationBlockSettings {
     const val PREFS_NAME = "AeonLab_block_at_all_notification_config"
@@ -10,12 +10,12 @@ object AtAllNotificationBlockSettings {
     const val DEFAULT_ENABLE = false
 
     fun isEnabled(context: Context): Boolean {
-        return HchatStorage.preferences(context, PREFS_NAME)
+        return AeonLabStorage.preferences(context, PREFS_NAME)
             .getBoolean(KEY_ENABLE, DEFAULT_ENABLE)
     }
 
     fun blocksGroup(context: Context, talker: String): Boolean {
-        val prefs = HchatStorage.preferences(context, PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context, PREFS_NAME)
         if (!prefs.getBoolean(KEY_ENABLE, DEFAULT_ENABLE)) return false
         if (!prefs.contains(KEY_GROUPS)) return true
         return parseGroups(prefs.getString(KEY_GROUPS, "")).contains(talker.trim())

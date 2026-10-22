@@ -1,4 +1,4 @@
-package com.aeonlab.toolkit.hooks.items.hchatextra
+package com.aeonlab.toolkit.hooks.items.aeonlabextra
 
 import com.aeonlab.toolkit.utils.HLog
 import android.app.Activity
@@ -38,7 +38,7 @@ import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.hideavatar.HideChatAvatarSettings
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.json.JSONObject
 import org.luckypray.dexkit.query.FindClass
@@ -62,15 +62,15 @@ import java.util.IdentityHashMap
 import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 
-class HchatExtraFeature : BaseFeature() {
-    private var hooker: HchatExtraHooker? = null
+class AeonLabExtraFeature : BaseFeature() {
+    private var hooker: AeonLabExtraHooker? = null
 
     override fun featureId(): String = ID
 
     override fun name(): String = "分支扩展功能"
 
     override fun onFeatureInit(context: FeatureContext) {
-        HchatExtraSettings.migrateLegacyPreferences(context.hostContext())
+        AeonLabExtraSettings.migrateLegacyPreferences(context.hostContext())
         registerSettingsProvider(MessageDetailsSettingsProvider())
         registerSettingsProvider(GroupMemberHistorySettingsProvider())
         registerSettingsProvider(RedPacketDetailsSettingsProvider())
@@ -78,7 +78,7 @@ class HchatExtraFeature : BaseFeature() {
     }
 
     override fun onFeatureInstall(context: FeatureContext) {
-        hooker = HchatExtraHooker(context, ::logError)
+        hooker = AeonLabExtraHooker(context, ::logError)
         scheduleInstall()
         subscribe(Events.DexReady::class.java) {
             scheduleInstall()
@@ -107,7 +107,7 @@ class HchatExtraFeature : BaseFeature() {
     }
 }
 
-private class HchatExtraHooker(
+private class AeonLabExtraHooker(
     private val context: FeatureContext,
     private val logger: (String, Throwable?) -> Unit
 ) {
@@ -187,8 +187,8 @@ private class HchatExtraHooker(
         UNAVAILABLE
     }
 
-    private val prefs = HchatStorage.preferences(context.hostContext(), HchatExtraSettings.PREFS_NAME)
-    private val hideAvatarPrefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), AeonLabExtraSettings.PREFS_NAME)
+    private val hideAvatarPrefs = AeonLabStorage.preferences(
         context.hostContext(),
         HideChatAvatarSettings.PREFS_NAME
     )
@@ -267,13 +267,13 @@ private class HchatExtraHooker(
     }
 
     private fun migrateMessageDetailsDefaultFormat() {
-        if (!prefs.contains(HchatExtraSettings.KEY_MESSAGE_DETAILS_FORMAT)) return
-        val stored = prefs.getString(HchatExtraSettings.KEY_MESSAGE_DETAILS_FORMAT, null)
-        if (stored == HchatExtraSettings.LEGACY_MESSAGE_DETAILS_FORMAT) {
+        if (!prefs.contains(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_FORMAT)) return
+        val stored = prefs.getString(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_FORMAT, null)
+        if (stored == AeonLabExtraSettings.LEGACY_MESSAGE_DETAILS_FORMAT) {
             prefs.edit()
                 .putString(
-                    HchatExtraSettings.KEY_MESSAGE_DETAILS_FORMAT,
-                    HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT
+                    AeonLabExtraSettings.KEY_MESSAGE_DETAILS_FORMAT,
+                    AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT
                 )
                 .apply()
         }
@@ -281,21 +281,21 @@ private class HchatExtraHooker(
 
     private fun readMessageDetailsConfig(): MessageDetailsConfig {
         val position = when (prefs.getString(
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_POSITION,
-            HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_POSITION
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_POSITION,
+            AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_POSITION
         )) {
-            HchatExtraSettings.POSITION_AVATAR_ABOVE -> HchatExtraSettings.POSITION_AVATAR_ABOVE
-            HchatExtraSettings.POSITION_AVATAR_BELOW -> HchatExtraSettings.POSITION_AVATAR_BELOW
-            else -> HchatExtraSettings.POSITION_MESSAGE_BOTTOM
+            AeonLabExtraSettings.POSITION_AVATAR_ABOVE -> AeonLabExtraSettings.POSITION_AVATAR_ABOVE
+            AeonLabExtraSettings.POSITION_AVATAR_BELOW -> AeonLabExtraSettings.POSITION_AVATAR_BELOW
+            else -> AeonLabExtraSettings.POSITION_MESSAGE_BOTTOM
         }
         val format = prefs.getString(
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_FORMAT,
-            HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT
-        ).orEmpty().ifBlank { HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT }
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_FORMAT,
+            AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT
+        ).orEmpty().ifBlank { AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT }
         val timePattern = prefs.getString(
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_TIME_FORMAT,
-            HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT
-        ).orEmpty().ifBlank { HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT }
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_TIME_FORMAT,
+            AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT
+        ).orEmpty().ifBlank { AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT }
         val timeFormatter = runCatching { DateTimeFormatter.ofPattern(timePattern) }
             .getOrDefault(DEFAULT_MESSAGE_DETAILS_TIME_FORMATTER)
         val lightText = messageDetailsTextColor(false)
@@ -304,8 +304,8 @@ private class HchatExtraHooker(
         val darkBg = messageDetailsBgColor(true)
         return MessageDetailsConfig(
             enabled = prefs.getBoolean(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS
             ),
             position = position,
             format = format,
@@ -314,51 +314,51 @@ private class HchatExtraHooker(
                 .toSet(),
             timeFormatter = timeFormatter,
             textSizeSp = prefs.getInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_TEXT_SIZE,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_TEXT_SIZE
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_TEXT_SIZE,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_TEXT_SIZE
             ).toFloat(),
             avatarGapDp = prefs.getInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_AVATAR_GAP,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_AVATAR_GAP
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_AVATAR_GAP,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_AVATAR_GAP
             ).coerceIn(0, 64),
             leftMarginDp = prefs.getInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_LEFT_MARGIN,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LEFT_MARGIN
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LEFT_MARGIN,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LEFT_MARGIN
             ),
             rightMarginDp = prefs.getInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_RIGHT_MARGIN,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_RIGHT_MARGIN
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_RIGHT_MARGIN,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_RIGHT_MARGIN
             ),
             clickShow = prefs.getBoolean(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_CLICK_SHOW,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_CLICK_SHOW
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_CLICK_SHOW,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_CLICK_SHOW
             ),
             lightTextColor = resolveMessageDetailsColor(
                 lightText,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT,
                 darkText,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT,
                 Color.RED
             ),
             darkTextColor = resolveMessageDetailsColor(
                 darkText,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT,
                 lightText,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT,
                 Color.RED
             ),
             lightBgColor = resolveMessageDetailsColor(
                 lightBg,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG,
                 darkBg,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG,
                 Color.TRANSPARENT
             ),
             darkBgColor = resolveMessageDetailsColor(
                 darkBg,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG,
                 lightBg,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG,
                 Color.TRANSPARENT
             )
         )
@@ -395,7 +395,7 @@ private class HchatExtraHooker(
             if (installRedPacketDetails()) hooked++
             if (installGroupMemberHistory()) hooked++
         }.onFailure {
-            logger("Hchat扩展功能安装异常", it)
+            logger("AeonLab扩展功能安装异常", it)
         }
         return hooked > 0
     }
@@ -410,7 +410,7 @@ private class HchatExtraHooker(
             listOf("MicroMsg.WebViewHighRiskAdH5Interceptor", "isInterceptEnabled, expt=")
         ) ?: return false
         hooked = hookOnce(intercept) { param ->
-            if (enabled(HchatExtraSettings.KEY_SKIP_WEB_RISK, HchatExtraSettings.DEFAULT_SKIP_WEB_RISK)) {
+            if (enabled(AeonLabExtraSettings.KEY_SKIP_WEB_RISK, AeonLabExtraSettings.DEFAULT_SKIP_WEB_RISK)) {
                 param.result = false
             }
         } || hooked
@@ -421,7 +421,7 @@ private class HchatExtraHooker(
         ).firstOrNull { it.returnType == java.lang.Boolean.TYPE || it.returnType == java.lang.Boolean::class.java }
             ?: return hooked
         hooked = hookOnce(safe) { param ->
-            if (enabled(HchatExtraSettings.KEY_SKIP_WEB_RISK, HchatExtraSettings.DEFAULT_SKIP_WEB_RISK)) {
+            if (enabled(AeonLabExtraSettings.KEY_SKIP_WEB_RISK, AeonLabExtraSettings.DEFAULT_SKIP_WEB_RISK)) {
                 param.result = true
             }
         } || hooked
@@ -432,7 +432,7 @@ private class HchatExtraHooker(
         var hooked = false
         locateRedPacketTimeFormatterMethod()?.let { method ->
             hooked = hookAfterOnce(method) { param ->
-                if (!enabled(HchatExtraSettings.KEY_RED_PACKET_DETAILS, HchatExtraSettings.DEFAULT_RED_PACKET_DETAILS)) return@hookAfterOnce
+                if (!enabled(AeonLabExtraSettings.KEY_RED_PACKET_DETAILS, AeonLabExtraSettings.DEFAULT_RED_PACKET_DETAILS)) return@hookAfterOnce
                 val timestamp = (param.args?.getOrNull(1) as? Number)?.toLong()
                     ?.takeIf { it in RED_PACKET_TIME_MILLIS_RANGE }
                     ?: return@hookAfterOnce
@@ -445,7 +445,7 @@ private class HchatExtraHooker(
         )
         if (bindMethod != null) {
             hooked = hookAfterOnce(bindMethod) { param ->
-                if (!enabled(HchatExtraSettings.KEY_RED_PACKET_DETAILS, HchatExtraSettings.DEFAULT_RED_PACKET_DETAILS)) return@hookAfterOnce
+                if (!enabled(AeonLabExtraSettings.KEY_RED_PACKET_DETAILS, AeonLabExtraSettings.DEFAULT_RED_PACKET_DETAILS)) return@hookAfterOnce
                 bindRedPacketRecordTime(param.args?.getOrNull(0), param.args?.getOrNull(1))
             } || hooked
         }
@@ -467,7 +467,7 @@ private class HchatExtraHooker(
                         JSONObject::class.java.isAssignableFrom(method.parameterTypes[2])
                 }?.let { method ->
                     hooked = hookOnce(method) { param ->
-                        if (!enabled(HchatExtraSettings.KEY_RED_PACKET_DETAILS, HchatExtraSettings.DEFAULT_RED_PACKET_DETAILS)) return@hookOnce
+                        if (!enabled(AeonLabExtraSettings.KEY_RED_PACKET_DETAILS, AeonLabExtraSettings.DEFAULT_RED_PACKET_DETAILS)) return@hookOnce
                         val json = param.args?.getOrNull(2) as? JSONObject ?: return@hookOnce
                         processRedPacketJson(json)
                     } || hooked
@@ -518,14 +518,14 @@ private class HchatExtraHooker(
         KavaReflector.findMethodRecursive(clazz, "initView")?.let { method ->
             hooked = hookAfterOnce(method) { param ->
                 val activity = param.thisObject as? Activity ?: return@hookAfterOnce
-                if (!enabled(HchatExtraSettings.KEY_GROUP_MEMBER_HISTORY, HchatExtraSettings.DEFAULT_GROUP_MEMBER_HISTORY)) return@hookAfterOnce
+                if (!enabled(AeonLabExtraSettings.KEY_GROUP_MEMBER_HISTORY, AeonLabExtraSettings.DEFAULT_GROUP_MEMBER_HISTORY)) return@hookAfterOnce
                 installGroupMemberHistoryFromList(activity)
             } || hooked
         }
         methodsRecursive(clazz).firstOrNull { it.name == "onPreferenceTreeClick" }?.let { method ->
             hooked = hookOnce(method) { param ->
                 val activity = param.thisObject as? Activity ?: return@hookOnce
-                if (!enabled(HchatExtraSettings.KEY_GROUP_MEMBER_HISTORY, HchatExtraSettings.DEFAULT_GROUP_MEMBER_HISTORY)) return@hookOnce
+                if (!enabled(AeonLabExtraSettings.KEY_GROUP_MEMBER_HISTORY, AeonLabExtraSettings.DEFAULT_GROUP_MEMBER_HISTORY)) return@hookOnce
                 val pref = groupHistoryClickedPreference(param.args)
                     ?: return@hookOnce
                 openGroupMemberHistory(activity)
@@ -590,7 +590,7 @@ private class HchatExtraHooker(
         // 主入口定位成功且至少一条 Hook 装上即视为可用；其余属版本差异，不作为失败。
         val usable = itemBind != null && hookedCount > 0
         HLog.i(
-            "[Hchat:Extra] 消息显示时间安装: itemBind=${itemBind != null} " +
+            "[AeonLab:Extra] 消息显示时间安装: itemBind=${itemBind != null} " +
                 "adapterClass=${adapterClass != null} adapterBinds=${adapterBinds.size}" +
                 "(2参=$arity2 3参=$arity3) hooked=$hookedCount/${binds.size} usable=$usable"
         )
@@ -620,13 +620,13 @@ private class HchatExtraHooker(
         return runCatching {
             HookRegistry.get().hook(method, object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    runCatching { block(param) }.onFailure { logger("Hchat扩展Hook执行失败: ${method.name}", it) }
+                    runCatching { block(param) }.onFailure { logger("AeonLab扩展Hook执行失败: ${method.name}", it) }
                 }
             })
             true
         }.getOrElse {
             hookedMethods.remove(method)
-            logger("Hchat扩展Hook安装失败: ${method.name}", it)
+            logger("AeonLab扩展Hook安装失败: ${method.name}", it)
             false
         }
     }
@@ -636,13 +636,13 @@ private class HchatExtraHooker(
         return runCatching {
             HookRegistry.get().hook(method, object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    runCatching { block(param) }.onFailure { logger("Hchat扩展Hook执行失败: ${method.name}", it) }
+                    runCatching { block(param) }.onFailure { logger("AeonLab扩展Hook执行失败: ${method.name}", it) }
                 }
             })
             true
         }.getOrElse {
             hookedMethods.remove(method)
-            logger("Hchat扩展Hook安装失败: ${method.name}", it)
+            logger("AeonLab扩展Hook安装失败: ${method.name}", it)
             false
         }
     }
@@ -756,7 +756,7 @@ private class HchatExtraHooker(
                 }
             ).firstOrNull()?.let { KavaReflector.loadClass(it.name, context.hostClassLoader()) }
         }.getOrElse {
-            logger("Hchat聊天消息Adapter定位失败", it)
+            logger("AeonLab聊天消息Adapter定位失败", it)
             null
         }
         if (clazz != null) {
@@ -856,7 +856,7 @@ private class HchatExtraHooker(
         if (textView != null) {
             textView.text = text
             textView.post {
-                if (enabled(HchatExtraSettings.KEY_RED_PACKET_DETAILS, HchatExtraSettings.DEFAULT_RED_PACKET_DETAILS)) {
+                if (enabled(AeonLabExtraSettings.KEY_RED_PACKET_DETAILS, AeonLabExtraSettings.DEFAULT_RED_PACKET_DETAILS)) {
                     textView.text = text
                 }
             }
@@ -1197,14 +1197,14 @@ private class HchatExtraHooker(
         val position = config.position
         val configuredAvatarHidden = configuredAvatarHidden(details.isSelf)
         val hiddenAvatarBelowUsesBottom =
-            configuredAvatarHidden && position == HchatExtraSettings.POSITION_AVATAR_BELOW
+            configuredAvatarHidden && position == AeonLabExtraSettings.POSITION_AVATAR_BELOW
         val resolvedAvatarAnchor = if (hiddenAvatarBelowUsesBottom) {
             null
         } else {
             findAvatarDetailsAnchor(root, holder, configuredAvatarHidden)
         }
         val avatarAnchor = if (
-            position == HchatExtraSettings.POSITION_MESSAGE_BOTTOM || hiddenAvatarBelowUsesBottom
+            position == AeonLabExtraSettings.POSITION_MESSAGE_BOTTOM || hiddenAvatarBelowUsesBottom
         ) {
             null
         } else {
@@ -1458,7 +1458,7 @@ private class HchatExtraHooker(
         }
         if (!alreadyAttached || target.hidden) label.visibility = View.INVISIBLE
         measureAvatarDetailsLabel(label)
-        val initialReservedSpace = if (position == HchatExtraSettings.POSITION_AVATAR_ABOVE) {
+        val initialReservedSpace = if (position == AeonLabExtraSettings.POSITION_AVATAR_ABOVE) {
             label.measuredHeight + gap
         } else {
             0
@@ -1534,8 +1534,8 @@ private class HchatExtraHooker(
         val originalTop = existing?.originalTop ?: parent.paddingTop
         val originalBottom = existing?.originalBottom ?: parent.paddingBottom
         val reserved = space.coerceAtLeast(0)
-        val appliedTop = originalTop + if (position == HchatExtraSettings.POSITION_AVATAR_ABOVE) reserved else 0
-        val appliedBottom = originalBottom + if (position == HchatExtraSettings.POSITION_AVATAR_BELOW) reserved else 0
+        val appliedTop = originalTop + if (position == AeonLabExtraSettings.POSITION_AVATAR_ABOVE) reserved else 0
+        val appliedBottom = originalBottom + if (position == AeonLabExtraSettings.POSITION_AVATAR_BELOW) reserved else 0
         val originalClipToPadding = existing?.originalClipToPadding ?: parent.clipToPadding
         val clipStates = existing?.clipStates ?: disableAvatarDetailsClipping(root, parent)
         clipStates.forEach { state -> state.view.get()?.clipChildren = false }
@@ -1673,18 +1673,18 @@ private class HchatExtraHooker(
         } else {
             (avatarBounds.left + (avatarBounds.width() - labelWidth) / 2).coerceIn(minLeft, maxLeft)
         }
-        val top = if (position == HchatExtraSettings.POSITION_AVATAR_ABOVE) {
+        val top = if (position == AeonLabExtraSettings.POSITION_AVATAR_ABOVE) {
             avatarBounds.top - label.measuredHeight - gap
         } else {
             avatarBounds.bottom + gap
         }
-        if (position == HchatExtraSettings.POSITION_AVATAR_BELOW) {
+        if (position == AeonLabExtraSettings.POSITION_AVATAR_BELOW) {
             val overflow = top + label.measuredHeight - parent.height
             if (overflow > 0 && expandAvatarBelowSpacing(parent, overflow)) {
                 return AvatarPositionResult.NEEDS_LAYOUT
             }
         }
-        if (top < 0 && position == HchatExtraSettings.POSITION_AVATAR_ABOVE && !fallbackBelow) {
+        if (top < 0 && position == AeonLabExtraSettings.POSITION_AVATAR_ABOVE && !fallbackBelow) {
             return if (expandAvatarAboveSpacing(parent, -top)) {
                 AvatarPositionResult.NEEDS_LAYOUT
             } else {
@@ -2465,8 +2465,8 @@ private class HchatExtraHooker(
     private fun showMessageDetailsDialog(context: Context, details: MessageDetails) {
         val raw = stripGroupSenderPrefix(details.content).ifBlank { details.body }.ifBlank { details.msgSource }
         val shouldFormat = prefs.getBoolean(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_FORMAT_CONTENT,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT_CONTENT
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_FORMAT_CONTENT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT_CONTENT
             ) || looksLikeXml(raw)
         val initialText = if (shouldFormat) {
             formatXmlLikeContent(raw)
@@ -2912,7 +2912,7 @@ private class HchatExtraHooker(
                 .format(config.timeFormatter)
                 .also { formattedTime = it }
         }
-        if (config.format == HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT) return formatTime()
+        if (config.format == AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT) return formatTime()
         return replaceMessageDetailsTokens(config.format) { name ->
             when (name) {
                 "time" -> formatTime()
@@ -3290,13 +3290,13 @@ private class HchatExtraHooker(
     private fun messageDetailsTextColor(night: Boolean): String {
         return if (night) {
             prefs.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_DARK_TEXT,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_DARK_TEXT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT
             ).orEmpty()
         } else {
             prefs.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_TEXT,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_TEXT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT
             ).orEmpty()
         }
     }
@@ -3304,13 +3304,13 @@ private class HchatExtraHooker(
     private fun messageDetailsBgColor(night: Boolean): String {
         return if (night) {
             prefs.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_DARK_BG,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_DARK_BG,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG
             ).orEmpty()
         } else {
             prefs.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_BG,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_BG,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG
             ).orEmpty()
         }
     }
@@ -3725,7 +3725,7 @@ private class HchatExtraHooker(
             setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
         )
         private val DEFAULT_MESSAGE_DETAILS_TIME_FORMATTER =
-            DateTimeFormatter.ofPattern(HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT)
+            DateTimeFormatter.ofPattern(AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT)
         private const val MASK_LAYOUT_CLASS = "com.tencent.mm.ui.base.MaskLayout"
         private const val CHATTING_AVATAR_VIEW_CLASS = "com.tencent.mm.ui.chatting.view.ChattingAvatarImageView"
         private const val RED_PACKET_RECORD_TIME_ID_NAME = "j6q"
@@ -3735,26 +3735,26 @@ private class HchatExtraHooker(
         private const val MESSAGE_DETAILS_MAX_RETRY = 2
         private const val MESSAGE_DETAILS_POSITION_MAX_RETRY = 4
         private val MESSAGE_DETAILS_COLOR_KEYS = setOf(
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_BG,
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_TEXT,
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_DARK_BG,
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_DARK_TEXT
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_BG,
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_TEXT,
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_DARK_BG,
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_DARK_TEXT
         )
         private val MESSAGE_DETAILS_LAYOUT_KEYS = setOf(
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_POSITION,
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_TEXT_SIZE,
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_AVATAR_GAP,
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_LEFT_MARGIN,
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_RIGHT_MARGIN
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_POSITION,
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_TEXT_SIZE,
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_AVATAR_GAP,
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LEFT_MARGIN,
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_RIGHT_MARGIN
         )
         private val MESSAGE_DETAILS_REBIND_KEYS = MESSAGE_DETAILS_LAYOUT_KEYS + setOf(
-            HchatExtraSettings.KEY_MESSAGE_DETAILS,
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_FORMAT,
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_TIME_FORMAT,
-            HchatExtraSettings.KEY_MESSAGE_DETAILS_CLICK_SHOW
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS,
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_FORMAT,
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_TIME_FORMAT,
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS_CLICK_SHOW
         )
         private val MESSAGE_DETAILS_CONFIG_KEYS = MESSAGE_DETAILS_COLOR_KEYS + MESSAGE_DETAILS_REBIND_KEYS + setOf(
-            HchatExtraSettings.KEY_MESSAGE_DETAILS
+            AeonLabExtraSettings.KEY_MESSAGE_DETAILS
         )
     }
 }

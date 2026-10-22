@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import java.io.File
 import java.io.FileOutputStream
@@ -187,7 +187,7 @@ object CustomFriendAvatarStore {
     }
 
     private fun avatarFile(context: Context, wxid: String): File {
-        val directory = File(HchatStorage.storageDir(context), DIRECTORY_NAME)
+        val directory = File(AeonLabStorage.storageDir(context), DIRECTORY_NAME)
         return File(directory, sha256(wxid) + ".png")
     }
 
@@ -214,7 +214,7 @@ object CustomFriendAvatarStore {
             .joinToString("") { byte -> "%02x".format(byte) }
     }
 
-    private const val TAG = "[Hchat:CustomFriendAvatar]"
+    private const val TAG = "[AeonLab:CustomFriendAvatar]"
     private const val DIRECTORY_NAME = "custom_friend_avatars"
     private const val MAX_DIMENSION = 1024
 }

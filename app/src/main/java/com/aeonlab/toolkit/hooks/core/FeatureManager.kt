@@ -103,6 +103,6 @@ class FeatureManager {
     }
 
     companion object {
-        private const val TAG = "[Hchat:FeatureManager]"
+        private const val TAG = "[AeonLab:FeatureManager]"
     }
 }

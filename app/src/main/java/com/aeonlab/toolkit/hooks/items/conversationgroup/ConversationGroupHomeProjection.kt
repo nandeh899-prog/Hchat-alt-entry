@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** Homepage-only projection. Never changes the official account's stored parent or message data. */
 internal object ConversationGroupHomeProjection {
-    private const val TAG = "[Hchat:ConversationGroupHome]"
+    private const val TAG = "[AeonLab:ConversationGroupHome]"
     private const val CACHE = "homepage_projection_v1"
     private val lifecycleLock = Any()
     @Volatile private var lifecycleGeneration = 0L

@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.hooks.items.payment.core
 import android.content.Context
 import android.content.SharedPreferences
 import android.text.TextUtils
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 class RedPacketSettings @JvmOverloads constructor(
     private val classLoader: ClassLoader,
@@ -67,7 +67,7 @@ class RedPacketSettings @JvmOverloads constructor(
     }
 
     fun getHostPreferences(): SharedPreferences? {
-        return hostContext?.let { HchatStorage.preferences(it, PREFS_NAME) }
+        return hostContext?.let { AeonLabStorage.preferences(it, PREFS_NAME) }
     }
 
     companion object {

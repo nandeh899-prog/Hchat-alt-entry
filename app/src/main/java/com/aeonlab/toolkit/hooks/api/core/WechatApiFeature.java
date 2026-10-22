@@ -27,7 +27,7 @@ import com.aeonlab.toolkit.utils.HLog;
  */
 public class WechatApiFeature implements Feature {
     public static final String ID = "wechat_api";
-    private static final String TAG = "[Hchat:WechatApi]";
+    private static final String TAG = "[AeonLab:WechatApi]";
 
     @Override
     public String featureId() {

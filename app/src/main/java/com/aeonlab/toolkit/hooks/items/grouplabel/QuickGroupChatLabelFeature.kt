@@ -18,7 +18,7 @@ import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.conversationgroup.ConversationGroupRuntime
 import com.aeonlab.toolkit.hooks.items.quickcontactedit.ConversationMenuLocator
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Method
@@ -73,7 +73,7 @@ private class QuickGroupChatLabelRuntime(
         val talker: String
     )
 
-    private val prefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(
         context.hostContext(),
         QuickGroupChatLabelSettings.PREFS_NAME
     )

@@ -5,7 +5,7 @@ import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.util.HashSet
@@ -25,14 +25,14 @@ class RemoveMomentsAdsFeature : BaseFeature() {
 
     companion object {
         const val ID = "remove_moments_ads"
-        private const val TAG = "[Hchat:MomentsAds]"
+        private const val TAG = "[AeonLab:MomentsAds]"
         private const val AD_INFO_CLASS = "com.tencent.mm.plugin.sns.storage.ADInfo"
         private val installedLoaders = HashSet<String>()
 
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            val sp = HchatStorage.preferences(context, RemoveMomentsAdsSettings.PREFS_NAME)
+            val sp = AeonLabStorage.preferences(context, RemoveMomentsAdsSettings.PREFS_NAME)
             return sp.getBoolean(
                 RemoveMomentsAdsSettings.KEY_ENABLE,
                 RemoveMomentsAdsSettings.DEFAULT_ENABLE

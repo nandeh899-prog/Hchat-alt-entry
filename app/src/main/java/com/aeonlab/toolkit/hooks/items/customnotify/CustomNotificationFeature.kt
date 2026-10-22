@@ -31,6 +31,6 @@ class CustomNotificationFeature : BaseFeature() {
 
     companion object {
         const val ID = "custom_notification"
-        private const val TAG = "[Hchat:CustomNotification]"
+        private const val TAG = "[AeonLab:CustomNotification]"
     }
 }

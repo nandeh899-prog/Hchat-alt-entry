@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Process
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 class QuickTerminateFeature : BaseFeature() {
     override fun featureId(): String = ID
@@ -26,7 +26,7 @@ object QuickTerminateRuntime {
     @JvmStatic
     fun isEnabled(context: Context?): Boolean {
         if (context == null) return false
-        return HchatStorage.preferences(context, QuickTerminateSettings.PREFS_NAME)
+        return AeonLabStorage.preferences(context, QuickTerminateSettings.PREFS_NAME)
             .getBoolean(QuickTerminateSettings.KEY_ENABLE, QuickTerminateSettings.DEFAULT_ENABLE)
     }
 

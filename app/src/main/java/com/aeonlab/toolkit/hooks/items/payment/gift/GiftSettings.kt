@@ -2,7 +2,7 @@ package com.aeonlab.toolkit.hooks.items.payment.gift
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 class GiftSettings @JvmOverloads constructor(
     private val classLoader: ClassLoader,
@@ -70,7 +70,7 @@ class GiftSettings @JvmOverloads constructor(
     }
 
     fun getHostPreferences(): SharedPreferences? =
-        hostContext?.let { HchatStorage.preferences(it, PREFS_NAME) }
+        hostContext?.let { AeonLabStorage.preferences(it, PREFS_NAME) }
 
     private inline fun edit(block: (SharedPreferences.Editor) -> Unit): Boolean = try {
         val prefs = getHostPreferences()

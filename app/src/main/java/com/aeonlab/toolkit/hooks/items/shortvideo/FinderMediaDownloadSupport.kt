@@ -6,7 +6,7 @@ import android.os.SystemClock
 import android.util.Xml
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.core.FeatureContext
-import com.aeonlab.toolkit.utils.HchatMediaDownloader
+import com.aeonlab.toolkit.utils.AeonLabMediaDownloader
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -206,7 +206,7 @@ internal object FinderMediaDownloadSupport {
             if (xmlParseErrorLogAt.compareAndSet(previous, now)) break
         }
         HLog.e(
-            "[Hchat:FinderDownload] 解析视频号XML失败: stage=pull-parser " +
+            "[AeonLab:FinderDownload] 解析视频号XML失败: stage=pull-parser " +
                 "length=${source.length} hash=${source.hashCode()}",
             throwable
         )
@@ -312,11 +312,11 @@ internal object FinderMediaDownloadSupport {
             media.objectNonceId,
             media.sourceCommentScene
         ) ?: run {
-            HLog.e("[Hchat:FinderDownload] 未能补齐视频号详情: objectId=${media.objectId}")
+            HLog.e("[AeonLab:FinderDownload] 未能补齐视频号详情: objectId=${media.objectId}")
             return media
         }
         return extractFinderObject(finderObject) ?: run {
-            HLog.e("[Hchat:FinderDownload] 视频号详情缺少可下载媒体: objectId=${media.objectId}")
+            HLog.e("[AeonLab:FinderDownload] 视频号详情缺少可下载媒体: objectId=${media.objectId}")
             media
         }
     }
@@ -361,7 +361,7 @@ internal object FinderMediaDownloadSupport {
             "finder_image_${System.currentTimeMillis()}_${mediaIndex + 1}",
             extensionFromUrl(url, "png")
         )
-        return HchatMediaDownloader.downloadFinderImage(context, url, target)
+        return AeonLabMediaDownloader.downloadFinderImage(context, url, target)
             ?.takeIf { it.isFile && it.length() > 0L }
     }
 
@@ -382,13 +382,13 @@ internal object FinderMediaDownloadSupport {
         val pcdn = pcdnUrl(json)
         val file = when {
             !h265Url.isNullOrBlank() && decodeKey.isNotBlank() ->
-                HchatMediaDownloader.downloadAndDecryptFinderVideo(context, h265Url, decodeKey, target)
+                AeonLabMediaDownloader.downloadAndDecryptFinderVideo(context, h265Url, decodeKey, target)
             pcdn.isNotBlank() ->
-                HchatMediaDownloader.downloadFinderVideo(context, pcdn, target)
+                AeonLabMediaDownloader.downloadFinderVideo(context, pcdn, target)
             decodeKey.isNotBlank() ->
-                HchatMediaDownloader.downloadAndDecryptFinderVideo(context, fullUrl(json), decodeKey, target)
+                AeonLabMediaDownloader.downloadAndDecryptFinderVideo(context, fullUrl(json), decodeKey, target)
             else ->
-                HchatMediaDownloader.downloadFinderVideo(context, fullUrl(json), target)
+                AeonLabMediaDownloader.downloadFinderVideo(context, fullUrl(json), target)
         }
         return validateFinderVideo(file)
     }
@@ -409,7 +409,7 @@ internal object FinderMediaDownloadSupport {
         val path = file.absolutePath
         val size = file.length()
         runCatching { file.delete() }
-        HLog.e("[Hchat:FinderDownload] 视频号下载结果不是有效MP4，已删除: path=$path size=$size")
+        HLog.e("[AeonLab:FinderDownload] 视频号下载结果不是有效MP4，已删除: path=$path size=$size")
         return null
     }
 
@@ -421,7 +421,7 @@ internal object FinderMediaDownloadSupport {
     ): File {
         val path = savePath?.trim().orEmpty()
         if (path.isBlank()) {
-            return File(HchatMediaDownloader.hchatDir(context, "Finder"), "$defaultName.$defaultExtension")
+            return File(AeonLabMediaDownloader.hchatDir(context, "Finder"), "$defaultName.$defaultExtension")
         }
         val target = File(path)
         if (path.endsWith("/") || target.isDirectory) {

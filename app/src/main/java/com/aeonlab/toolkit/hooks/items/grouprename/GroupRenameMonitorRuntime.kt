@@ -7,7 +7,7 @@ import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveMonitorLinks
 import com.aeonlab.toolkit.hooks.items.membertitle.MemberTitleStore
 import com.aeonlab.toolkit.hooks.items.realtail.RealNameTailStore
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
@@ -21,7 +21,7 @@ class GroupRenameMonitorRuntime(
     private val logger: (String, Throwable?) -> Unit
 ) {
     private val prefs: SharedPreferences =
-        HchatStorage.preferences(context.hostContext(), GroupRenameMonitorSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context.hostContext(), GroupRenameMonitorSettings.PREFS_NAME)
     private val realNameTailStore = RealNameTailStore(context.hostContext())
     private val memberSnapshots = ConcurrentHashMap<String, Set<String>>()
     private val memberNickSnapshots = ConcurrentHashMap<String, Map<String, String>>()

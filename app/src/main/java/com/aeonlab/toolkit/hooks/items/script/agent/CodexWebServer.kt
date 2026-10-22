@@ -8,7 +8,7 @@ import java.net.Socket
 
 // codex 网页版服务：在 Ubuntu 环境里跑内置 Node 运行时，把界面暴露给手机浏览器
 object CodexWebServer {
-    private const val TAG = "[Hchat:CodexWeb]"
+    private const val TAG = "[AeonLab:CodexWeb]"
 
     const val PORT = 8214
 
@@ -90,12 +90,12 @@ object CodexWebServer {
     private val RUN_COMMAND = """
         BASE=/opt/codex-web/current
         if [ ! -x "${'$'}BASE/bin/node" ]; then
-            echo "HCHAT_WEBSRV_ERR 网页版运行环境未安装"
+            echo "AEONLAB_WEBSRV_ERR 网页版运行环境未安装"
             exit 1
         fi
         CODEX_BIN=/opt/codex/packages/standalone/current/bin/codex
         [ -x "${'$'}CODEX_BIN" ] || CODEX_BIN=""
-        cd "${'$'}BASE" || { echo "HCHAT_WEBSRV_ERR 找不到 ${'$'}BASE"; exit 1; }
+        cd "${'$'}BASE" || { echo "AEONLAB_WEBSRV_ERR 找不到 ${'$'}BASE"; exit 1; }
         exec env CODEX_CLI_PATH="${'$'}CODEX_BIN" ./bin/node $MAIN_ARG --host 127.0.0.1 --port $PORT
     """.trimIndent()
 
@@ -106,6 +106,6 @@ object CodexWebServer {
             if grep -qa "${'$'}PAT" /proc/${'$'}__p/cmdline 2>/dev/null; then kill -9 "${'$'}__p" 2>/dev/null; fi
         done
         unset __p PAT
-        echo "HCHAT_WEBSRV_STOPPED"
+        echo "AEONLAB_WEBSRV_STOPPED"
     """.trimIndent()
 }

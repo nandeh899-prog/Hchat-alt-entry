@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.roundavatar
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import kotlin.math.roundToInt
 
 object RoundAvatarSettings {
@@ -33,5 +33,5 @@ object RoundAvatarSettings {
         return (normalizeRadiusFactor(value) * 100f).roundToInt()
     }
 
-    private fun preferences(context: Context) = HchatStorage.preferences(context, PREFS_NAME)
+    private fun preferences(context: Context) = AeonLabStorage.preferences(context, PREFS_NAME)
 }

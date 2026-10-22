@@ -52,18 +52,18 @@ import com.aeonlab.toolkit.utils.KavaReflector;
  */
 public class SettingsInjector {
 
-    private static final String TAG = "[Hchat:SettingsInjector]";
+    private static final String TAG = "[AeonLab:SettingsInjector]";
     private static final String PREFS_KEY = "AeonLab_settings";
     private static final String PREFS_TITLE = "AeonLab";
-    private static final String MODULE_TAG = "Hchat";
+    private static final String MODULE_TAG = "AeonLab";
     private static final boolean VERBOSE = false;
 
     // 新版 SettingItem 的 nameResId，用 Context.getString 拦截时判断。
-    // 必须使用 Hchat 独有值，避免和 WeKitFork 等同源模块的伪资源 ID 串台。
-    private static final int HCHAT_SETTING_ITEM_NAME_RES_ID = -1212373076;
-    private static final String SETTING_ITEM_ID = "SettingGroup_Main_Other_Hchat";
-    private static final int HCHAT_PLUS_MENU_ID = -1212373075;
-    private static final int HCHAT_PLUS_LONG_PRESS_TAG = -1212373074;
+    // 必须使用 AeonLab 独有值，避免和 WeKitFork 等同源模块的伪资源 ID 串台。
+    private static final int AEONLAB_SETTING_ITEM_NAME_RES_ID = -1212373076;
+    private static final String SETTING_ITEM_ID = "SettingGroup_Main_Other_AeonLab";
+    private static final int AEONLAB_PLUS_MENU_ID = -1212373075;
+    private static final int AEONLAB_PLUS_LONG_PRESS_TAG = -1212373074;
     private static final int QUICK_READ_PLUS_MENU_ID = -1212373073;
     private static final String QUICK_READ_PLUS_MENU_TITLE = "全部已读";
     private static final int QUICK_TERMINATE_PLUS_MENU_ID = -1212373072;
@@ -376,7 +376,7 @@ public class SettingsInjector {
                     return newSettingLocation(parentClass, frontClass);
                 }
                 if (fNameResId.equals(name)) {
-                    return HCHAT_SETTING_ITEM_NAME_RES_ID;
+                    return AEONLAB_SETTING_ITEM_NAME_RES_ID;
                 }
 
                 // 抽象方法返回默认值
@@ -604,7 +604,7 @@ public class SettingsInjector {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        if ((int) param.args[0] == HCHAT_SETTING_ITEM_NAME_RES_ID) {
+                        if ((int) param.args[0] == AEONLAB_SETTING_ITEM_NAME_RES_ID) {
                             param.setResult(PREFS_TITLE);
                         }
                     }
@@ -769,14 +769,14 @@ public class SettingsInjector {
     private void markPlusView(View plusView) {
         if (plusView == null) return;
         if (isMarkedPlusView(plusView)) return;
-        plusView.setTag(HCHAT_PLUS_LONG_PRESS_TAG, Boolean.TRUE);
+        plusView.setTag(AEONLAB_PLUS_LONG_PRESS_TAG, Boolean.TRUE);
         plusView.setOnLongClickListener(view -> {
             return openPlusLongPressSettings(view);
         });
     }
 
     private boolean isMarkedPlusView(View view) {
-        return view != null && Boolean.TRUE.equals(view.getTag(HCHAT_PLUS_LONG_PRESS_TAG));
+        return view != null && Boolean.TRUE.equals(view.getTag(AEONLAB_PLUS_LONG_PRESS_TAG));
     }
 
     private boolean openPlusLongPressSettings(View view) {
@@ -866,7 +866,7 @@ public class SettingsInjector {
 
                         Context context = findContextFieldValue(param.thisObject);
                         if (context == null) return;
-                        if (itemId == HCHAT_PLUS_MENU_ID) {
+                        if (itemId == AEONLAB_PLUS_MENU_ID) {
                             showModuleSettingsPage(context);
                         } else if (itemId == PLUGIN_AGENT_PLUS_MENU_ID) {
                             showScriptPluginAgentPage(context);
@@ -892,7 +892,7 @@ public class SettingsInjector {
         if (items == null) return;
         boolean changed = false;
         if (!isPlusMenuEnabled()) {
-            changed |= removePlusMenuItem(items, HCHAT_PLUS_MENU_ID, PREFS_TITLE);
+            changed |= removePlusMenuItem(items, AEONLAB_PLUS_MENU_ID, PREFS_TITLE);
         }
         if (!isQuickReadPlusMenuEnabled()) {
             changed |= removePlusMenuItem(items, QUICK_READ_PLUS_MENU_ID, QUICK_READ_PLUS_MENU_TITLE);
@@ -913,7 +913,7 @@ public class SettingsInjector {
             if (changed && adapter != null) adapter.notifyDataSetChanged();
             return;
         }
-        if (containsPlusMenuItem(items, HCHAT_PLUS_MENU_ID, PREFS_TITLE)
+        if (containsPlusMenuItem(items, AEONLAB_PLUS_MENU_ID, PREFS_TITLE)
                 && containsPlusMenuItem(items, QUICK_READ_PLUS_MENU_ID, QUICK_READ_PLUS_MENU_TITLE)
                 && containsPlusMenuItem(items, PLUGIN_AGENT_PLUS_MENU_ID, PLUGIN_AGENT_PLUS_MENU_TITLE)
                 && containsPlusMenuItem(
@@ -935,8 +935,8 @@ public class SettingsInjector {
 
         ensurePlusMenuAdapterViewHook(adapter);
         if (isPlusMenuEnabled()
-                && !containsPlusMenuItem(items, HCHAT_PLUS_MENU_ID, PREFS_TITLE)) {
-            changed |= appendPlusMenuItem(items, sampleWrapper.getClass(), sampleItem, HCHAT_PLUS_MENU_ID, PREFS_TITLE);
+                && !containsPlusMenuItem(items, AEONLAB_PLUS_MENU_ID, PREFS_TITLE)) {
+            changed |= appendPlusMenuItem(items, sampleWrapper.getClass(), sampleItem, AEONLAB_PLUS_MENU_ID, PREFS_TITLE);
         }
         if (isPluginAgentPlusMenuEnabled()
                 && !containsPlusMenuItem(
@@ -1068,8 +1068,8 @@ public class SettingsInjector {
     }
 
     private int plusMenuWrapperId(Object wrapper) {
-        if (isPlusMenuWrapper(wrapper, HCHAT_PLUS_MENU_ID, PREFS_TITLE)) {
-            return HCHAT_PLUS_MENU_ID;
+        if (isPlusMenuWrapper(wrapper, AEONLAB_PLUS_MENU_ID, PREFS_TITLE)) {
+            return AEONLAB_PLUS_MENU_ID;
         }
         if (isPlusMenuWrapper(wrapper, QUICK_READ_PLUS_MENU_ID, QUICK_READ_PLUS_MENU_TITLE)) {
             return QUICK_READ_PLUS_MENU_ID;
@@ -1092,7 +1092,7 @@ public class SettingsInjector {
     private boolean isPlusMenuWrapper(Object wrapper, int itemId, String title) {
         Object item = findNestedItemObject(wrapper);
         if (item == null) return false;
-        boolean allowTitleFallback = itemId == HCHAT_PLUS_MENU_ID;
+        boolean allowTitleFallback = itemId == AEONLAB_PLUS_MENU_ID;
         boolean hasTargetTitle = false;
         boolean hasTargetId = false;
         for (Field field : KavaReflector.declaredFields(item.getClass())) {

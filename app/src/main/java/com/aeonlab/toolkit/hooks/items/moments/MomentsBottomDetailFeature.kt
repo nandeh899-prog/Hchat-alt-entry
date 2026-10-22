@@ -10,7 +10,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.matchers.MethodMatcher
@@ -79,7 +79,7 @@ class MomentsBottomDetailFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            return HchatStorage.preferences(context, MomentsBottomDetailSettings.PREFS_NAME)
+            return AeonLabStorage.preferences(context, MomentsBottomDetailSettings.PREFS_NAME)
                 .getBoolean(MomentsBottomDetailSettings.KEY_ENABLE, MomentsBottomDetailSettings.DEFAULT_ENABLE)
         }
     }
@@ -89,7 +89,7 @@ private class MomentsBottomDetailRuntime(
     private val context: FeatureContext,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val prefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(
         context.hostContext(),
         MomentsBottomDetailSettings.PREFS_NAME
     )

@@ -12,7 +12,7 @@ import com.aeonlab.toolkit.xposed.compat.XposedHelpers
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.ui.miuix.ScriptFloatingGlassBarHost
 import com.aeonlab.toolkit.utils.KavaReflector
@@ -57,7 +57,7 @@ class ScriptPluginBridge internal constructor(
             current.getAndSet(null)?.let {
                 runCatching { it.accept(value) }
                     .onFailure { error ->
-                        com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 对话框回调失败: ${error.message}", error)
+                        com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 对话框回调失败: ${error.message}", error)
                     }
             }
         }
@@ -68,19 +68,19 @@ class ScriptPluginBridge internal constructor(
     }
 
     fun log(message: Any?) {
-        XposedBridge.log("[Hchat:Script] ${message ?: "null"}")
+        XposedBridge.log("[AeonLab:Script] ${message ?: "null"}")
     }
 
     fun log(pluginName: String?, pluginDir: File?, message: Any?) {
         val text = message?.toString() ?: "null"
-        XposedBridge.log("[Hchat:Script] [${pluginName.orEmpty()}] $text")
+        XposedBridge.log("[AeonLab:Script] [${pluginName.orEmpty()}] $text")
         val dir = pluginDir ?: return
         runCatching {
             if (!dir.isDirectory) dir.mkdirs()
             val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(Date())
             File(dir, "log.txt").appendText("[$time] $text\n")
         }.onFailure {
-            com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 写入插件日志失败: ${pluginName.orEmpty()} ${it.message}", it)
+            com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 写入插件日志失败: ${pluginName.orEmpty()} ${it.message}", it)
         }
     }
 
@@ -350,7 +350,7 @@ class ScriptPluginBridge internal constructor(
                 runCatching { callback.accept(activity) }
                     .onFailure {
                         com.aeonlab.toolkit.utils.HLog.e(
-                            "[Hchat:Script] 加号菜单回调失败: ${pluginId.orEmpty()} ${it.message}",
+                            "[AeonLab:Script] 加号菜单回调失败: ${pluginId.orEmpty()} ${it.message}",
                             it
                         )
                     }
@@ -377,7 +377,7 @@ class ScriptPluginBridge internal constructor(
                 runCatching { callback.accept(message) }
                     .onFailure {
                         com.aeonlab.toolkit.utils.HLog.e(
-                            "[Hchat:Script] 长按消息菜单回调失败: ${pluginId.orEmpty()} ${it.message}",
+                            "[AeonLab:Script] 长按消息菜单回调失败: ${pluginId.orEmpty()} ${it.message}",
                             it
                         )
                     }
@@ -389,7 +389,7 @@ class ScriptPluginBridge internal constructor(
         ScriptMenuDispatcher.remove(handle)
     }
 
-    fun prefs(name: String) = HchatStorage.preferences(hostContext, name)
+    fun prefs(name: String) = AeonLabStorage.preferences(hostContext, name)
 
     fun file(name: String): File = File(scriptDir, name)
 
@@ -602,7 +602,7 @@ class ScriptPluginBridge internal constructor(
             synchronized(callbacks) { callbacks.forEach { it.clear() } }
         }
         runCatching { ScriptMenuDispatcher.unregisterOwner(pluginId) }.onFailure {
-            com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 清理插件菜单失败: $pluginId", it)
+            com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 清理插件菜单失败: $pluginId", it)
         }
         pluginFloatingBars.remove(pluginId)?.let { handles ->
             runCatching {
@@ -611,12 +611,12 @@ class ScriptPluginBridge internal constructor(
                     true
                 }
             }.onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 恢复插件悬浮栏失败: $pluginId", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 恢复插件悬浮栏失败: $pluginId", it)
             }
         }
         for (hook in pluginHooks.remove(pluginId).orEmpty()) {
             runCatching { HookRegistry.get().unhook(hook) }.onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 解除插件 Hook 失败: $pluginId", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 解除插件 Hook 失败: $pluginId", it)
             }
         }
     }
@@ -701,7 +701,7 @@ class ScriptPluginBridge internal constructor(
                     }
                 }
             }.onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 读取插件配置失败: ${pluginDir?.name.orEmpty()} ${it.message}", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 读取插件配置失败: ${pluginDir?.name.orEmpty()} ${it.message}", it)
             }
         }
         return properties
@@ -719,11 +719,11 @@ class ScriptPluginBridge internal constructor(
                     }
                     properties.setProperty(normalizedKey, value)
                     file.writer(Charsets.UTF_8).use {
-                        properties.store(it, "Hchat script plugin config")
+                        properties.store(it, "AeonLab script plugin config")
                     }
                 }
             }.onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 写入插件配置失败: ${pluginDir?.name.orEmpty()} ${it.message}", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 写入插件配置失败: ${pluginDir?.name.orEmpty()} ${it.message}", it)
             }
         }
     }
@@ -738,7 +738,7 @@ class ScriptPluginBridge internal constructor(
         if (!parent.isDirectory && !parent.mkdirs()) {
             error("无法创建插件配置目录: ${parent.absolutePath}")
         }
-        val lockRoot = File(HchatStorage.storageDir(hostContext), "script_plugin_locks")
+        val lockRoot = File(AeonLabStorage.storageDir(hostContext), "script_plugin_locks")
         if (!lockRoot.isDirectory && !lockRoot.mkdirs()) {
             error("无法创建插件配置锁目录: ${lockRoot.absolutePath}")
         }
@@ -769,7 +769,7 @@ class ScriptPluginBridge internal constructor(
         val show = Runnable {
             if (activity.isFinishing || activity.isDestroyed) return@Runnable
             runCatching { action(activity) }.onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 显示模块弹窗失败: ${it.message}", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 显示模块弹窗失败: ${it.message}", it)
             }
         }
         if (Looper.myLooper() == Looper.getMainLooper()) {
@@ -783,7 +783,7 @@ class ScriptPluginBridge internal constructor(
     private fun <T> callOnMainForResult(action: () -> T?): T? {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             return runCatching(action).onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 执行模块悬浮底栏操作失败: ${it.message}", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 执行模块悬浮底栏操作失败: ${it.message}", it)
             }.getOrNull()
         }
         val pending = 0
@@ -822,9 +822,9 @@ class ScriptPluginBridge internal constructor(
                 mainHandler.removeCallbacks(task)
                 if (interrupted) {
                     Thread.currentThread().interrupt()
-                    com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 等待模块悬浮底栏操作被中断")
+                    com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 等待模块悬浮底栏操作被中断")
                 } else {
-                    com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 执行模块悬浮底栏操作超时")
+                    com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 执行模块悬浮底栏操作超时")
                 }
                 return null
             }
@@ -840,7 +840,7 @@ class ScriptPluginBridge internal constructor(
             Thread.currentThread().interrupt()
         }
         error.get()?.let {
-            com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 执行模块悬浮底栏操作失败: ${it.message}", it)
+            com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 执行模块悬浮底栏操作失败: ${it.message}", it)
             return null
         }
         return result.get()
@@ -859,7 +859,7 @@ class ScriptPluginBridge internal constructor(
 
     private fun <T> dispatchDialogCallback(callback: Consumer<T>?, value: T) {
         runCatching { callback?.accept(value) }.onFailure {
-            com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 模块弹窗回调失败: ${it.message}", it)
+            com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 模块弹窗回调失败: ${it.message}", it)
         }
     }
 

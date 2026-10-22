@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.script.market
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONObject
 import java.util.UUID
 
@@ -107,7 +107,7 @@ object PluginMarketSettings {
         }
     }
 
-    private fun preferences(context: Context) = HchatStorage.preferences(
+    private fun preferences(context: Context) = AeonLabStorage.preferences(
         context.applicationContext ?: context,
         PREFS_NAME
     )

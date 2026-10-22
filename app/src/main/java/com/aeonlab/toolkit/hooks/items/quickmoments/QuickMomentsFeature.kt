@@ -21,7 +21,7 @@ import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.quickcontactedit.ConversationMenuLocator
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Method
@@ -70,7 +70,7 @@ class QuickMomentsFeature : BaseFeature() {
 object QuickMomentsRuntime {
     fun isEnabled(context: Context?): Boolean {
         if (context == null) return false
-        return HchatStorage.preferences(context, QuickMomentsSettings.PREFS_NAME)
+        return AeonLabStorage.preferences(context, QuickMomentsSettings.PREFS_NAME)
             .getBoolean(QuickMomentsSettings.KEY_ENABLE, QuickMomentsSettings.DEFAULT_ENABLE)
     }
 
@@ -99,7 +99,7 @@ object QuickMomentsRuntime {
             activity.startActivity(intent)
             true
         }.getOrElse {
-            HLog.e("[Hchat:${QuickMomentsFeature.ID}] 打开个人朋友圈失败: talker=$wxId", it)
+            HLog.e("[AeonLab:${QuickMomentsFeature.ID}] 打开个人朋友圈失败: talker=$wxId", it)
             false
         }
     }

@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.api.sns
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import java.math.BigInteger
 
 internal object SnsLocalPostIdentity {
@@ -38,7 +38,7 @@ internal object SnsLocalPostIdentity {
         val id = normalize(raw) ?: return false
         if (isLegacyLocalOnly(id)) return true
         val key = java.lang.Long.toUnsignedString(id)
-        return HchatStorage.preferences(context, REGISTRY_PREFS)
+        return AeonLabStorage.preferences(context, REGISTRY_PREFS)
             .getStringSet(REGISTRY_KEY, emptySet())
             .orEmpty()
             .contains(key)

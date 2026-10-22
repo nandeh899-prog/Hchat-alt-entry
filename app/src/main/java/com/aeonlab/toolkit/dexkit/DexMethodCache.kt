@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.dexkit
 import android.content.Context
 import android.content.SharedPreferences
 import com.aeonlab.toolkit.hooks.api.runtime.WeChatVersionApi
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.luckypray.dexkit.wrap.DexMethod
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
@@ -12,7 +12,7 @@ object DexMethodCache {
     private const val CACHE_KEY = "cache.key"
 
     fun prefs(context: Context, name: String): SharedPreferences {
-        return HchatStorage.preferences(context, name)
+        return AeonLabStorage.preferences(context, name)
     }
 
     fun runtimeKey(context: Context, classLoader: ClassLoader): String {

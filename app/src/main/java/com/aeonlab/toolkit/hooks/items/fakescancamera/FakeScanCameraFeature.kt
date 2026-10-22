@@ -8,7 +8,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.matchers.MethodMatcher
@@ -49,7 +49,7 @@ class FakeScanCameraFeature : BaseFeature() {
 private class FakeScanCameraHooker(
     private val context: FeatureContext
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), FakeScanCameraSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), FakeScanCameraSettings.PREFS_NAME)
     private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_fake_scan_camera_method_cache")
 
     @Volatile
@@ -162,7 +162,7 @@ private class FakeScanCameraHooker(
     }
 
     companion object {
-        private const val TAG = "[Hchat:FakeScanCamera]"
+        private const val TAG = "[AeonLab:FakeScanCamera]"
         private const val CACHE_SCHEMA = "fake_scan_camera_v5_eq_qbar_only"
         private const val CACHE_QBAR_STRING_HANDLER_METHODS = "qbar_string_handler_methods"
     }

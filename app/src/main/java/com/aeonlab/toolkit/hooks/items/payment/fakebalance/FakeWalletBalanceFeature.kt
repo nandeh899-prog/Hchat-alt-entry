@@ -13,7 +13,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
@@ -50,7 +50,7 @@ class FakeWalletBalanceFeature : BaseFeature() {
 private class FakeWalletBalanceHooker(
     private val context: FeatureContext
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), FakeWalletBalanceSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), FakeWalletBalanceSettings.PREFS_NAME)
     private val methodPrefs = DexMethodCache.prefs(context.hostContext(), CACHE_PREFS)
     private val tickerTextSizeReady = WeakHashMap<View, Boolean>()
     private val amountTextStates = WeakHashMap<View, AmountTextState>()
@@ -618,7 +618,7 @@ private class FakeWalletBalanceHooker(
     }
 
     companion object {
-        private const val TAG = "[Hchat:FakeWalletBalance]"
+        private const val TAG = "[AeonLab:FakeWalletBalance]"
         private const val CACHE_PREFS = "AeonLab_fake_wallet_balance_method_cache"
         private const val CACHE_SCHEMA = "fake_wallet_balance_wekit_style_v1"
         private const val CACHE_TICKER_METHODS = "ticker_methods"

@@ -12,7 +12,7 @@ import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import java.io.File
 import java.io.FileInputStream
@@ -298,7 +298,7 @@ object MessageBubbleStore {
     }
 
     private fun assetFile(context: Context, slot: MessageBubbleSlot): File {
-        return File(File(HchatStorage.storageDir(context), DIRECTORY_NAME), slot.fileName)
+        return File(File(AeonLabStorage.storageDir(context), DIRECTORY_NAME), slot.fileName)
     }
 
     private class MessageBubbleDrawable(
@@ -309,7 +309,7 @@ object MessageBubbleStore {
         private val bitmap = bitmap
         private val ninePatch = chunk?.let {
             runCatching {
-                if (NinePatch.isNinePatchChunk(it)) NinePatch(bitmap, it, "HchatMessageBubble") else null
+                if (NinePatch.isNinePatchChunk(it)) NinePatch(bitmap, it, "AeonLabMessageBubble") else null
             }.getOrNull()
         }
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
@@ -359,7 +359,7 @@ object MessageBubbleStore {
         }
     }
 
-    private const val TAG = "[Hchat:MessageBubble]"
+    private const val TAG = "[AeonLab:MessageBubble]"
     private const val DIRECTORY_NAME = "message_bubbles"
     private const val MAX_FILE_BYTES = 32L * 1024L * 1024L
     private const val MAX_DIMENSION = 2048

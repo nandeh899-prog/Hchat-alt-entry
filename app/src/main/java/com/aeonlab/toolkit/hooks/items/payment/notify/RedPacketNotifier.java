@@ -25,9 +25,9 @@ import com.aeonlab.toolkit.xposed.compat.XposedBridge;
  * 只负责 Toast / 系统通知，不负责判断是否该通知，也不负责 Hook。
  */
 public class RedPacketNotifier {
-    private static final String DEFAULT_TAG = "[Hchat:RedPacketNotifier]";
+    private static final String DEFAULT_TAG = "[AeonLab:RedPacketNotifier]";
     private static final String DEFAULT_CHANNEL_ID = "AeonLab_redpacket_notify_manual_v2";
-    private static final String DEFAULT_CHANNEL_NAME = "Hchat 红包提醒";
+    private static final String DEFAULT_CHANNEL_NAME = "AeonLab 红包提醒";
     private static final long MANUAL_SOUND_DEBOUNCE_MS = 1200L;
     private static final long MANUAL_SOUND_STOP_DELAY_MS = 3500L;
 

@@ -21,7 +21,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.utils.WeChatIdRules
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 
 class ProfileIdFeature : BaseFeature() {
@@ -39,7 +39,7 @@ class ProfileIdFeature : BaseFeature() {
 
     companion object {
         const val ID = "profile_id"
-        private const val TAG = "[Hchat:ProfileId]"
+        private const val TAG = "[AeonLab:ProfileId]"
         private const val CONTACT_INFO_UI = "com.tencent.mm.plugin.profile.ui.ContactInfoUI"
         private const val CHATROOM_INFO_UI = "com.tencent.mm.chatroom.ui.ChatroomInfoUI"
         private const val CONTACT_USER = "Contact_User"
@@ -63,7 +63,7 @@ class ProfileIdFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            val sp = HchatStorage.preferences(context, ProfileIdSettings.PREFS_NAME)
+            val sp = AeonLabStorage.preferences(context, ProfileIdSettings.PREFS_NAME)
             return sp.getBoolean(ProfileIdSettings.KEY_ENABLE, ProfileIdSettings.DEFAULT_ENABLE)
         }
 
@@ -356,7 +356,7 @@ class ProfileIdFeature : BaseFeature() {
             }
             val result = ArrayList<java.lang.reflect.Method>()
             setters.forEachIndexed { index, method ->
-                val marker = "HchatTitleProbe$index"
+                val marker = "AeonLabTitleProbe$index"
                 clearCharSequenceValues(preference, emptyList())
                 KavaReflector.invoke(method, preference, marker)
                 if (KavaReflector.invoke(titleGetter, preference)?.toString() == marker) {

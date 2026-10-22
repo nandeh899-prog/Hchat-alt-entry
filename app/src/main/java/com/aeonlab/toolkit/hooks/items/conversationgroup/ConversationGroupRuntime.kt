@@ -30,7 +30,7 @@ import com.aeonlab.toolkit.hooks.core.ConversationMenuExtensionTarget
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.quickcontactedit.ConversationMenuLocator
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.json.JSONObject
@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 object ConversationGroupRuntime {
-    private const val TAG = "[Hchat:ConversationGroup]"
+    private const val TAG = "[AeonLab:ConversationGroup]"
     private const val CACHE_PREFS = "AeonLab_conversation_group_method_cache"
     private const val CACHE_QUERY = "main_conversation_query"
     private const val CACHE_SHARE_RECENT_ADAPTER_RESET = "share_recent_adapter_reset"
@@ -370,7 +370,7 @@ object ConversationGroupRuntime {
         lifecycleGeneration.incrementAndGet()
         preferenceListener?.let {
             runCatching {
-                HchatStorage.preferences(context.hostContext(), ConversationGroupStore.PREFS_NAME)
+                AeonLabStorage.preferences(context.hostContext(), ConversationGroupStore.PREFS_NAME)
                     .unregisterOnSharedPreferenceChangeListener(it)
             }
         }
@@ -436,7 +436,7 @@ object ConversationGroupRuntime {
         runtimeActive = true
         lifecycleGeneration.incrementAndGet()
         val generation = lifecycleGeneration.get()
-        val prefs = HchatStorage.preferences(context.hostContext(), ConversationGroupStore.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context.hostContext(), ConversationGroupStore.PREFS_NAME)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (runtimeActive && generation == lifecycleGeneration.get() &&
                 (key == ConversationGroupStore.KEY_ENABLE || key == ConversationGroupStore.KEY_DATA)
@@ -1647,7 +1647,7 @@ object ConversationGroupRuntime {
         val account = ConversationGroupStore.accountKey()
         if (account.isBlank()) return
         val database = WeChatApis.database() ?: return
-        val prefs = HchatStorage.preferences(context, ConversationGroupStore.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context, ConversationGroupStore.PREFS_NAME)
         val originals = loadOriginalParentRefs(prefs, account)
         var groups = ConversationGroupStore.load(context)
         val enabled = ConversationGroupStore.isEnabled(context)

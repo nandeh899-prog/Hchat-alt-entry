@@ -50,14 +50,14 @@ object ChatNameDecorationLayout {
     private data class Decoration(val row: Row, val state: State)
 
     fun current(nameView: TextView): Row? {
-        return (nameView.getTag(R.id.hchat_chat_name_decoration) as? Decoration)?.row
+        return (nameView.getTag(R.id.aeonlab_chat_name_decoration) as? Decoration)?.row
     }
 
     fun ensure(nameView: TextView): Row {
         current(nameView)?.let { return it }
         val row = Row(nameView)
         nameView.setTag(
-            R.id.hchat_chat_name_decoration,
+            R.id.aeonlab_chat_name_decoration,
             Decoration(row, State(baseName = stripInlineDecorations(nameView.text)))
         )
         nameView.setSingleLine(false)
@@ -68,7 +68,7 @@ object ChatNameDecorationLayout {
     }
 
     fun displayNameText(nameView: TextView): CharSequence {
-        (nameView.getTag(R.id.hchat_chat_name_decoration) as? Decoration)?.state?.let {
+        (nameView.getTag(R.id.aeonlab_chat_name_decoration) as? Decoration)?.state?.let {
             if (it.lastRendered.isNotEmpty() && nameView.text?.toString() == it.lastRendered) {
                 return it.baseName
             }
@@ -132,10 +132,10 @@ object ChatNameDecorationLayout {
 
     private fun state(row: Row): State {
         val view = row.nameView
-        val existing = view.getTag(R.id.hchat_chat_name_decoration) as? Decoration
+        val existing = view.getTag(R.id.aeonlab_chat_name_decoration) as? Decoration
         if (existing != null) return existing.state
         return State(baseName = stripInlineDecorations(view.text)).also {
-            view.setTag(R.id.hchat_chat_name_decoration, Decoration(row, it))
+            view.setTag(R.id.aeonlab_chat_name_decoration, Decoration(row, it))
         }
     }
 

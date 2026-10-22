@@ -7,7 +7,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.matchers.MethodMatcher
@@ -59,7 +59,7 @@ private class CallRingtoneBlockHooker(
         val acknowledge: Method
     )
 
-    private val settingsPrefs = HchatStorage.preferences(
+    private val settingsPrefs = AeonLabStorage.preferences(
         context.hostContext(),
         CallMediaLimitSettings.PREFS_NAME
     )

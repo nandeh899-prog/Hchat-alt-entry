@@ -1,12 +1,12 @@
 package com.aeonlab.toolkit.hooks.items.zombiecheck
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import org.json.JSONObject
 
 class ZombieCheckSettings(context: Context) {
-    private val prefs = HchatStorage.preferences(context, PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context, PREFS_NAME)
 
     fun enabled(): Boolean = prefs.getBoolean(KEY_ENABLE, DEFAULT_ENABLE)
     fun minDelaySeconds(): Int = prefs.getInt(KEY_MIN_DELAY_SECONDS, DEFAULT_MIN_DELAY_SECONDS).coerceIn(0, 60)

@@ -22,7 +22,7 @@ import com.aeonlab.toolkit.hooks.api.media.VoiceMessageDurationResolver
 import com.aeonlab.toolkit.hooks.api.media.WeChatVoiceApi
 import com.aeonlab.toolkit.hooks.api.message.WeChatMessageObserveApi
 import com.aeonlab.toolkit.hooks.api.model.WeChatMessage
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.io.File
@@ -84,7 +84,7 @@ class TextSpeechRuntime(context: Context) {
     )
 
     private val appContext = context.applicationContext ?: context
-    private val prefs = HchatStorage.preferences(appContext, TextSpeechSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(appContext, TextSpeechSettings.PREFS_NAME)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val queue = ArrayDeque<PlaybackItem>()
     private val pendingVoiceKeys = ConcurrentHashMap.newKeySet<String>()
@@ -1259,7 +1259,7 @@ class TextSpeechRuntime(context: Context) {
     }
 
     companion object {
-        private const val TAG = "[Hchat:TextSpeech]"
+        private const val TAG = "[AeonLab:TextSpeech]"
         private const val MESSAGE_TYPE_TEXT = "文字消息"
         private const val MESSAGE_TYPE_VOICE = "语音消息"
         private const val MAX_INIT_RETRIES = 1
@@ -1275,7 +1275,7 @@ class TextSpeechRuntime(context: Context) {
         private const val VOICE_PLAYBACK_TIMEOUT_GRACE_MS = 15_000L
         private const val MIN_VOICE_PLAYBACK_TIMEOUT_MS = 20_000L
         private const val MAX_VOICE_PLAYBACK_TIMEOUT_MS = 5 * 60_000L
-        private const val MEDIA_SESSION_TAG = "HchatTextSpeech"
+        private const val MEDIA_SESSION_TAG = "AeonLabTextSpeech"
         private const val ACTION_VOLUME_CHANGED = "android.media.VOLUME_CHANGED_ACTION"
         private const val EXTRA_VOLUME_STREAM_TYPE = "android.media.EXTRA_VOLUME_STREAM_TYPE"
         private const val EXTRA_VOLUME_STREAM_VALUE = "android.media.EXTRA_VOLUME_STREAM_VALUE"

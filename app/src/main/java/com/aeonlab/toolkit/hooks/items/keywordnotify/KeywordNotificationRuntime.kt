@@ -30,7 +30,7 @@ import com.aeonlab.toolkit.hooks.api.model.WeChatMessageTypes
 import com.aeonlab.toolkit.hooks.items.customfriendavatar.CustomFriendAvatarSettings
 import com.aeonlab.toolkit.hooks.items.customfriendavatar.CustomFriendAvatarStore
 import com.aeonlab.toolkit.hooks.items.notification.NotificationNameResolver
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import java.io.File
 import java.net.URL
@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
 object KeywordNotificationRuntime {
-    private const val TAG = "[Hchat:KeywordNotification]"
+    private const val TAG = "[AeonLab:KeywordNotification]"
     private const val CHANNEL_PREFIX = "AeonLab_keyword_notification_"
     private const val CHANNEL_NAME = "AeonLab 关键词通知"
     private const val EXTRA_KEYWORD_NOTIFY = "hchat_keyword_notification"
@@ -619,7 +619,7 @@ object KeywordNotificationRuntime {
 
     private fun rememberLastMatch(context: Context, keyword: String) {
         runCatching {
-            HchatStorage.preferences(context, KeywordNotificationSettings.PREFS_NAME)
+            AeonLabStorage.preferences(context, KeywordNotificationSettings.PREFS_NAME)
                 .edit()
                 .putLong(KeywordNotificationSettings.KEY_LAST_TIME, System.currentTimeMillis())
                 .putString(KeywordNotificationSettings.KEY_LAST_KEYWORD, keyword)

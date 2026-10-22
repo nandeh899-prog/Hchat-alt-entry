@@ -7,7 +7,7 @@ import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import org.luckypray.dexkit.DexKitBridge
 import org.luckypray.dexkit.query.FindMethod
@@ -31,7 +31,7 @@ class DisableHotUpdateFeature : BaseFeature() {
 
     companion object {
         const val ID = "disable_hot_update"
-        private const val TAG = "[Hchat:HotUpdate]"
+        private const val TAG = "[AeonLab:HotUpdate]"
         private const val TINKER_APP = "com.tencent.tinker.loader.app.TinkerApplication"
         private const val TINKER_LOADER = "com.tencent.tinker.loader.TinkerLoader"
         private const val TINKER_SYNC_RESPONSE = "com.tencent.mm.plugin.hp.util.TinkerSyncResponse"
@@ -54,7 +54,7 @@ class DisableHotUpdateFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            val sp = HchatStorage.preferences(context, DisableHotUpdateSettings.PREFS_NAME)
+            val sp = AeonLabStorage.preferences(context, DisableHotUpdateSettings.PREFS_NAME)
             return sp.getBoolean(
                 DisableHotUpdateSettings.KEY_ENABLE,
                 DisableHotUpdateSettings.DEFAULT_ENABLE

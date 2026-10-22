@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 import java.util.UUID
 
 object ScriptPluginAgentClient {
-    private const val TAG = "[Hchat:ScriptAgent]"
+    private const val TAG = "[AeonLab:ScriptAgent]"
     private const val STREAM_UPDATE_INTERVAL_MS = 50L
     private const val MAX_RESPONSE_PARSE_RETRIES = 2
     private const val MAX_WORKSPACE_COMPLETION_RETRIES = 2

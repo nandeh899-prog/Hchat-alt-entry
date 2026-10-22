@@ -30,7 +30,7 @@ class ProtobufPacketFileLogger(context: Context) {
                 append("Json: ").append(json).append("\n\n")
             })
         } catch (e: Throwable) {
-            com.aeonlab.toolkit.utils.HLog.e("[Hchat:Protobuf] 写入抓包文件失败: ${e.message}", e)
+            com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Protobuf] 写入抓包文件失败: ${e.message}", e)
         }
     }
 

@@ -7,7 +7,7 @@ import com.reandroid.apk.ApkModule
 import com.reandroid.arsc.chunk.TableBlock
 import com.reandroid.arsc.model.ResourceEntry
 import com.aeonlab.toolkit.dexkit.DexBridgeHolder
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import org.json.JSONObject
 import org.luckypray.dexkit.DexKitBridge
@@ -358,7 +358,7 @@ object ScriptPluginAgentLocalReverseTools {
             )
         )
         return JSONObject().apply {
-            put("source", "Hchat 内置逆向工具")
+            put("source", "AeonLab 内置逆向工具")
             put(
                 "instructions",
                 "默认目标是当前微信 APK。分析其它版本时先用 open_target_session(input) 注册 APK，并在后续每次查询中传返回的 session_id；多版本初筛优先使用 compare_methods_using_strings。find/list 首次查询优先 brief=true，确有需要再选择 fields。Java/Smali/XML 按 nextOffset 分页读取。"
@@ -1291,7 +1291,7 @@ object ScriptPluginAgentLocalReverseTools {
     }
 
     private fun loadPersistedTargets(host: Binding) {
-        val raw = HchatStorage.preferences(host.context, TARGET_PREFS_NAME)
+        val raw = AeonLabStorage.preferences(host.context, TARGET_PREFS_NAME)
             .getString(TARGET_PREFS_KEY, "")
             .orEmpty()
         if (raw.isBlank()) return
@@ -1327,7 +1327,7 @@ object ScriptPluginAgentLocalReverseTools {
             pruneTargets(host)
             if (changed || targetSessions.size != beforePrune) persistTargets(host)
         }.onFailure {
-            HchatStorage.preferences(host.context, TARGET_PREFS_NAME)
+            AeonLabStorage.preferences(host.context, TARGET_PREFS_NAME)
                 .edit()
                 .remove(TARGET_PREFS_KEY)
                 .apply()
@@ -1345,7 +1345,7 @@ object ScriptPluginAgentLocalReverseTools {
                     put("addedAt", session.addedAt)
                 })
             }
-        HchatStorage.preferences(host.context, TARGET_PREFS_NAME)
+        AeonLabStorage.preferences(host.context, TARGET_PREFS_NAME)
             .edit()
             .putString(TARGET_PREFS_KEY, array.toString())
             .apply()

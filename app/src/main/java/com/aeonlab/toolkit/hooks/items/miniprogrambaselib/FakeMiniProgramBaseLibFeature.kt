@@ -7,7 +7,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.json.JSONObject
@@ -40,7 +40,7 @@ class FakeMiniProgramBaseLibFeature : BaseFeature() {
 
     companion object {
         const val ID = "fake_mini_program_base_lib"
-        private const val TAG = "[Hchat:FakeMiniProgramHostVersion]"
+        private const val TAG = "[AeonLab:FakeMiniProgramHostVersion]"
         internal const val CACHE_PREFS_NAME =
             "AeonLab_fake_mini_program_host_version_member_cache"
         internal const val CACHE_PRIVATE_OPEN_URL_METHOD = "private_open_url_method"
@@ -49,7 +49,7 @@ class FakeMiniProgramBaseLibFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            return HchatStorage.preferences(context, FakeMiniProgramBaseLibSettings.PREFS_NAME)
+            return AeonLabStorage.preferences(context, FakeMiniProgramBaseLibSettings.PREFS_NAME)
                 .getBoolean(
                     FakeMiniProgramBaseLibSettings.KEY_ENABLE,
                     FakeMiniProgramBaseLibSettings.DEFAULT_ENABLE

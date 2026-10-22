@@ -7,7 +7,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.matchers.MethodMatcher
@@ -43,7 +43,7 @@ class SkipGlobalMiniProgramSplashAdsFeature : BaseFeature() {
 
     companion object {
         const val ID = "skip_global_mini_program_splash_ads"
-        private const val TAG = "[Hchat:MiniProgramSplashAds]"
+        private const val TAG = "[AeonLab:MiniProgramSplashAds]"
         internal const val CACHE_PREFS_NAME =
             "AeonLab_skip_global_mini_program_splash_ads_method_cache"
         internal const val CACHE_SPLASH_AD_CHECK_METHOD = "splash_ad_check_method"
@@ -52,7 +52,7 @@ class SkipGlobalMiniProgramSplashAdsFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            return HchatStorage.preferences(
+            return AeonLabStorage.preferences(
                 context,
                 SkipGlobalMiniProgramSplashAdsSettings.PREFS_NAME
             ).getBoolean(

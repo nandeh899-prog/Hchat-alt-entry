@@ -5,7 +5,7 @@ import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -48,7 +48,7 @@ private class MomentsAutoRefreshRuntime(
     context: FeatureContext,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), MomentsAutoRefreshSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), MomentsAutoRefreshSettings.PREFS_NAME)
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == MomentsAutoRefreshSettings.KEY_ENABLE) reconfigure()
     }

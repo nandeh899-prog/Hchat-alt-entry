@@ -4,11 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
 import com.aeonlab.toolkit.BuildConfig
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 
 object WeChatKeepAliveRuntime {
-    private const val TAG = "[Hchat:KeepAlive]"
+    private const val TAG = "[AeonLab:KeepAlive]"
     private const val WAKE_LOCK_TAG = "Hchat:WeChatKeepAlive"
     private const val WECHAT_PACKAGE = "com.tencent.mm"
     private var wakeLock: PowerManager.WakeLock? = null
@@ -19,7 +19,7 @@ object WeChatKeepAliveRuntime {
         if (hostContext == null) return
         val appContext = hostContext.applicationContext ?: hostContext
         val serviceContext = (moduleContext ?: resolveModuleContext(appContext))?.let { it.applicationContext ?: it }
-        val prefs = HchatStorage.preferences(appContext, WeChatKeepAliveSettings.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(appContext, WeChatKeepAliveSettings.PREFS_NAME)
         val enabled = prefs.getBoolean(WeChatKeepAliveSettings.KEY_ENABLE, WeChatKeepAliveSettings.DEFAULT_ENABLE)
         if (!enabled) {
             releaseWakeLock()

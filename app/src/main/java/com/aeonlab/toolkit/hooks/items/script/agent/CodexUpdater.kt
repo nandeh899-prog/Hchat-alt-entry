@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 
 // 服务器清单驱动的内置 codex 更新：下载 → 校验 sha256 → 切换 current → 自检，失败回滚
 object CodexUpdater {
-    private const val TAG = "[Hchat:CodexUpdater]"
+    private const val TAG = "[AeonLab:CodexUpdater]"
 
     private const val MANIFEST_PATH = "/codex/version.json"
 
@@ -162,7 +162,7 @@ object CodexUpdater {
         script.writeText(UPDATE_SCRIPT)
         val cmd = "sh /root/$CACHE_DIR/$SCRIPT_NAME '${release.release}' '/root/$CACHE_DIR/$PKG_NAME'"
         val result = ProotEnvironment.exec(context, cmd, timeoutSeconds = UPDATE_TIMEOUT_SECONDS)
-        val ok = result.output.contains("HCHAT_CODEX_OK")
+        val ok = result.output.contains("AEONLAB_CODEX_OK")
         if (!ok) {
             val tail = result.output.trim().lines().filter { it.isNotBlank() }.takeLast(6).joinToString(" | ")
             HLog.e("$TAG 更新失败: ${result.exitInfo} $tail")
@@ -321,13 +321,13 @@ object CodexUpdater {
 
     private val UPDATE_SCRIPT = """
         #!/bin/sh
-        # Hchat 内置 codex 更新脚本（由模块写入，勿手改）
+        # AeonLab 内置 codex 更新脚本（由模块写入，勿手改）
         REL="${'$'}1"
         PKG="${'$'}2"
-        case "${'$'}REL" in */*|*" "*) echo "HCHAT_CODEX_ERR 版本标识非法: ${'$'}REL"; exit 1;; esac
+        case "${'$'}REL" in */*|*" "*) echo "AEONLAB_CODEX_ERR 版本标识非法: ${'$'}REL"; exit 1;; esac
         BASE=/opt/codex/packages/standalone
-        cd "${'$'}BASE" || { echo "HCHAT_CODEX_ERR 找不到 ${'$'}BASE"; exit 1; }
-        [ -f "${'$'}PKG" ] || { echo "HCHAT_CODEX_ERR 包不存在: ${'$'}PKG"; exit 1; }
+        cd "${'$'}BASE" || { echo "AEONLAB_CODEX_ERR 找不到 ${'$'}BASE"; exit 1; }
+        [ -f "${'$'}PKG" ] || { echo "AEONLAB_CODEX_ERR 包不存在: ${'$'}PKG"; exit 1; }
 
         PREV=""
         [ -L current ] && PREV=${'$'}(readlink current)
@@ -346,12 +346,12 @@ object CodexUpdater {
         mkdir -p "releases/.staging-${'$'}REL"
 
         if ! tar -xf "${'$'}PKG" -C "releases/.staging-${'$'}REL"; then
-            echo "HCHAT_CODEX_ERR 解压失败"
+            echo "AEONLAB_CODEX_ERR 解压失败"
             restore_backup
             exit 1
         fi
         if [ ! -f "releases/.staging-${'$'}REL/bin/codex" ]; then
-            echo "HCHAT_CODEX_ERR 包内缺少 bin/codex"
+            echo "AEONLAB_CODEX_ERR 包内缺少 bin/codex"
             restore_backup
             exit 1
         fi
@@ -365,9 +365,9 @@ object CodexUpdater {
         ln -sfn "releases/${'$'}REL" current
 
         VER=${'$'}(./current/bin/codex --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?' | head -1)
-        echo "HCHAT_CODEX_VERSION ${'$'}VER"
+        echo "AEONLAB_CODEX_VERSION ${'$'}VER"
         if [ -z "${'$'}VER" ]; then
-            echo "HCHAT_CODEX_ERR 新版本无法启动: ${'$'}VER"
+            echo "AEONLAB_CODEX_ERR 新版本无法启动: ${'$'}VER"
             [ -n "${'$'}PREV" ] && ln -sfn "${'$'}PREV" current
             rm -rf "releases/${'$'}REL"
             restore_backup
@@ -381,6 +381,6 @@ object CodexUpdater {
         done
         rm -rf releases/.backup-* releases/.staging-* 2>/dev/null
         rm -f "${'$'}PKG"
-        echo "HCHAT_CODEX_OK version=${'$'}VER"
+        echo "AEONLAB_CODEX_OK version=${'$'}VER"
     """.trimIndent() + "\n"
 }

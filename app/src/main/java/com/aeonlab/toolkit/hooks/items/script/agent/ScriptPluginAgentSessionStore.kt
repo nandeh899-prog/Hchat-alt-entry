@@ -114,7 +114,7 @@ object ScriptPluginAgentSessionStore {
                 while (true) {
                     val pending = pendingAsyncSaves.remove(id) ?: break
                     runCatching { save(pending.first, pending.second) }
-                        .onFailure { HLog.e("[Hchat:ScriptAgent] 异步保存会话失败: $id", it) }
+                        .onFailure { HLog.e("[AeonLab:ScriptAgent] 异步保存会话失败: $id", it) }
                 }
             } finally {
                 queuedAsyncSaves.remove(id)
@@ -179,7 +179,7 @@ object ScriptPluginAgentSessionStore {
                 } catch (error: Throwable) {
                     temp.delete()
                     target.delete()
-                    HLog.e("[Hchat:ScriptAgent] 恢复附件失败: ${attachment.name}", error)
+                    HLog.e("[AeonLab:ScriptAgent] 恢复附件失败: ${attachment.name}", error)
                     throw IllegalStateException("无法恢复附件: ${attachment.name}", error)
                 }
             }

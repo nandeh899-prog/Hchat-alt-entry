@@ -6,7 +6,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Modifier
 
@@ -50,7 +50,7 @@ private class MomentsUploadTailHooker(
     private val context: FeatureContext,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val prefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(
         context.hostContext(),
         MomentsUploadTailSettings.PREFS_NAME
     )

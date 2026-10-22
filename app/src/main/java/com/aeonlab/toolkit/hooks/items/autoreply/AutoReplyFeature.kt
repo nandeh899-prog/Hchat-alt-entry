@@ -35,6 +35,6 @@ class AutoReplyFeature : BaseFeature() {
 
     companion object {
         const val ID = "auto_reply"
-        private const val TAG = "[Hchat:AutoReply]"
+        private const val TAG = "[AeonLab:AutoReply]"
     }
 }

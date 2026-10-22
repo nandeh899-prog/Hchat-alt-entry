@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 
 // 服务器清单驱动的 codex 网页版运行时：下载 → 校验 sha256 → 切换 current → 自检，失败回滚
 object CodexWebUpdater {
-    private const val TAG = "[Hchat:CodexWebUpdater]"
+    private const val TAG = "[AeonLab:CodexWebUpdater]"
 
     private const val MANIFEST_PATH = "/codex/web-version.json"
 
@@ -166,7 +166,7 @@ object CodexWebUpdater {
         script.writeText(UPDATE_SCRIPT)
         val cmd = "sh /root/$CACHE_DIR/$SCRIPT_NAME '${release.version}' '/root/$CACHE_DIR/$PKG_NAME'"
         val result = ProotEnvironment.exec(context, cmd, timeoutSeconds = UPDATE_TIMEOUT_SECONDS)
-        val ok = result.output.contains("HCHAT_WEB_OK")
+        val ok = result.output.contains("AEONLAB_WEB_OK")
         if (!ok) {
             val tail = result.output.trim().lines().filter { it.isNotBlank() }.takeLast(6).joinToString(" | ")
             HLog.e("$TAG 更新失败: ${result.exitInfo} $tail")
@@ -319,14 +319,14 @@ object CodexWebUpdater {
 
     private val UPDATE_SCRIPT = """
         #!/bin/sh
-        # Hchat codex 网页版运行时更新脚本（由模块写入，勿手改）
+        # AeonLab codex 网页版运行时更新脚本（由模块写入，勿手改）
         VER="${'$'}1"
         PKG="${'$'}2"
-        case "${'$'}VER" in */*|*" "*) echo "HCHAT_WEB_ERR 版本号非法: ${'$'}VER"; exit 1;; esac
+        case "${'$'}VER" in */*|*" "*) echo "AEONLAB_WEB_ERR 版本号非法: ${'$'}VER"; exit 1;; esac
         BASE=/opt/codex-web
-        mkdir -p "${'$'}BASE/releases" || { echo "HCHAT_WEB_ERR 无法创建 ${'$'}BASE"; exit 1; }
-        cd "${'$'}BASE" || { echo "HCHAT_WEB_ERR 找不到 ${'$'}BASE"; exit 1; }
-        [ -f "${'$'}PKG" ] || { echo "HCHAT_WEB_ERR 包不存在: ${'$'}PKG"; exit 1; }
+        mkdir -p "${'$'}BASE/releases" || { echo "AEONLAB_WEB_ERR 无法创建 ${'$'}BASE"; exit 1; }
+        cd "${'$'}BASE" || { echo "AEONLAB_WEB_ERR 找不到 ${'$'}BASE"; exit 1; }
+        [ -f "${'$'}PKG" ] || { echo "AEONLAB_WEB_ERR 包不存在: ${'$'}PKG"; exit 1; }
 
         PREV=""
         [ -L current ] && PREV=${'$'}(readlink current)
@@ -345,12 +345,12 @@ object CodexWebUpdater {
         mkdir -p "releases/.staging-${'$'}VER"
 
         if ! tar -xf "${'$'}PKG" -C "releases/.staging-${'$'}VER"; then
-            echo "HCHAT_WEB_ERR 解压失败"
+            echo "AEONLAB_WEB_ERR 解压失败"
             restore_backup
             exit 1
         fi
         if [ ! -f "releases/.staging-${'$'}VER/bin/node" ]; then
-            echo "HCHAT_WEB_ERR 包内缺少 bin/node"
+            echo "AEONLAB_WEB_ERR 包内缺少 bin/node"
             restore_backup
             exit 1
         fi
@@ -362,9 +362,9 @@ object CodexWebUpdater {
         ln -sfn "releases/${'$'}VER" current
 
         NVER=${'$'}(./current/bin/node --version 2>&1 | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-        echo "HCHAT_WEB_NODE ${'$'}NVER"
+        echo "AEONLAB_WEB_NODE ${'$'}NVER"
         if [ -z "${'$'}NVER" ]; then
-            echo "HCHAT_WEB_ERR 运行时无法启动: ${'$'}NVER"
+            echo "AEONLAB_WEB_ERR 运行时无法启动: ${'$'}NVER"
             [ -n "${'$'}PREV" ] && ln -sfn "${'$'}PREV" current
             rm -rf "releases/${'$'}VER"
             restore_backup
@@ -378,6 +378,6 @@ object CodexWebUpdater {
         done
         rm -rf releases/.backup-* releases/.staging-* 2>/dev/null
         rm -f "${'$'}PKG"
-        echo "HCHAT_WEB_OK version=${'$'}VER"
+        echo "AEONLAB_WEB_OK version=${'$'}VER"
     """.trimIndent() + "\n"
 }

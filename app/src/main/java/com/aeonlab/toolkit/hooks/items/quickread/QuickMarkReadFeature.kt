@@ -125,7 +125,7 @@ private class QuickMarkReadDragController(
 
     private fun startPendingSession(activity: Activity, event: MotionEvent): Boolean {
         val root = activity.window?.decorView as? ViewGroup ?: return false
-        if (root.findViewWithTag<View>(HCHAT_SETTINGS_PAGE_TAG) != null) {
+        if (root.findViewWithTag<View>(AEONLAB_SETTINGS_PAGE_TAG) != null) {
             clearGesture(resetActive = true)
             return false
         }
@@ -470,7 +470,7 @@ private class QuickMarkReadDragController(
     companion object {
         private const val LAUNCHER_UI = "com.tencent.mm.ui.LauncherUI"
         private const val DISPATCH_TOUCH_EVENT = "dispatchTouchEvent"
-        private const val HCHAT_SETTINGS_PAGE_TAG = "Hchat:MiuixSettingsPage"
+        private const val AEONLAB_SETTINGS_PAGE_TAG = "Hchat:MiuixSettingsPage"
         private const val HOME_TAB_LABEL = "微信"
         private val UNREAD_TEXT = Regex("""\d+\+?|…|\.{2,3}""")
         private val BOTTOM_TAB_LABELS = setOf("微信", "通讯录", "发现", "我")

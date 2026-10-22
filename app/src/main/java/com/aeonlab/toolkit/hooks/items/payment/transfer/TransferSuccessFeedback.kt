@@ -22,9 +22,9 @@ class TransferSuccessFeedback(
     private val mainHandler = Handler(Looper.getMainLooper())
     private val notifier = RedPacketNotifier(
         context,
-        "[Hchat:TransferNotifier]",
+        "[AeonLab:TransferNotifier]",
         "AeonLab_transfer_notify_manual_v1",
-        "Hchat 自动收款提醒"
+        "AeonLab 自动收款提醒"
     )
     private val handled = ConcurrentHashMap.newKeySet<String>()
     private val settings = AutoTransferSettings(context)

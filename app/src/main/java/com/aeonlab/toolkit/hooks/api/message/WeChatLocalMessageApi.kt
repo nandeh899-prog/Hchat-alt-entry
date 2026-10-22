@@ -294,7 +294,7 @@ class WeChatLocalMessageApi(
     }
 
     companion object {
-        private const val TAG = "[Hchat:LocalMessage]"
+        private const val TAG = "[AeonLab:LocalMessage]"
     }
 
     private data class TimedInsert(

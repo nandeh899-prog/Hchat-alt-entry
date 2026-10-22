@@ -12,7 +12,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Method
 import java.text.SimpleDateFormat
@@ -642,7 +642,7 @@ class AntiRecallFeature : BaseFeature() {
         sendTime: Long,
         recallTime: Long
     ): String {
-        val savedTemplate = HchatStorage.preferences(context.hostContext(), AntiRecallSettings.PREFS_NAME)
+        val savedTemplate = AeonLabStorage.preferences(context.hostContext(), AntiRecallSettings.PREFS_NAME)
             .getString(AntiRecallSettings.KEY_NOTICE_TEXT, AntiRecallSettings.DEFAULT_NOTICE_TEXT)
             ?.takeIf { it.isNotBlank() }
             ?: AntiRecallSettings.DEFAULT_NOTICE_TEXT
@@ -668,7 +668,7 @@ class AntiRecallFeature : BaseFeature() {
     }
 
     private fun noticeTimeFormat(context: FeatureContext): String {
-        return HchatStorage.preferences(context.hostContext(), AntiRecallSettings.PREFS_NAME)
+        return AeonLabStorage.preferences(context.hostContext(), AntiRecallSettings.PREFS_NAME)
             .getString(
                 AntiRecallSettings.KEY_NOTICE_TIME_FORMAT,
                 AntiRecallSettings.DEFAULT_NOTICE_TIME_FORMAT
@@ -1124,17 +1124,17 @@ class AntiRecallFeature : BaseFeature() {
     }
 
     private fun isAntiRecallEnabled(context: FeatureContext): Boolean {
-        return HchatStorage.preferences(context.hostContext(), AntiRecallSettings.PREFS_NAME)
+        return AeonLabStorage.preferences(context.hostContext(), AntiRecallSettings.PREFS_NAME)
             .getBoolean(AntiRecallSettings.KEY_ENABLE, AntiRecallSettings.DEFAULT_ENABLE)
     }
 
     private fun keepSelfRecallEnabled(context: FeatureContext): Boolean {
-        return HchatStorage.preferences(context.hostContext(), AntiRecallSettings.PREFS_NAME)
+        return AeonLabStorage.preferences(context.hostContext(), AntiRecallSettings.PREFS_NAME)
             .getBoolean(AntiRecallSettings.KEY_KEEP_SELF_RECALL, AntiRecallSettings.DEFAULT_KEEP_SELF_RECALL)
     }
 
     private fun showNoticeEnabled(context: FeatureContext): Boolean {
-        return HchatStorage.preferences(context.hostContext(), AntiRecallSettings.PREFS_NAME)
+        return AeonLabStorage.preferences(context.hostContext(), AntiRecallSettings.PREFS_NAME)
             .getBoolean(AntiRecallSettings.KEY_SHOW_NOTICE, AntiRecallSettings.DEFAULT_SHOW_NOTICE)
     }
 
@@ -1145,7 +1145,7 @@ class AntiRecallFeature : BaseFeature() {
 
     companion object {
         const val ID = "anti_recall"
-        private const val TAG = "[Hchat:AntiRecall]"
+        private const val TAG = "[AeonLab:AntiRecall]"
         private const val MAX_CACHED_MESSAGES = 1000
         private const val SELF_REVOKE_SENDER = "你"
         private const val RECALLED_MESSAGE_TYPE = 268445456

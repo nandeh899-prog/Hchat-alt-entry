@@ -76,7 +76,7 @@ internal fun ScriptPluginAgentSkillsPage(
     val bottomBarHeight = with(LocalDensity.current) { bottomBarHeightPx.toDp() }
 
     fun showError(error: Throwable) {
-        HLog.e("[Hchat:ScriptAgentSkills] 技能管理失败", error)
+        HLog.e("[AeonLab:ScriptAgentSkills] 技能管理失败", error)
         errorMessage = error.message?.takeIf { it.isNotBlank() } ?: "操作失败，请重试"
         scope.launch { (if (editing) editorState else listState).animateScrollToItem(0) }
     }
@@ -443,7 +443,7 @@ private object SkillDocumentPicker {
                 true
             }
         } catch (error: Throwable) {
-            HLog.e("[Hchat:ScriptAgentSkills] 注册文件选择回调失败", error)
+            HLog.e("[AeonLab:ScriptAgentSkills] 注册文件选择回调失败", error)
             false
         }
     }

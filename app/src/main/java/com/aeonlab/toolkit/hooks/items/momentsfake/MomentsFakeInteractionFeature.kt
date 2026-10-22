@@ -8,7 +8,7 @@ import com.aeonlab.toolkit.hooks.api.sns.WeChatSnsPostObserver
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 
 class MomentsFakeInteractionFeature : BaseFeature() {
@@ -51,7 +51,7 @@ class MomentsFakeInteractionFeature : BaseFeature() {
         if (!runtime.installRecordHooks()) {
             logFeatureError("朋友圈伪互动记录Hook未安装", null)
         }
-        val prefs = HchatStorage.preferences(
+        val prefs = AeonLabStorage.preferences(
             context.hostContext(),
             MomentsFakeInteractionSettings.PREFS_NAME
         )

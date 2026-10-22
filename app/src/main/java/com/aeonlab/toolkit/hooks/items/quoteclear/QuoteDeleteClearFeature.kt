@@ -13,7 +13,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field
@@ -390,7 +390,7 @@ private class QuoteDeleteClearRuntime(
     }
 
     private fun isEnabled(): Boolean {
-        val sp = HchatStorage.preferences(context.hostContext(), QuoteDeleteClearSettings.PREFS_NAME)
+        val sp = AeonLabStorage.preferences(context.hostContext(), QuoteDeleteClearSettings.PREFS_NAME)
         return sp.getBoolean(QuoteDeleteClearSettings.KEY_ENABLE, QuoteDeleteClearSettings.DEFAULT_ENABLE)
     }
 

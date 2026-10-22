@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger
 object DexInstallScheduler {
     enum class Stage(internal val level: Int) { EARLY(0), BRIDGE(1), WARMUP(2) }
 
-    private const val TAG = "[Hchat:DexInstall]"
+    private const val TAG = "[AeonLab:DexInstall]"
     private const val MAX_RETRY_ATTEMPTS = 6
     private const val MAX_RETRY_DELAY_MS = 60_000L
     private val mainHandler = Handler(Looper.getMainLooper())

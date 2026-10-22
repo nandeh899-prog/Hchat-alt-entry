@@ -10,8 +10,8 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher
 import java.lang.reflect.Method
 
 object FavoriteMenuLocator {
-    const val HCHAT_GENERIC_FAVORITE_FORWARD_MENU_ITEM_ID = 0x48434641
-    const val HCHAT_VOICE_FAVORITE_FORWARD_MENU_ITEM_ID = 0x48435646
+    const val AEONLAB_GENERIC_FAVORITE_FORWARD_MENU_ITEM_ID = 0x48434641
+    const val AEONLAB_VOICE_FAVORITE_FORWARD_MENU_ITEM_ID = 0x48435646
 
     private const val FAVORITE_UI_PREFIX = "com.tencent.mm.plugin.fav.ui."
     private const val PREFS_NAME = "AeonLab_favorite_menu_method_cache"

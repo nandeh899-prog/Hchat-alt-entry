@@ -34,7 +34,7 @@ internal class ScriptAsyncScope(private val pluginName: () -> String) {
         val task = object : FutureTask<Unit>({
             if (isActive()) {
                 runCatching(block).onFailure { error ->
-                    com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 异步任务失败: ${pluginName()} ${error.message}", error)
+                    com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 异步任务失败: ${pluginName()} ${error.message}", error)
                 }
             }
             Unit
@@ -111,7 +111,7 @@ internal class ScriptAsyncScope(private val pluginName: () -> String) {
         fun complete(action: (T) -> Unit) {
             val callback = owner.take(this) ?: return
             runCatching { action(callback) }.onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:Script] 异步回调失败: ${it.message}", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:Script] 异步回调失败: ${it.message}", it)
             }
         }
 

@@ -15,7 +15,7 @@ import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
 
 object PluginMarketClient {
-    private const val TAG = "[Hchat:PluginMarket]"
+    private const val TAG = "[AeonLab:PluginMarket]"
     private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)

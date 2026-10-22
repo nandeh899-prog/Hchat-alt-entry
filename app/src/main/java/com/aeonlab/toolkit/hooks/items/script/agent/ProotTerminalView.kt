@@ -61,7 +61,7 @@ class ProotTerminalView(context: Context) : FrameLayout(context), TermuxSessionV
         runCatching {
             com.aeonlab.toolkit.loader.utils.NativeLibraryLoader()
                 .loadTermux(context.applicationContext ?: context, javaClass.classLoader)
-        }.onFailure { HLog.e("[Hchat:Term] libtermux 预加载失败: ${it.message}", it) }
+        }.onFailure { HLog.e("[AeonLab:Term] libtermux 预加载失败: ${it.message}", it) }
 
         prepareTerminalView()
         val holder = TermuxSessions.ensureCurrent(context) ?: return false
@@ -105,7 +105,7 @@ class ProotTerminalView(context: Context) : FrameLayout(context), TermuxSessionV
     // 换字体：TerminalView.setTypeface 内部自己重建渲染器并 updateSize
     private fun applyFont() {
         runCatching { terminalView.setTypeface(TerminalFonts.typeface(context)) }
-            .onFailure { HLog.e("[Hchat:Term] 应用终端字体失败: ${it.message}", it) }
+            .onFailure { HLog.e("[AeonLab:Term] 应用终端字体失败: ${it.message}", it) }
     }
 
     fun showFontMenu() {
@@ -142,7 +142,7 @@ class ProotTerminalView(context: Context) : FrameLayout(context), TermuxSessionV
                     }
                     .setNegativeButton("取消", null)
                     .show()
-            }.onFailure { HLog.e("[Hchat:Term] 字体菜单弹出失败: ${it.message}", it) }
+            }.onFailure { HLog.e("[AeonLab:Term] 字体菜单弹出失败: ${it.message}", it) }
         }
     }
 
@@ -221,7 +221,7 @@ class ProotTerminalView(context: Context) : FrameLayout(context), TermuxSessionV
                         }
                     }
                     .show()
-            }.onFailure { HLog.e("[Hchat:Term] 会话菜单弹出失败: ${it.message}", it) }
+            }.onFailure { HLog.e("[AeonLab:Term] 会话菜单弹出失败: ${it.message}", it) }
         }
     }
 
@@ -290,10 +290,10 @@ class ProotTerminalView(context: Context) : FrameLayout(context), TermuxSessionV
             toast("复制失败：剪贴板不可用")
             return
         }
-        runCatching { cm.setPrimaryClip(ClipData.newPlainText("Hchat 终端", value)) }
+        runCatching { cm.setPrimaryClip(ClipData.newPlainText("AeonLab 终端", value)) }
             .onSuccess { toast("已复制") }
             .onFailure {
-                HLog.e("[Hchat:Term] 复制失败: ${it.message}", it)
+                HLog.e("[AeonLab:Term] 复制失败: ${it.message}", it)
                 toast("复制失败")
             }
     }
@@ -349,7 +349,7 @@ class ProotTerminalView(context: Context) : FrameLayout(context), TermuxSessionV
                 clazz.getMethod("render").invoke(controller)
                 terminalView.invalidate()
                 toast("已全选（共 ${scrollRows + emulator.mRows} 行），点复制即可")
-            }.onFailure { HLog.e("[Hchat:Term] 全选失败: ${it.message}", it) }
+            }.onFailure { HLog.e("[AeonLab:Term] 全选失败: ${it.message}", it) }
         }
     }
 
@@ -369,7 +369,7 @@ class ProotTerminalView(context: Context) : FrameLayout(context), TermuxSessionV
                         }
                     }
                     .show()
-            }.onFailure { HLog.e("[Hchat:Term] 更多菜单弹出失败: ${it.message}", it) }
+            }.onFailure { HLog.e("[AeonLab:Term] 更多菜单弹出失败: ${it.message}", it) }
         }
     }
 

@@ -15,7 +15,7 @@ import com.aeonlab.toolkit.hooks.api.sns.SnsCachedNativeLookup
 import com.aeonlab.toolkit.hooks.api.sns.SnsContextMenuTarget
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
@@ -62,7 +62,7 @@ internal class MomentsFakeInteractionRuntime(
     private val codec: MomentsFakeInteractionCodec,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val prefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(
         context.hostContext(),
         MomentsFakeInteractionSettings.PREFS_NAME
     )

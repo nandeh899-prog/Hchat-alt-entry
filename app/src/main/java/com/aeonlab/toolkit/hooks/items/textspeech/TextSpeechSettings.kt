@@ -8,7 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.json.JSONArray
 import java.text.SimpleDateFormat
@@ -17,7 +17,7 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
 class TextSpeechSettings(context: Context?) {
-    private val prefs = context?.let { HchatStorage.preferences(it, PREFS_NAME) }
+    private val prefs = context?.let { AeonLabStorage.preferences(it, PREFS_NAME) }
 
     fun isEnabled(): Boolean = boolean(KEY_ENABLE, DEFAULT_ENABLE)
 

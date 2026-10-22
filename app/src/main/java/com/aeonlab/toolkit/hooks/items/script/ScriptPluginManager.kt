@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.system.Os
 import com.aeonlab.toolkit.hooks.items.script.agent.ScriptPluginAgentWorkspaceTools
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import org.json.JSONArray
 import org.json.JSONObject
@@ -30,9 +30,10 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 object ScriptPluginManager {
-    private const val TAG = "[Hchat:ScriptManager]"
+    private const val TAG = "[AeonLab:ScriptManager]"
     private const val DISPLAY_STATE_VERSION = 1
-    private const val EXPORT_FORMAT = "hchat-script-plugins"
+    private const val EXPORT_FORMAT = "aeonlab-script-plugins"
+    private const val LEGACY_EXPORT_FORMAT = "hchat-script-plugins"
     private const val EXPORT_VERSION = 1
     private const val EXPORT_MANIFEST = "hchat-plugin-manifest.json"
     private const val EXPORT_PLUGIN_ROOT = "plugins"
@@ -1244,7 +1245,7 @@ object ScriptPluginManager {
         require(file.canonicalFile.parentFile == archiveRoot.canonicalFile) { "ZIP manifest 路径越界" }
         require(file.length() <= MAX_INFO_FILE_BYTES) { "ZIP manifest 文件过大" }
         val json = JSONObject(file.readText(Charsets.UTF_8))
-        require(json.optString("format") == EXPORT_FORMAT) { "不支持的插件 ZIP 格式" }
+        require(json.optString("format").let { it == EXPORT_FORMAT || it == LEGACY_EXPORT_FORMAT }) { "不支持的插件 ZIP 格式" }
         val version = json.optInt("version", 0)
         require(version == EXPORT_VERSION) { "不支持的插件 ZIP 版本: $version" }
         val array = json.optJSONArray("plugins") ?: error("ZIP manifest 缺少插件列表")
@@ -1597,7 +1598,7 @@ object ScriptPluginManager {
         }
     }
 
-    private fun preferences(context: Context) = HchatStorage.preferences(
+    private fun preferences(context: Context) = AeonLabStorage.preferences(
         context.applicationContext ?: context,
         ScriptPluginSettings.PREFS_NAME
     )

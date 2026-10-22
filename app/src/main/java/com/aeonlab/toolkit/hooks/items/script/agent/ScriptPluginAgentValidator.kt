@@ -149,13 +149,13 @@ object ScriptPluginAgentValidator {
         val result = try {
             ScriptSyntaxValidator.validate(code)
         } catch (error: Exception) {
-            HLog.e("[Hchat:ScriptAgent] BeanShell 语法检查失败: $path", error)
+            HLog.e("[AeonLab:ScriptAgent] BeanShell 语法检查失败: $path", error)
             return ScriptPluginAgentIssue(
                 ScriptPluginAgentIssueLevel.ERROR,
                 "$path 无法完成 BeanShell 语法检查：${error.javaClass.simpleName}"
             )
         } catch (error: StackOverflowError) {
-            HLog.e("[Hchat:ScriptAgent] BeanShell 语法嵌套过深: $path", error)
+            HLog.e("[AeonLab:ScriptAgent] BeanShell 语法嵌套过深: $path", error)
             return ScriptPluginAgentIssue(ScriptPluginAgentIssueLevel.ERROR, "$path 语法嵌套过深，无法完成检查")
         }
         val error = result.error ?: return null

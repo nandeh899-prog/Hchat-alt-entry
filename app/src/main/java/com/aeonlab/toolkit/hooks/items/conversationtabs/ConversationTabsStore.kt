@@ -2,7 +2,7 @@ package com.aeonlab.toolkit.hooks.items.conversationtabs
 
 import android.content.Context
 import com.aeonlab.toolkit.hooks.items.conversationgroup.ConversationGroupStore
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import org.json.JSONArray
 import org.json.JSONObject
@@ -15,7 +15,7 @@ object ConversationTabsStore {
         val account = accountKey()
         if (account.isBlank()) return ConversationTabsConfig()
         return runCatching {
-            val raw = HchatStorage.preferences(context, PREFS_NAME).getString(account, null)
+            val raw = AeonLabStorage.preferences(context, PREFS_NAME).getString(account, null)
                 ?: return ConversationTabsConfig()
             val json = JSONObject(raw)
             val array = json.optJSONArray("tabs") ?: JSONArray()
@@ -33,7 +33,7 @@ object ConversationTabsStore {
                 )
             }
             ConversationTabsConfig.normalize(ConversationTabsConfig(json.optBoolean("enabled"), tabs))
-        }.getOrElse { HLog.e("[Hchat:ConversationTabs] 读取标签配置失败", it); ConversationTabsConfig() }
+        }.getOrElse { HLog.e("[AeonLab:ConversationTabs] 读取标签配置失败", it); ConversationTabsConfig() }
     }
 
     @Synchronized
@@ -48,9 +48,9 @@ object ConversationTabsStore {
                     .put("icon", tab.icon).put("iconPath", tab.iconPath).put("display", tab.display.name)
                     .put("conversations", JSONArray(tab.conversationIds.toList())))
             }
-            HchatStorage.preferences(context, PREFS_NAME).edit().putString(account,
+            AeonLabStorage.preferences(context, PREFS_NAME).edit().putString(account,
                 JSONObject().put("version", 1).put("enabled", normalized.enabled).put("tabs", array).toString()).apply()
             true
-        }.getOrElse { HLog.e("[Hchat:ConversationTabs] 保存标签配置失败", it); false }
+        }.getOrElse { HLog.e("[AeonLab:ConversationTabs] 保存标签配置失败", it); false }
     }
 }

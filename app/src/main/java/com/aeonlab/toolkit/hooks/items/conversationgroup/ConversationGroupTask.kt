@@ -169,7 +169,7 @@ internal object ConversationGroupTask {
             try {
                 handle?.close()
             } catch (error: Throwable) {
-                HLog.e("[Hchat:ConversationGroup] 关闭任务加载层失败", error)
+                HLog.e("[AeonLab:ConversationGroup] 关闭任务加载层失败", error)
             } finally {
                 closingLoading = false
             }
@@ -179,7 +179,7 @@ internal object ConversationGroupTask {
             decor?.get()?.removeCallbacks(deliver)
             decor = null
             runCatching { application.unregisterActivityLifecycleCallbacks(this) }
-                .onFailure { HLog.e("[Hchat:ConversationGroup] 释放任务生命周期监听失败", it) }
+                .onFailure { HLog.e("[AeonLab:ConversationGroup] 释放任务生命周期监听失败", it) }
             owner.clear()
             closeLoading()
         }

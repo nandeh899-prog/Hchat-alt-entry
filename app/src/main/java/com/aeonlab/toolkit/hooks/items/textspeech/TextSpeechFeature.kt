@@ -64,6 +64,6 @@ class TextSpeechFeature : BaseFeature() {
 
     companion object {
         const val ID = "text_speech"
-        private const val TAG = "[Hchat:TextSpeech]"
+        private const val TAG = "[AeonLab:TextSpeech]"
     }
 }

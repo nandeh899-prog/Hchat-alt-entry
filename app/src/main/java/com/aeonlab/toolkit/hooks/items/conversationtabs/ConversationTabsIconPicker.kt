@@ -103,7 +103,7 @@ object ConversationTabsIconPicker {
                 ?.let(ConversationTabsIconPickResult::Saved)
                 ?: ConversationTabsIconPickResult.FAILED
         }, failure = { error ->
-            HLog.e("[Hchat:ConversationTabs] 读取标签图标失败", error)
+            HLog.e("[AeonLab:ConversationTabs] 读取标签图标失败", error)
             ConversationTabsIconPickResult.FAILED
         })
     }

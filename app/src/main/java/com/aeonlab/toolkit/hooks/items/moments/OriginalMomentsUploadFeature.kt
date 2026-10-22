@@ -8,7 +8,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
@@ -51,7 +51,7 @@ class OriginalMomentsUploadFeature : BaseFeature() {
 private class OriginalMomentsUploadHooker(
     private val context: FeatureContext
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), OriginalMomentsUploadSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), OriginalMomentsUploadSettings.PREFS_NAME)
     private val methodPrefs = DexMethodCache.prefs(context.hostContext(), CACHE_PREFS)
 
     @Volatile
@@ -303,7 +303,7 @@ private class OriginalMomentsUploadHooker(
     }
 
     companion object {
-        private const val TAG = "[Hchat:OriginalMomentsUpload]"
+        private const val TAG = "[AeonLab:OriginalMomentsUpload]"
         private const val CACHE_PREFS = "AeonLab_original_moments_upload_method_cache"
         private const val CACHE_SCHEMA = "original_moments_upload_v2"
         private const val CACHE_IMAGE_PREVIEW = "image_preview_send"

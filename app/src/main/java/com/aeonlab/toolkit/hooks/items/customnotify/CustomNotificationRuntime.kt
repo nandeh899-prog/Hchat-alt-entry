@@ -54,7 +54,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 object CustomNotificationRuntime {
-    private const val TAG = "[Hchat:CustomNotification]"
+    private const val TAG = "[AeonLab:CustomNotification]"
     private const val MARK_HCHAT = "hchat_custom_notification"
     private const val MARK_KEYWORD_NOTIFICATION = "hchat_keyword_notification"
     private const val EXTRA_TALKER = "hchat_custom_notification_talker"

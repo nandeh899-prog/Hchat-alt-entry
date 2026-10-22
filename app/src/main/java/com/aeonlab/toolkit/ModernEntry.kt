@@ -82,11 +82,11 @@ class ModernEntry : XposedModule() {
         try {
             ModuleEntry().handleLoadPackage(compat)
         } catch (t: Throwable) {
-            HLog.e("[Hchat:Entry] 现代入口初始化失败($stage)", t)
+            HLog.e("[AeonLab:Entry] 现代入口初始化失败($stage)", t)
         }
     }
 
     companion object {
-        private const val TAG = "[Hchat:Modern]"
+        private const val TAG = "[AeonLab:Modern]"
     }
 }

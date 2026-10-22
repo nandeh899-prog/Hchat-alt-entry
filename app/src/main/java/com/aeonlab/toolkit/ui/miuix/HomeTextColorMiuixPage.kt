@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.aeonlab.toolkit.hooks.items.hometextcolor.HomeTextColorSettings
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.FeatureSettingsProvider
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -27,7 +27,7 @@ internal fun HomeTextColorMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, HomeTextColorSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, HomeTextColorSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(
             sp.getBoolean(HomeTextColorSettings.KEY_ENABLE, HomeTextColorSettings.DEFAULT_ENABLE)

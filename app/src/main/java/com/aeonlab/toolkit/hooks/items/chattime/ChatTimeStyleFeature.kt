@@ -11,7 +11,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
@@ -76,7 +76,7 @@ private class ChatTimeStyleRuntime(
         val root: WeakReference<View>
     )
 
-    private val prefs = HchatStorage.preferences(context.hostContext(), ChatTimeStyleSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), ChatTimeStyleSettings.PREFS_NAME)
     private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_chat_time_style_method_cache")
     private val rootFieldCache = ConcurrentHashMap<Class<*>, Field>()
     private val timeFieldCache = ConcurrentHashMap<Class<*>, Field>()
@@ -499,7 +499,7 @@ private class ChatTimeStyleRuntime(
     }
 
     private companion object {
-        const val TAG = "[Hchat:ChatTimeStyle]"
+        const val TAG = "[AeonLab:ChatTimeStyle]"
         const val CACHE_SCHEMA = "chat_time_style_v2"
         const val CACHE_BIND_METHOD = "chat_time_bind"
     }

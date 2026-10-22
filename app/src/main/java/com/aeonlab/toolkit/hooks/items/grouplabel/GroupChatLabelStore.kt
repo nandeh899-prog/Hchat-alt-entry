@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.grouplabel
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -18,7 +18,7 @@ object GroupChatLabelStore {
 
     @JvmStatic
     fun load(context: Context): List<GroupChatLabel> {
-        val raw = HchatStorage.preferences(context, PREFS_NAME).getString(KEY_LABELS, "").orEmpty()
+        val raw = AeonLabStorage.preferences(context, PREFS_NAME).getString(KEY_LABELS, "").orEmpty()
         if (raw.isBlank()) return emptyList()
         return runCatching {
             val array = JSONArray(raw)
@@ -59,7 +59,7 @@ object GroupChatLabelStore {
                     .put("groups", groups)
             )
         }
-        HchatStorage.preferences(context, PREFS_NAME)
+        AeonLabStorage.preferences(context, PREFS_NAME)
             .edit()
             .putString(KEY_LABELS, array.toString())
             .apply()

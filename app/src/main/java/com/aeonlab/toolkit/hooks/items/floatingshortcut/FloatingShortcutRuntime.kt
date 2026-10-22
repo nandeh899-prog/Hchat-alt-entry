@@ -32,7 +32,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.ui.AeonLabAgentIconDrawable
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.SettingsUI
 import com.aeonlab.toolkit.ui.miuix.MiuixSettingsPage
 import com.aeonlab.toolkit.utils.HLog
@@ -40,7 +40,7 @@ import java.lang.ref.WeakReference
 import kotlin.math.abs
 
 object FloatingShortcutRuntime {
-    private const val TAG = "[Hchat:FloatingShortcut]"
+    private const val TAG = "[AeonLab:FloatingShortcut]"
     private const val BUBBLE_TAG = "Hchat:FloatingShortcut:Bubble"
     private const val ACTION_LABEL_TAG = "Hchat:FloatingShortcut:Label"
     private const val ACTION_ICON_TAG = "Hchat:FloatingShortcut:Icon"
@@ -119,7 +119,7 @@ object FloatingShortcutRuntime {
             ?: (hostContext.applicationContext as? Application)
             ?: return
         enabledItems = FloatingShortcutSettings.loadItems(hostContext).filter { it.enabled }
-        prefs = HchatStorage.preferences(hostContext, FloatingShortcutSettings.PREFS_NAME).also {
+        prefs = AeonLabStorage.preferences(hostContext, FloatingShortcutSettings.PREFS_NAME).also {
             it.registerOnSharedPreferenceChangeListener(preferenceListener)
             enabled = it.getBoolean(
                 FloatingShortcutSettings.KEY_ENABLE,
@@ -133,7 +133,7 @@ object FloatingShortcutRuntime {
     }
 
     fun setEnabled(context: Context, value: Boolean) {
-        HchatStorage.preferences(context, FloatingShortcutSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context, FloatingShortcutSettings.PREFS_NAME)
             .edit()
             .putBoolean(FloatingShortcutSettings.KEY_ENABLE, value)
             .apply()
@@ -141,7 +141,7 @@ object FloatingShortcutRuntime {
     }
 
     fun isEnabled(context: Context): Boolean {
-        return HchatStorage.preferences(context, FloatingShortcutSettings.PREFS_NAME)
+        return AeonLabStorage.preferences(context, FloatingShortcutSettings.PREFS_NAME)
             .getBoolean(
                 FloatingShortcutSettings.KEY_ENABLE,
                 FloatingShortcutSettings.DEFAULT_ENABLE

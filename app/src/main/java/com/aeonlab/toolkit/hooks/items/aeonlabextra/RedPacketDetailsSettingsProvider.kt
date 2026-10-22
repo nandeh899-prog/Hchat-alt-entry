@@ -1,4 +1,4 @@
-package com.aeonlab.toolkit.hooks.items.hchatextra
+package com.aeonlab.toolkit.hooks.items.aeonlabextra
 
 import com.aeonlab.toolkit.ui.FeatureSettingsProvider
 import com.aeonlab.toolkit.ui.SimpleFeatureSettingsProvider

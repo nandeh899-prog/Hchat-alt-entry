@@ -1,10 +1,10 @@
 package com.aeonlab.toolkit.hooks.items.settings
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 class SettingsEntrySettings(context: Context) {
-    private val prefs = HchatStorage.preferences(context, PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context, PREFS_NAME)
 
     fun plusMenuEnabled(): Boolean {
         return prefs.getBoolean(KEY_PLUS_MENU_ENABLE, DEFAULT_PLUS_MENU_ENABLE)

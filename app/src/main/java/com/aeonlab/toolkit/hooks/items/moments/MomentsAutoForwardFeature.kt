@@ -13,7 +13,7 @@ import com.aeonlab.toolkit.hooks.api.sns.SnsForwardContentResolver
 import com.aeonlab.toolkit.hooks.api.sns.SnsForwardSnapshot
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.json.JSONArray
 import org.json.JSONObject
@@ -79,7 +79,7 @@ private class MomentsAutoForwardRuntime(
         @Volatile var future: ScheduledFuture<*>? = null
     }
 
-    private val prefs = HchatStorage.preferences(context.hostContext(), MomentsAutoForwardSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), MomentsAutoForwardSettings.PREFS_NAME)
     private val resolver = SnsForwardContentResolver(context, logger)
     private val worker = ScheduledThreadPoolExecutor(1) { runnable ->
         Thread(runnable, "AeonLab-MomentsAutoForward").apply { isDaemon = true }

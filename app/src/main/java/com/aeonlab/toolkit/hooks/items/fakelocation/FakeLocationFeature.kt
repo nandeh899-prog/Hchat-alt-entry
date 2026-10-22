@@ -8,7 +8,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
@@ -56,7 +56,7 @@ class FakeLocationFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            return HchatStorage.preferences(context, FakeLocationSettings.PREFS_NAME)
+            return AeonLabStorage.preferences(context, FakeLocationSettings.PREFS_NAME)
                 .getBoolean(FakeLocationSettings.KEY_ENABLE, FakeLocationSettings.DEFAULT_ENABLE)
         }
 
@@ -72,7 +72,7 @@ class FakeLocationFeature : BaseFeature() {
             ).filter(::isLocationCallback)
             if (callbacks.isEmpty()) return false
             return FakeLocationProcessHooker.install(context, callbacks) { message, throwable ->
-                HLog.e("[Hchat:FakeLocation] $message", throwable)
+                HLog.e("[AeonLab:FakeLocation] $message", throwable)
             }
         }
     }

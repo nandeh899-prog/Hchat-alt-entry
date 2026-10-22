@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.selectedmessages
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 object SelectedMessagesSettings {
     const val PREFS_NAME = "AeonLab_selected_messages_config"
@@ -17,18 +17,18 @@ object SelectedMessagesSettings {
     const val MAX_SEND_INTERVAL_SECONDS = 3600
 
     fun isBackgroundSilentSendEnabled(context: Context): Boolean {
-        return HchatStorage.preferences(context, PREFS_NAME)
+        return AeonLabStorage.preferences(context, PREFS_NAME)
             .getBoolean(KEY_BACKGROUND_SILENT_SEND, DEFAULT_BACKGROUND_SILENT_SEND)
     }
 
     fun officialIntervalMinutes(context: Context): Int {
-        return HchatStorage.preferences(context, PREFS_NAME)
+        return AeonLabStorage.preferences(context, PREFS_NAME)
             .getInt(KEY_OFFICIAL_INTERVAL_MINUTES, DEFAULT_OFFICIAL_INTERVAL_MINUTES)
             .coerceIn(0, MAX_OFFICIAL_INTERVAL_MINUTES)
     }
 
     fun sendIntervalSeconds(context: Context): Int {
-        return HchatStorage.preferences(context, PREFS_NAME)
+        return AeonLabStorage.preferences(context, PREFS_NAME)
             .getInt(KEY_SEND_INTERVAL_SECONDS, DEFAULT_SEND_INTERVAL_SECONDS)
             .coerceIn(0, MAX_SEND_INTERVAL_SECONDS)
     }

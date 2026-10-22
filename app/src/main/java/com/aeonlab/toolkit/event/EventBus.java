@@ -11,7 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public final class EventBus {
 
-    private static final String TAG = "[Hchat:EventBus]";
+    private static final String TAG = "[AeonLab:EventBus]";
 
     private static final EventBus INSTANCE = new EventBus();
 

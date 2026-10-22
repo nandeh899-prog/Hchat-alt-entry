@@ -80,7 +80,7 @@ internal object FloatingShortcutIconLoader {
                 val bitmap = try {
                     decode(path)
                 } catch (error: Throwable) {
-                    HLog.e("[Hchat:FloatingShortcut] 图标解码失败", error)
+                    HLog.e("[AeonLab:FloatingShortcut] 图标解码失败", error)
                     null
                 }
                 main.post {

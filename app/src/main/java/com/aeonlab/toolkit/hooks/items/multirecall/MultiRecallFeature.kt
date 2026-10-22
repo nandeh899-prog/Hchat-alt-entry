@@ -13,7 +13,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Method
 import java.util.Collections
@@ -51,7 +51,7 @@ private class MultiRecallHooker(
     private val context: FeatureContext,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), MultiRecallSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), MultiRecallSettings.PREFS_NAME)
     private val hookedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
 
     fun install(): Boolean {

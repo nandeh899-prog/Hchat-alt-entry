@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.max
@@ -77,6 +77,6 @@ object FloatingShortcutIconStore {
     }
 
     private fun iconDirectory(context: Context): File {
-        return File(HchatStorage.storageDir(context), "FloatingShortcut/icons")
+        return File(AeonLabStorage.storageDir(context), "FloatingShortcut/icons")
     }
 }

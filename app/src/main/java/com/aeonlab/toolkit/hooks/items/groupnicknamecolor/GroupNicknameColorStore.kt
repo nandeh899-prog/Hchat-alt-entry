@@ -4,11 +4,11 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.aeonlab.toolkit.hooks.items.membertitle.MemberTitleStore
 import com.aeonlab.toolkit.hooks.items.realtail.RealNameTailStore
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 class GroupNicknameColorStore(context: Context) {
     private val prefs: SharedPreferences =
-        HchatStorage.preferences(context, GroupNicknameColorSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context, GroupNicknameColorSettings.PREFS_NAME)
 
     fun isEnabled(): Boolean =
         prefs.getBoolean(GroupNicknameColorSettings.KEY_ENABLE, GroupNicknameColorSettings.DEFAULT_ENABLE)

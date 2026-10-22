@@ -1,4 +1,4 @@
-package com.aeonlab.toolkit.hooks.items.hchatextra
+package com.aeonlab.toolkit.hooks.items.aeonlabextra
 
 import android.app.Activity
 import android.content.Context

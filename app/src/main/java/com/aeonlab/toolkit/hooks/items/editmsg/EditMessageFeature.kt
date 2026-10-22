@@ -15,7 +15,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.EditMessageMiuixDialog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.math.BigDecimal
@@ -88,7 +88,7 @@ object EditMessageRepository {
 
     fun isEnabled(context: Context?): Boolean {
         if (context == null) return false
-        val prefs = HchatStorage.preferences(context, EditMessageSettings.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(context, EditMessageSettings.PREFS_NAME)
         return prefs.getBoolean(EditMessageSettings.KEY_ENABLE, EditMessageSettings.DEFAULT_ENABLE)
     }
 
@@ -188,7 +188,7 @@ object EditMessageRepository {
     }
 
     private fun backupPrefs(context: Context) =
-        HchatStorage.preferences(context, EditMessageSettings.BACKUP_PREFS_NAME)
+        AeonLabStorage.preferences(context, EditMessageSettings.BACKUP_PREFS_NAME)
 
     private fun backupKey(msgId: Long): String = BACKUP_PREFIX + msgId
 
@@ -701,10 +701,10 @@ private class EditMessageHooker(
                 if (itemIndex < 0) continue
                 val moved = items.removeAt(itemIndex)
                 val forwardIndex = items.indexOfFirst { candidate ->
-                    (candidate as? MenuItem)?.itemId == SingleMessageMenuLocator.HCHAT_FORWARD_MENU_ITEM_ID
+                    (candidate as? MenuItem)?.itemId == SingleMessageMenuLocator.AEONLAB_FORWARD_MENU_ITEM_ID
                 }
                 val repeatIndex = items.indexOfFirst { candidate ->
-                    (candidate as? MenuItem)?.itemId == SingleMessageMenuLocator.HCHAT_REPEAT_MENU_ITEM_ID
+                    (candidate as? MenuItem)?.itemId == SingleMessageMenuLocator.AEONLAB_REPEAT_MENU_ITEM_ID
                 }
                 val targetIndex = when {
                     forwardIndex >= 0 -> forwardIndex + 1

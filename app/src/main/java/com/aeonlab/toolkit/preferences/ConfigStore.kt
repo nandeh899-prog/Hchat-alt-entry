@@ -6,7 +6,7 @@ import com.aeonlab.toolkit.utils.HLog
 
 class ConfigStore(private val hostContext: Context) {
     fun getFeaturePrefs(featureId: String): SharedPreferences {
-        return HchatStorage.preferences(hostContext, FEATURE_PREFS_PREFIX + featureId)
+        return AeonLabStorage.preferences(hostContext, FEATURE_PREFS_PREFIX + featureId)
     }
 
     fun getBoolean(featureId: String, key: String, def: Boolean): Boolean {
@@ -90,11 +90,11 @@ class ConfigStore(private val hostContext: Context) {
     }
 
     fun getGlobalPrefs(): SharedPreferences {
-        return HchatStorage.preferences(hostContext, GLOBAL_PREFS)
+        return AeonLabStorage.preferences(hostContext, GLOBAL_PREFS)
     }
 
     fun reopenGlobalPrefsIfFilesMissing(): SharedPreferences {
-        return HchatStorage.reopenIfFilesMissing(hostContext, GLOBAL_PREFS)
+        return AeonLabStorage.reopenIfFilesMissing(hostContext, GLOBAL_PREFS)
     }
 
     fun getGlobalBoolean(key: String, def: Boolean): Boolean {
@@ -162,7 +162,7 @@ class ConfigStore(private val hostContext: Context) {
     }
 
     companion object {
-        private const val TAG = "[Hchat:ConfigStore]"
+        private const val TAG = "[AeonLab:ConfigStore]"
         private const val GLOBAL_PREFS = "AeonLab_global_config"
         private const val FEATURE_PREFS_PREFIX = "AeonLab_feature_"
     }

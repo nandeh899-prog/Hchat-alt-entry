@@ -10,7 +10,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.api.runtime.WeChatVersionApi
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.matchers.MethodMatcher
@@ -34,7 +34,7 @@ class WeChatTabletFeature : BaseFeature() {
 
     companion object {
         const val ID = "wechat_tablet"
-        private const val TAG = "[Hchat:Tablet]"
+        private const val TAG = "[AeonLab:Tablet]"
         private const val CHAT_VOICE_STACK = "com.tencent.mm.pluginsdk.ui.chat"
         private const val CACHE_PREFS = "AeonLab_wechat_tablet_cache"
         private const val CACHE_KEY = "cache_key"
@@ -46,7 +46,7 @@ class WeChatTabletFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            val sp = HchatStorage.preferences(context, WeChatTabletSettings.PREFS_NAME)
+            val sp = AeonLabStorage.preferences(context, WeChatTabletSettings.PREFS_NAME)
             return sp.getBoolean(WeChatTabletSettings.KEY_ENABLE, WeChatTabletSettings.DEFAULT_ENABLE)
         }
 
@@ -54,7 +54,7 @@ class WeChatTabletFeature : BaseFeature() {
         fun install(context: Context?, classLoader: ClassLoader?, dexKit: org.luckypray.dexkit.DexKitBridge?) {
             if (context == null || classLoader == null || dexKit == null) return
             if (!isEnabled(context)) return
-            val cache = HchatStorage.preferences(context, CACHE_PREFS)
+            val cache = AeonLabStorage.preferences(context, CACHE_PREFS)
             val runtimeKey = cacheKey(context, classLoader)
             val padAlreadyHooked = isPadHooked(classLoader)
             val padMethod = if (padAlreadyHooked) null else {
@@ -86,7 +86,7 @@ class WeChatTabletFeature : BaseFeature() {
         fun installCached(context: Context?, classLoader: ClassLoader?): Boolean {
             if (context == null || classLoader == null) return false
             if (!isEnabled(context)) return false
-            val cache = HchatStorage.preferences(context, CACHE_PREFS)
+            val cache = AeonLabStorage.preferences(context, CACHE_PREFS)
             val runtimeKey = cacheKey(context, classLoader)
             var padReady = isPadHooked(classLoader)
             if (!padReady) {

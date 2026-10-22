@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 object XiaozhiConsoleApi {
-    private const val TAG = "[Hchat:XiaozhiConsole]"
+    private const val TAG = "[AeonLab:XiaozhiConsole]"
     private const val BASE_URL = "https://xiaozhi.me"
     private const val LOGIN_REFERER = "https://xiaozhi.me/login"
     private const val BROWSER_USER_AGENT =

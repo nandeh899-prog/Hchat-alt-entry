@@ -1,11 +1,11 @@
 package com.aeonlab.toolkit.hooks.items.musicorder
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 
 class QQMusicOrderSettings(context: Context?) {
-    private val prefs = context?.let { HchatStorage.preferences(it, PREFS_NAME) }
+    private val prefs = context?.let { AeonLabStorage.preferences(it, PREFS_NAME) }
 
     fun isEnabled(): Boolean = boolean(KEY_ENABLE, DEFAULT_ENABLE)
 

@@ -14,7 +14,7 @@ import com.aeonlab.toolkit.hooks.api.sns.SnsContextMenuTarget
 import com.aeonlab.toolkit.hooks.api.sns.SnsLocalPostIdentity
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.matchers.MethodMatcher
@@ -68,7 +68,7 @@ internal class MomentsFakeForwardRuntime(
     private val context: FeatureContext,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), MomentsFakeInteractionSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), MomentsFakeInteractionSettings.PREFS_NAME)
     private val cachePrefs = DexMethodCache.prefs(context.hostContext(), CACHE_PREFS)
     @Volatile private var ready = false
     @Volatile private var deleteGuardInstalled = false
@@ -1212,7 +1212,7 @@ internal class MomentsFakeForwardRuntime(
         private const val MAX_ADAPTER_SEARCH_DEPTH = 4
         private const val MAX_ID_GENERATION_ATTEMPTS = 64
         private const val ID_OFFSET_BOUND = 0x10000L
-        private const val TAG = "[Hchat:moments_fake_interaction:fake_forward]"
+        private const val TAG = "[AeonLab:moments_fake_interaction:fake_forward]"
         private const val CACHE_PREFS = "AeonLab_moments_fake_forward_cache"
         private const val CACHE_DELETE_CALLBACK = "fake_forward_delete_callback_v1"
         private const val CACHE_USER_QUERY = "fake_forward_user_query_v1"

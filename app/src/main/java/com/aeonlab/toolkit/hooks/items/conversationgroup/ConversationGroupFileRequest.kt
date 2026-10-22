@@ -111,16 +111,16 @@ internal class ConversationGroupFileRequest<T> private constructor(
         oldFuture?.let { executor.remove(it) }
         activity.clear()
         runCatching { application.unregisterActivityLifecycleCallbacks(this) }
-            .onFailure { HLog.e("[Hchat:ConversationGroup] 释放文件任务生命周期监听失败", it) }
+            .onFailure { HLog.e("[AeonLab:ConversationGroup] 释放文件任务生命周期监听失败", it) }
         active.remove(this)
         slots.release()
         runCatching { onReleased() }
-            .onFailure { HLog.e("[Hchat:ConversationGroup] 清理文件请求索引失败", it) }
+            .onFailure { HLog.e("[AeonLab:ConversationGroup] 清理文件请求索引失败", it) }
     }
 
     private fun discard(value: T) {
         runCatching { onDiscard(value) }
-            .onFailure { HLog.e("[Hchat:ConversationGroup] 清理未交付文件结果失败", it) }
+            .onFailure { HLog.e("[AeonLab:ConversationGroup] 清理未交付文件结果失败", it) }
     }
 
     override fun onActivityDestroyed(activity: Activity) {
@@ -155,7 +155,7 @@ internal class ConversationGroupFileRequest<T> private constructor(
             try { activity.application.registerActivityLifecycleCallbacks(request) }
             catch (error: Throwable) {
                 request.cancel()
-                HLog.e("[Hchat:ConversationGroup] 注册文件任务生命周期失败", error)
+                HLog.e("[AeonLab:ConversationGroup] 注册文件任务生命周期失败", error)
                 return null
             }
             if (activity.isDestroyed || activity.isFinishing) {
@@ -206,7 +206,7 @@ internal class ConversationGroupFileResultHooks(
             hooks.values.forEach { retiredHooks.addAll(it) }
             hooks.clear()
             retryRetiredHooks()
-            HLog.e("[Hchat:ConversationGroup] 安装文件选择结果 Hook 失败", error)
+            HLog.e("[AeonLab:ConversationGroup] 安装文件选择结果 Hook 失败", error)
             return false
         }
     }
@@ -225,7 +225,7 @@ internal class ConversationGroupFileResultHooks(
             val handle = iterator.next()
             runCatching { handle.unhook() }
                 .onSuccess { iterator.remove() }
-                .onFailure { HLog.e("[Hchat:ConversationGroup] 卸载文件选择结果 Hook 失败", it) }
+                .onFailure { HLog.e("[AeonLab:ConversationGroup] 卸载文件选择结果 Hook 失败", it) }
         }
     }
 }

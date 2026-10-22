@@ -33,6 +33,6 @@ class KeywordNotificationFeature : BaseFeature() {
 
     companion object {
         const val ID = "keyword_notification"
-        private const val TAG = "[Hchat:KeywordNotification]"
+        private const val TAG = "[AeonLab:KeywordNotification]"
     }
 }

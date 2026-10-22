@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.fakelocation
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 object FakeLocationSettings {
     const val PREFS_NAME = "AeonLab_fake_location_config"
@@ -13,12 +13,12 @@ object FakeLocationSettings {
     const val DEFAULT_LONGITUDE = "121.469170"
 
     fun enabled(context: Context): Boolean {
-        return HchatStorage.preferences(context, PREFS_NAME)
+        return AeonLabStorage.preferences(context, PREFS_NAME)
             .getBoolean(KEY_ENABLE, DEFAULT_ENABLE)
     }
 
     fun latitude(context: Context): Double {
-        return HchatStorage.preferences(context, PREFS_NAME)
+        return AeonLabStorage.preferences(context, PREFS_NAME)
             .getString(KEY_LATITUDE, DEFAULT_LATITUDE)
             ?.toDoubleOrNull()
             ?.takeIf { it in -90.0..90.0 }
@@ -26,7 +26,7 @@ object FakeLocationSettings {
     }
 
     fun longitude(context: Context): Double {
-        return HchatStorage.preferences(context, PREFS_NAME)
+        return AeonLabStorage.preferences(context, PREFS_NAME)
             .getString(KEY_LONGITUDE, DEFAULT_LONGITUDE)
             ?.toDoubleOrNull()
             ?.takeIf { it in -180.0..180.0 }

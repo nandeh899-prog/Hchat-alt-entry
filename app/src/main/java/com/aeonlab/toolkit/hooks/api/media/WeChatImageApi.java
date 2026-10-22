@@ -473,7 +473,7 @@ public final class WeChatImageApi {
     private InvocationHandler marsCallbackHandler(String fileKey, DownloadCallbackState callbackState) {
         return (proxy, method, args) -> {
             String name = method != null ? method.getName() : "";
-            if ("toString".equals(name)) return "HchatMarsCdnCallback(" + fileKey + ")";
+            if ("toString".equals(name)) return "AeonLabMarsCdnCallback(" + fileKey + ")";
             if ("hashCode".equals(name)) return System.identityHashCode(proxy);
             if ("equals".equals(name)) {
                 return proxy == (args != null && args.length > 0 ? args[0] : null);

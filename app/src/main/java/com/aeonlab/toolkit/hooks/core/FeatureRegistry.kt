@@ -86,7 +86,7 @@ import com.aeonlab.toolkit.hooks.items.textspeech.TextSpeechFeature
 import com.aeonlab.toolkit.hooks.items.textvoice.TextVoiceFeature
 import com.aeonlab.toolkit.hooks.items.typingreport.TypingReportBlockFeature
 import com.aeonlab.toolkit.hooks.items.voiceforward.VoiceForwardFeature
-import com.aeonlab.toolkit.hooks.items.hchatextra.HchatExtraFeature
+import com.aeonlab.toolkit.hooks.items.aeonlabextra.AeonLabExtraFeature
 import com.aeonlab.toolkit.hooks.items.voicepreview.VoicePreviewFeature
 import com.aeonlab.toolkit.hooks.items.zombiecheck.ZombieCheckFeature
 
@@ -184,7 +184,7 @@ object FeatureRegistry {
             .register(ProtobufPacketFeature())
             .register(StatusTextLimitFeature())
             .register(FinderMediaDownloadFeature())
-            .register(HchatExtraFeature())
+            .register(AeonLabExtraFeature())
             .register(ScriptPluginFeature())
     }
 }

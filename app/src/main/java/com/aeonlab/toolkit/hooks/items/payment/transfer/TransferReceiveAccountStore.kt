@@ -6,7 +6,7 @@ import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import org.json.JSONObject
 import org.luckypray.dexkit.query.FindMethod
@@ -61,7 +61,7 @@ object TransferReceiveAccountStore {
 
     fun list(context: Context?): List<TransferReceiveAccount> {
         if (context == null) return emptyList()
-        val raw = HchatStorage.preferences(context, AutoTransferSettings.PREFS_NAME)
+        val raw = AeonLabStorage.preferences(context, AutoTransferSettings.PREFS_NAME)
             .getString(accountsKey(), "")
             .orEmpty()
         if (raw.isBlank()) return emptyList()
@@ -189,7 +189,7 @@ object TransferReceiveAccountStore {
                 put("available", account.available)
             })
         }
-        HchatStorage.preferences(context, AutoTransferSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context, AutoTransferSettings.PREFS_NAME)
             .edit()
             .putString(accountsKey(), array.toString())
             .apply()

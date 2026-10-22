@@ -4,10 +4,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.text.TextUtils
 import com.aeonlab.toolkit.hooks.items.payment.core.PaymentTemplateTimeFormatter
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 class AutoTransferSettings(private val context: Context?) {
-    private val prefs = context?.let { HchatStorage.preferences(it, PREFS_NAME) }
+    private val prefs = context?.let { AeonLabStorage.preferences(it, PREFS_NAME) }
 
     fun getBoolean(key: String, def: Boolean): Boolean = try {
         prefs?.getBoolean(key, def) ?: def

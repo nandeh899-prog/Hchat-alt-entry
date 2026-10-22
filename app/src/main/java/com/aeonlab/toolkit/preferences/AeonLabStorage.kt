@@ -7,8 +7,8 @@ import io.fastkv.FastKV
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
-object HchatStorage {
-    private const val TAG = "[Hchat:Storage]"
+object AeonLabStorage {
+    private const val TAG = "[AeonLab:Storage]"
     private const val DIR_NAME = "AeonLab"
     private const val LEGACY_DIR_NAME = "Hchat"
     private const val FILE_PREFIX = "AeonLab_"

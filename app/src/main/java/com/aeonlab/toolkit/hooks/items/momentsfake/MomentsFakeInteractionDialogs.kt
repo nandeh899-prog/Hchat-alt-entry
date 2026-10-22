@@ -5,7 +5,7 @@ import android.content.Context
 import android.widget.Toast
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.sns.SnsContextMenuTarget
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.text.SimpleDateFormat
@@ -21,7 +21,7 @@ internal class MomentsFakeInteractionDialogs(
     private val runtime: MomentsFakeInteractionRuntime,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val prefs = HchatStorage.preferences(context, MomentsFakeInteractionSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context, MomentsFakeInteractionSettings.PREFS_NAME)
     private val legacyDisplayNameCache = ConcurrentHashMap<String, String>()
 
     fun showFakeForward(

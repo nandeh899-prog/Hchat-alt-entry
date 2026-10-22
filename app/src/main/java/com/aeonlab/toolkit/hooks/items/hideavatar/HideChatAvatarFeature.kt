@@ -9,7 +9,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
@@ -55,7 +55,7 @@ class HideChatAvatarFeature : BaseFeature() {
 private class HideChatAvatarRuntime(
     private val context: FeatureContext
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), HideChatAvatarSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), HideChatAvatarSettings.PREFS_NAME)
     private val methodPrefs = DexMethodCache.prefs(context.hostContext(), "AeonLab_hide_chat_avatar_method_cache")
     private val holderFields = ConcurrentHashMap<Class<*>, AvatarFields>()
     private val unsupportedHolderClasses = ConcurrentHashMap.newKeySet<Class<*>>()
@@ -238,7 +238,7 @@ private class HideChatAvatarRuntime(
     private data class AvatarFields(val avatar: Field, val mask: Field?)
 
     private companion object {
-        const val TAG = "[Hchat:HideChatAvatar]"
+        const val TAG = "[AeonLab:HideChatAvatar]"
         const val CACHE_SCHEMA = "hide_chat_avatar_v1"
         const val CACHE_AVATAR_BIND = "avatar_bind"
         const val MASK_LAYOUT_CLASS = "com.tencent.mm.ui.base.MaskLayout"

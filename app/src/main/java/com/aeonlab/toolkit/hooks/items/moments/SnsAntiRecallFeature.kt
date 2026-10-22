@@ -9,7 +9,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.momentsfake.MomentsFakeInteractionNodeIdentity
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
@@ -49,7 +49,7 @@ private class SnsAntiRecallHooker(
     private val context: FeatureContext
 ) {
     private val prefs: SharedPreferences =
-        HchatStorage.preferences(context.hostContext(), SnsAntiRecallSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context.hostContext(), SnsAntiRecallSettings.PREFS_NAME)
     private val methodPrefs: SharedPreferences =
         DexMethodCache.prefs(context.hostContext(), CACHE_PREFS)
     private val hookedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
@@ -95,7 +95,7 @@ private class SnsAntiRecallHooker(
                             handleSnsQuery(param.args)
                         }
                     } catch (e: Throwable) {
-                        HLog.e("[Hchat:SnsAntiRecall] Hook处理失败", e)
+                        HLog.e("[AeonLab:SnsAntiRecall] Hook处理失败", e)
                     }
                 }
             })
@@ -200,7 +200,7 @@ private class SnsAntiRecallHooker(
             })
             1
         } catch (e: Throwable) {
-            HLog.e("[Hchat:SnsAntiRecall] Hook旧版朋友圈主页开关失败: ${e.message}", e)
+            HLog.e("[AeonLab:SnsAntiRecall] Hook旧版朋友圈主页开关失败: ${e.message}", e)
             0
         }
     }
@@ -223,7 +223,7 @@ private class SnsAntiRecallHooker(
             ).mapNotNull { it.getMethodInstance(context.hostClassLoader()) }
                 .firstOrNull { isEnableFlutterSnsPageMethod(it) }
         }.getOrElse {
-            HLog.e("[Hchat:SnsAntiRecall] 定位旧版朋友圈主页开关失败: ${it.message}", it)
+            HLog.e("[AeonLab:SnsAntiRecall] 定位旧版朋友圈主页开关失败: ${it.message}", it)
             null
         }
 
@@ -421,7 +421,7 @@ private class SnsAntiRecallHooker(
             writeCommentCount(newObject, newComments.size)
             serializeSnsObject(newObject)
         } catch (e: Throwable) {
-            HLog.e("[Hchat:SnsAntiRecall] 合并朋友圈评论失败: ${e.message}", e)
+            HLog.e("[AeonLab:SnsAntiRecall] 合并朋友圈评论失败: ${e.message}", e)
             null
         }
     }

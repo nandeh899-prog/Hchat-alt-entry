@@ -485,15 +485,15 @@ import com.aeonlab.toolkit.hooks.items.typingreport.TypingReportBlockFeature
 import com.aeonlab.toolkit.hooks.items.typingreport.TypingReportBlockSettings
 import com.aeonlab.toolkit.hooks.items.voiceforward.VoiceForwardFeature
 import com.aeonlab.toolkit.hooks.items.voiceforward.VoiceForwardSettings
-import com.aeonlab.toolkit.hooks.items.hchatextra.GroupMemberHistorySettingsProvider
-import com.aeonlab.toolkit.hooks.items.hchatextra.MessageDetailsSettingsProvider
-import com.aeonlab.toolkit.hooks.items.hchatextra.RedPacketDetailsSettingsProvider
-import com.aeonlab.toolkit.hooks.items.hchatextra.SkipWebRiskSettingsProvider
-import com.aeonlab.toolkit.hooks.items.hchatextra.HchatExtraSettings
+import com.aeonlab.toolkit.hooks.items.aeonlabextra.GroupMemberHistorySettingsProvider
+import com.aeonlab.toolkit.hooks.items.aeonlabextra.MessageDetailsSettingsProvider
+import com.aeonlab.toolkit.hooks.items.aeonlabextra.RedPacketDetailsSettingsProvider
+import com.aeonlab.toolkit.hooks.items.aeonlabextra.SkipWebRiskSettingsProvider
+import com.aeonlab.toolkit.hooks.items.aeonlabextra.AeonLabExtraSettings
 import com.aeonlab.toolkit.hooks.items.voicepreview.VoicePreviewFeature
 import com.aeonlab.toolkit.hooks.items.voicepreview.VoicePreviewSettings
 import com.aeonlab.toolkit.media.AudioTransformBridge
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.preferences.TermsGate
 import com.aeonlab.toolkit.ui.FeatureSettingsProvider
 import com.aeonlab.toolkit.ui.UIRegistry
@@ -1093,15 +1093,15 @@ object MiuixSettingsPage {
             runCatching {
                 page.findViewById<ComposeView>(android.R.id.content)?.disposeComposition()
             }.onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:MiuixSettings] 销毁页面 Composition 失败: ${it.message}", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:MiuixSettings] 销毁页面 Composition 失败: ${it.message}", it)
             }
             runCatching {
                 if (page.parent === decor) decor.removeView(page)
             }.onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:MiuixSettings] 移除页面失败: ${it.message}", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:MiuixSettings] 移除页面失败: ${it.message}", it)
             }
             runCatching { owner.destroy() }.onFailure {
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:MiuixSettings] 销毁页面 Owner 失败: ${it.message}", it)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:MiuixSettings] 销毁页面 Owner 失败: ${it.message}", it)
             }
         }
         fun handleBack() {
@@ -1206,7 +1206,7 @@ object MiuixSettingsPage {
                     LocalNavigationEventDispatcherOwner provides owner,
                     LocalSettingsBackHandlerRegistry provides settingsBackHandlers
                 ) {
-                    HchatMiuixTheme(activity) {
+                    AeonLabMiuixTheme(activity) {
                         readmeDialogPlugin.value?.let { plugin ->
                             ScriptPluginSettingsMiuixContent.ScriptPluginReadmeDialog(
                                 context = activity,
@@ -1325,7 +1325,7 @@ object MiuixSettingsPage {
         } catch (throwable: Throwable) {
             closePage()
             com.aeonlab.toolkit.utils.HLog.e(
-                "[Hchat:MiuixSettings] 创建页面 ComposeView 失败: ${throwable.message}",
+                "[AeonLab:MiuixSettings] 创建页面 ComposeView 失败: ${throwable.message}",
                 throwable
             )
             return
@@ -1344,7 +1344,7 @@ object MiuixSettingsPage {
         } catch (throwable: Throwable) {
             closePage()
             com.aeonlab.toolkit.utils.HLog.e(
-                "[Hchat:MiuixSettings] 创建页面 Composition 失败: ${throwable.message}",
+                "[AeonLab:MiuixSettings] 创建页面 Composition 失败: ${throwable.message}",
                 throwable
             )
             return
@@ -1474,7 +1474,7 @@ private object NativeFakeLocationPickerBridge {
         }.onSuccess { unhooks ->
             if (unhooks.isNotEmpty()) hookedClasses.add(clazz)
         }.onFailure {
-            com.aeonlab.toolkit.utils.HLog.e("[Hchat:FakeLocation] 地图选点结果 Hook 安装失败: ${clazz.name}", it)
+            com.aeonlab.toolkit.utils.HLog.e("[AeonLab:FakeLocation] 地图选点结果 Hook 安装失败: ${clazz.name}", it)
         }
     }
 
@@ -2580,7 +2580,7 @@ private object ConfigImportExportBridge {
                 type = "*/*"
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            activity.startActivityForResult(Intent.createChooser(fallback, "选择 Hchat 配置文件"), CONFIG_IMPORT_REQUEST_CODE)
+            activity.startActivityForResult(Intent.createChooser(fallback, "选择 AeonLab 配置文件"), CONFIG_IMPORT_REQUEST_CODE)
         }
     }
 
@@ -2598,14 +2598,14 @@ private object ConfigImportExportBridge {
                     val uri = data.data ?: return
                     val activity = currentActivity ?: return
                     if (requestCode == CONFIG_EXPORT_REQUEST_CODE) {
-                        val count = HchatConfigBackup.exportToUri(activity, uri)
+                        val count = AeonLabConfigBackup.exportToUri(activity, uri)
                         if (count > 0) {
                             Toast.makeText(activity, "已导出 $count 项配置", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(activity, "导出失败", Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        val count = HchatConfigBackup.importFromUri(activity, uri)
+                        val count = AeonLabConfigBackup.importFromUri(activity, uri)
                         if (count > 0) {
                             onImported?.invoke()
                             Toast.makeText(activity, "已导入 $count 项配置，当前设置页已刷新", Toast.LENGTH_LONG).show()
@@ -2621,7 +2621,7 @@ private object ConfigImportExportBridge {
     }
 }
 
-private object HchatConfigBackup {
+private object AeonLabConfigBackup {
     private const val VERSION = 1
     private const val TYPE_BOOLEAN = "boolean"
     private const val TYPE_INT = "int"
@@ -2637,7 +2637,7 @@ private object HchatConfigBackup {
         CallMediaLimitSettings.PREFS_NAME,
         FakeLocationSettings.PREFS_NAME,
         FinderMediaDownloadSettings.PREFS_NAME,
-        HchatExtraSettings.PREFS_NAME,
+        AeonLabExtraSettings.PREFS_NAME,
         StatusTextLimitSettings.PREFS_NAME,
         EditMessageSettings.PREFS_NAME,
         DisableHotUpdateSettings.PREFS_NAME,
@@ -2704,7 +2704,7 @@ private object HchatConfigBackup {
             val prefsJson = JSONObject()
             var itemCount = 0
             prefsNames.forEach { name ->
-                val sp = HchatStorage.preferences(context, name)
+                val sp = AeonLabStorage.preferences(context, name)
                 val entries = JSONObject()
                 sp.all.forEach { (key, value) ->
                     encodePreferenceValue(value)?.let { encoded ->
@@ -2717,7 +2717,7 @@ private object HchatConfigBackup {
                 }
             }
             val root = JSONObject().apply {
-                put("format", "HchatConfigBackup")
+                put("format", "AeonLabConfigBackup")
                 put("version", VERSION)
                 put("appVersion", BuildConfig.VERSION_NAME)
                 put("exportedAt", System.currentTimeMillis())
@@ -2737,12 +2737,12 @@ private object HchatConfigBackup {
             }.orEmpty()
             if (text.isBlank()) return 0
             val root = JSONObject(text)
-            if (root.optString("format") != "HchatConfigBackup") return 0
+            if (root.optString("format") != "AeonLabConfigBackup") return 0
             val prefsJson = root.optJSONObject("prefs") ?: return 0
             var itemCount = 0
             prefsNames.forEach { name ->
                 val entries = prefsJson.optJSONObject(name) ?: return@forEach
-                val editor = HchatStorage.preferences(context, name).edit().clear()
+                val editor = AeonLabStorage.preferences(context, name).edit().clear()
                 val keys = entries.keys()
                 while (keys.hasNext()) {
                     val key = keys.next()
@@ -2866,7 +2866,7 @@ private fun rememberPressFeedbackColor(pressed: Boolean): Color {
 }
 
 @Composable
-private fun HchatMiuixTheme(context: Context, content: @Composable () -> Unit) {
+private fun AeonLabMiuixTheme(context: Context, content: @Composable () -> Unit) {
     val colors = if (isDarkMode(context)) {
         darkColorScheme()
     } else {
@@ -2893,7 +2893,7 @@ private fun MainSettingsPage(
     onOpenScriptPluginManager: () -> Unit,
     onConfigImported: () -> Unit
 ) {
-    val uiPrefs = remember(configVersion) { HchatStorage.preferences(context, UI_PREFS_NAME) }
+    val uiPrefs = remember(configVersion) { AeonLabStorage.preferences(context, UI_PREFS_NAME) }
     val glassSupported = remember { isLiquidGlassSupported() }
     var floatingNav by remember(configVersion) { mutableStateOf(uiPrefs.getBoolean(KEY_FLOATING_NAV, true)) }
     var glassNav by remember(configVersion) { mutableStateOf(glassSupported && uiPrefs.getBoolean(KEY_GLASS_NAV, true)) }
@@ -2916,7 +2916,7 @@ private fun MainSettingsPage(
     val scope = rememberCoroutineScope()
     var gateUpdate by remember { mutableStateOf<ModuleUpdateInfo?>(null) }
     var showGateUpdate by remember { mutableStateOf(false) }
-    val gatePrefs = remember { HchatStorage.preferences(context, MODULE_UPDATE_PREFS) }
+    val gatePrefs = remember { AeonLabStorage.preferences(context, MODULE_UPDATE_PREFS) }
     LaunchedEffect(Unit) {
         val result = withContext(Dispatchers.IO) {
             runCatching {
@@ -3275,7 +3275,7 @@ private fun SettingsSearchPage(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var pluginListVersion by remember { mutableStateOf(0) }
-    val uiPrefs = remember { HchatStorage.preferences(context, UI_PREFS_NAME) }
+    val uiPrefs = remember { AeonLabStorage.preferences(context, UI_PREFS_NAME) }
     var searchHistory by remember { mutableStateOf(readSearchHistory(uiPrefs)) }
     val practicalProviders = providers.filter { it.category() == FeatureSettingsProvider.CATEGORY_PRACTICAL }
     val entertainmentProviders = providers.filter { it.category() == FeatureSettingsProvider.CATEGORY_ENTERTAINMENT }
@@ -4454,8 +4454,8 @@ private fun MainNavigationBar(
         )
     }
     val selectedIndex = items.indexOfFirst { it.tab == selectedTab }.coerceAtLeast(0)
-    val updateDot = HchatStorage.preferences(context, MODULE_UPDATE_PREFS).getBoolean("has_update", false) &&
-        HchatStorage.preferences(context, MODULE_UPDATE_PREFS).getInt(MODULE_UPDATE_IGNORED_CODE, -1) != BuildConfig.VERSION_CODE
+    val updateDot = AeonLabStorage.preferences(context, MODULE_UPDATE_PREFS).getBoolean("has_update", false) &&
+        AeonLabStorage.preferences(context, MODULE_UPDATE_PREFS).getInt(MODULE_UPDATE_IGNORED_CODE, -1) != BuildConfig.VERSION_CODE
     val contentColor = MiuixTheme.colorScheme.onSurface
     Box(
         modifier = Modifier
@@ -4512,7 +4512,7 @@ private fun GiftMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, GiftSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, GiftSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     val timeFormat = remember { SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault()) }
@@ -4634,30 +4634,30 @@ private fun FeatureSettingsPage(
         FloatingShortcutFeature.ID -> FloatingShortcutMiuixPage(context, provider, onBack)
         MessageDetailsSettingsProvider.FEATURE_ID -> MessageDetailsConfigPage(
             context = context,
-            sp = HchatStorage.preferences(context, HchatExtraSettings.PREFS_NAME),
+            sp = AeonLabStorage.preferences(context, AeonLabExtraSettings.PREFS_NAME),
             onBack = onBack
         )
-        GroupMemberHistorySettingsProvider.FEATURE_ID -> HchatExtraToggleMiuixPage(
+        GroupMemberHistorySettingsProvider.FEATURE_ID -> AeonLabExtraToggleMiuixPage(
             context = context,
             provider = provider,
-            key = HchatExtraSettings.KEY_GROUP_MEMBER_HISTORY,
-            defaultValue = HchatExtraSettings.DEFAULT_GROUP_MEMBER_HISTORY,
+            key = AeonLabExtraSettings.KEY_GROUP_MEMBER_HISTORY,
+            defaultValue = AeonLabExtraSettings.DEFAULT_GROUP_MEMBER_HISTORY,
             summary = "在群成员资料页添加历史发言记录入口",
             onBack = onBack
         )
-        RedPacketDetailsSettingsProvider.FEATURE_ID -> HchatExtraToggleMiuixPage(
+        RedPacketDetailsSettingsProvider.FEATURE_ID -> AeonLabExtraToggleMiuixPage(
             context = context,
             provider = provider,
-            key = HchatExtraSettings.KEY_RED_PACKET_DETAILS,
-            defaultValue = HchatExtraSettings.DEFAULT_RED_PACKET_DETAILS,
+            key = AeonLabExtraSettings.KEY_RED_PACKET_DETAILS,
+            defaultValue = AeonLabExtraSettings.DEFAULT_RED_PACKET_DETAILS,
             summary = "红包详情页显示金额、个数和领取时间",
             onBack = onBack
         )
-        SkipWebRiskSettingsProvider.FEATURE_ID -> HchatExtraToggleMiuixPage(
+        SkipWebRiskSettingsProvider.FEATURE_ID -> AeonLabExtraToggleMiuixPage(
             context = context,
             provider = provider,
-            key = HchatExtraSettings.KEY_SKIP_WEB_RISK,
-            defaultValue = HchatExtraSettings.DEFAULT_SKIP_WEB_RISK,
+            key = AeonLabExtraSettings.KEY_SKIP_WEB_RISK,
+            defaultValue = AeonLabExtraSettings.DEFAULT_SKIP_WEB_RISK,
             summary = "跳过微信 WebView 高风险网页拦截提示",
             onBack = onBack
         )
@@ -4740,7 +4740,7 @@ private fun MultiRecallMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MultiRecallSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MultiRecallSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -4782,7 +4782,7 @@ private fun SelectedMessagesMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, SelectedMessagesSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, SelectedMessagesSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<SelectedMessagesRoute>(SelectedMessagesRoute.Main) }
     var draft by remember {
         mutableStateOf(
@@ -5148,7 +5148,7 @@ private fun MessageForwardMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MessageForwardSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MessageForwardSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     PageScaffold(
@@ -5219,7 +5219,7 @@ private fun CallMediaLimitMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, CallMediaLimitSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, CallMediaLimitSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5261,7 +5261,7 @@ private fun CallRingtoneBlockMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, CallMediaLimitSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, CallMediaLimitSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5309,7 +5309,7 @@ private fun StatusTextLimitMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, StatusTextLimitSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, StatusTextLimitSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5351,7 +5351,7 @@ private fun EditMessageMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, EditMessageSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, EditMessageSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5393,7 +5393,7 @@ private fun QuickContactEditMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, QuickContactEditSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, QuickContactEditSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5433,7 +5433,7 @@ private fun QuickGroupChatLabelMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, QuickGroupChatLabelSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, QuickGroupChatLabelSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5473,7 +5473,7 @@ private fun QuickMomentsMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, QuickMomentsSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, QuickMomentsSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5513,7 +5513,7 @@ private fun QuickTerminateMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, QuickTerminateSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, QuickTerminateSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5553,7 +5553,7 @@ private fun TypingReportBlockMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, TypingReportBlockSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, TypingReportBlockSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5813,7 +5813,7 @@ private fun PatBlockMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, PatBlockSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, PatBlockSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5853,7 +5853,7 @@ private fun AutoOriginalImageMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, AutoOriginalImageSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, AutoOriginalImageSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5893,7 +5893,7 @@ private fun AutoViewOriginalMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, AutoViewOriginalSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, AutoViewOriginalSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5933,7 +5933,7 @@ private fun RemoveForwardLimitMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, RemoveForwardLimitSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, RemoveForwardLimitSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -5973,7 +5973,7 @@ private fun AtAllNotificationBlockMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, AtAllNotificationBlockSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, AtAllNotificationBlockSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(sp.getBoolean(AtAllNotificationBlockSettings.KEY_ENABLE, AtAllNotificationBlockSettings.DEFAULT_ENABLE))
     }
@@ -6070,7 +6070,7 @@ private fun DisableHotUpdateMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, DisableHotUpdateSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, DisableHotUpdateSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -6112,7 +6112,7 @@ private fun MomentsAutoLikeMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MomentsAutoLikeSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MomentsAutoLikeSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<MomentsAutoLikeRoute>(MomentsAutoLikeRoute.Main) }
     var whitelist by remember { mutableStateOf(parseIds(sp.getString(MomentsAutoLikeSettings.KEY_WHITELIST, "").orEmpty())) }
     var blacklist by remember { mutableStateOf(parseIds(sp.getString(MomentsAutoLikeSettings.KEY_BLACKLIST, "").orEmpty())) }
@@ -6490,7 +6490,7 @@ private object MomentsAutoCommentPage {
         provider: FeatureSettingsProvider,
         onBack: () -> Unit
     ) {
-    val sp = remember { HchatStorage.preferences(context, MomentsAutoCommentSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MomentsAutoCommentSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<MomentsAutoCommentRoute>(MomentsAutoCommentRoute.Main) }
     var whitelist by remember { mutableStateOf(parseIds(sp.getString(MomentsAutoCommentSettings.KEY_WHITELIST, "").orEmpty())) }
     var blacklist by remember { mutableStateOf(parseIds(sp.getString(MomentsAutoCommentSettings.KEY_BLACKLIST, "").orEmpty())) }
@@ -6920,7 +6920,7 @@ private fun MomentsAutoForwardMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MomentsAutoForwardSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MomentsAutoForwardSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<MomentsAutoForwardRoute>(MomentsAutoForwardRoute.Main) }
     var targets by remember {
         mutableStateOf(
@@ -7569,7 +7569,7 @@ private fun MomentsAutoRefreshMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MomentsAutoRefreshSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MomentsAutoRefreshSettings.PREFS_NAME) }
     var enabled by remember { mutableStateOf(sp.getBoolean(MomentsAutoRefreshSettings.KEY_ENABLE, false)) }
     var interval by remember {
         mutableStateOf(sp.getInt(MomentsAutoRefreshSettings.KEY_INTERVAL_SECONDS, MomentsAutoRefreshSettings.DEFAULT_INTERVAL_SECONDS).toString())
@@ -7661,7 +7661,7 @@ private fun MomentsContactFilterMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MomentsContactFilterSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MomentsContactFilterSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<MomentsContactFilterRoute>(MomentsContactFilterRoute.Main) }
     var targets by remember {
         mutableStateOf(
@@ -7811,7 +7811,7 @@ private fun MomentsKeywordBlockMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MomentsKeywordBlockSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MomentsKeywordBlockSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(
             sp.getBoolean(
@@ -7880,7 +7880,7 @@ private fun MomentsBottomDetailMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MomentsBottomDetailSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MomentsBottomDetailSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(
             sp.getBoolean(
@@ -8013,7 +8013,7 @@ private fun MomentsPostNotificationMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MomentsPostNotificationSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MomentsPostNotificationSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<MomentsPostNotificationRoute>(MomentsPostNotificationRoute.Main) }
     var targets by remember {
         mutableStateOf(parseIds(sp.getString(MomentsPostNotificationSettings.KEY_TARGETS, "").orEmpty()))
@@ -8160,7 +8160,7 @@ private fun OriginalMomentsUploadMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, OriginalMomentsUploadSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, OriginalMomentsUploadSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -8202,7 +8202,7 @@ private fun MomentsUploadTailMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MomentsUploadTailSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MomentsUploadTailSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     var enabled by remember {
@@ -8283,7 +8283,7 @@ private fun SnsAntiRecallMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, SnsAntiRecallSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, SnsAntiRecallSettings.PREFS_NAME) }
     var momentMarkText by remember {
         mutableStateOf(
             sp.getString(
@@ -8415,7 +8415,7 @@ private fun MomentsFakeInteractionMiuixPage(
     onBack: () -> Unit
 ) {
     val sp = remember {
-        HchatStorage.preferences(context, MomentsFakeInteractionSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context, MomentsFakeInteractionSettings.PREFS_NAME)
     }
     val isLike = provider.featureId() == MomentsFakeLikeSettingsProvider.ID
     val isForward = provider.featureId() == MomentsFakeForwardSettingsProvider.ID
@@ -9033,7 +9033,7 @@ private fun RemoveMomentsAdsMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, RemoveMomentsAdsSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, RemoveMomentsAdsSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -9075,7 +9075,7 @@ private fun FinderMediaDownloadMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, FinderMediaDownloadSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, FinderMediaDownloadSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -9110,7 +9110,7 @@ private fun FinderMediaDownloadMiuixPage(
 }
 
 @Composable
-private fun HchatExtraToggleMiuixPage(
+private fun AeonLabExtraToggleMiuixPage(
     context: Context,
     provider: FeatureSettingsProvider,
     key: String,
@@ -9118,7 +9118,7 @@ private fun HchatExtraToggleMiuixPage(
     summary: String,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, HchatExtraSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, AeonLabExtraSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -9161,166 +9161,166 @@ private fun MessageDetailsConfigPage(
     var enabled by remember {
         mutableStateOf(
             sp.getBoolean(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS
             )
         )
     }
     var lightBg by remember {
         mutableStateOf(
             sp.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_BG,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_BG,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG
             ).orEmpty()
         )
     }
     var lightText by remember {
         mutableStateOf(
             sp.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_TEXT,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_TEXT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT
             ).orEmpty()
         )
     }
     var darkBg by remember {
         mutableStateOf(
             sp.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_DARK_BG,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_DARK_BG,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG
             ).orEmpty()
         )
     }
     var darkText by remember {
         mutableStateOf(
             sp.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_DARK_TEXT,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_DARK_TEXT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT
             ).orEmpty()
         )
     }
     var format by remember {
         mutableStateOf(
             sp.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_FORMAT,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_FORMAT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT
             ).orEmpty()
         )
     }
     var timeFormat by remember {
         mutableStateOf(
             sp.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_TIME_FORMAT,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_TIME_FORMAT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT
             ).orEmpty()
         )
     }
     var position by remember {
         mutableStateOf(
             sp.getString(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_POSITION,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_POSITION
-            ).orEmpty().ifBlank { HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_POSITION }
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_POSITION,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_POSITION
+            ).orEmpty().ifBlank { AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_POSITION }
         )
     }
     var avatarGap by remember {
         mutableStateOf(
             sp.getInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_AVATAR_GAP,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_AVATAR_GAP
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_AVATAR_GAP,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_AVATAR_GAP
             ).toString()
         )
     }
     var leftMargin by remember {
         mutableStateOf(
             sp.getInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_LEFT_MARGIN,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LEFT_MARGIN
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LEFT_MARGIN,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LEFT_MARGIN
             ).toString()
         )
     }
     var rightMargin by remember {
         mutableStateOf(
             sp.getInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_RIGHT_MARGIN,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_RIGHT_MARGIN
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_RIGHT_MARGIN,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_RIGHT_MARGIN
             ).toString()
         )
     }
     var textSize by remember {
         mutableStateOf(
             sp.getInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_TEXT_SIZE,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_TEXT_SIZE
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_TEXT_SIZE,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_TEXT_SIZE
             ).toString()
         )
     }
     var clickShow by remember {
         mutableStateOf(
             sp.getBoolean(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_CLICK_SHOW,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_CLICK_SHOW
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_CLICK_SHOW,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_CLICK_SHOW
             )
         )
     }
     var formatContent by remember {
         mutableStateOf(
             sp.getBoolean(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_FORMAT_CONTENT,
-                HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT_CONTENT
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_FORMAT_CONTENT,
+                AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT_CONTENT
             )
         )
     }
 
     fun resetValues() {
-        enabled = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS
-        lightBg = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG
-        lightText = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT
-        darkBg = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG
-        darkText = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT
-        format = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT
-        timeFormat = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT
-        position = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_POSITION
-        avatarGap = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_AVATAR_GAP.toString()
-        leftMargin = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LEFT_MARGIN.toString()
-        rightMargin = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_RIGHT_MARGIN.toString()
-        textSize = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_TEXT_SIZE.toString()
-        clickShow = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_CLICK_SHOW
-        formatContent = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT_CONTENT
+        enabled = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS
+        lightBg = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG
+        lightText = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT
+        darkBg = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG
+        darkText = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT
+        format = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT
+        timeFormat = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT
+        position = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_POSITION
+        avatarGap = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_AVATAR_GAP.toString()
+        leftMargin = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LEFT_MARGIN.toString()
+        rightMargin = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_RIGHT_MARGIN.toString()
+        textSize = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_TEXT_SIZE.toString()
+        clickShow = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_CLICK_SHOW
+        formatContent = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT_CONTENT
     }
 
     fun saveValues() {
-        val savedLightBg = cleanMessageDetailsColor(lightBg, HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG)
-        val savedLightText = cleanMessageDetailsColor(lightText, HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT)
-        val savedDarkBg = cleanMessageDetailsColor(darkBg, HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG)
-        val savedDarkText = cleanMessageDetailsColor(darkText, HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT)
+        val savedLightBg = cleanMessageDetailsColor(lightBg, AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG)
+        val savedLightText = cleanMessageDetailsColor(lightText, AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT)
+        val savedDarkBg = cleanMessageDetailsColor(darkBg, AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG)
+        val savedDarkText = cleanMessageDetailsColor(darkText, AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT)
         val savedPosition = position.takeIf { it in messageDetailsPositionValues() }
-            ?: HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_POSITION
-        val savedAvatarGap = (avatarGap.toIntOrNull() ?: HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_AVATAR_GAP)
+            ?: AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_POSITION
+        val savedAvatarGap = (avatarGap.toIntOrNull() ?: AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_AVATAR_GAP)
             .coerceIn(0, 64)
         sp.edit()
-            .putBoolean(HchatExtraSettings.KEY_MESSAGE_DETAILS, enabled)
-            .putString(HchatExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_BG, savedLightBg)
-            .putString(HchatExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_TEXT, savedLightText)
-            .putString(HchatExtraSettings.KEY_MESSAGE_DETAILS_DARK_BG, savedDarkBg)
-            .putString(HchatExtraSettings.KEY_MESSAGE_DETAILS_DARK_TEXT, savedDarkText)
-            .putString(HchatExtraSettings.KEY_MESSAGE_DETAILS_FORMAT, format.ifBlank { HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT })
-            .putString(HchatExtraSettings.KEY_MESSAGE_DETAILS_TIME_FORMAT, timeFormat.ifBlank { HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT })
-            .putString(HchatExtraSettings.KEY_MESSAGE_DETAILS_POSITION, savedPosition)
-            .putInt(HchatExtraSettings.KEY_MESSAGE_DETAILS_AVATAR_GAP, savedAvatarGap)
+            .putBoolean(AeonLabExtraSettings.KEY_MESSAGE_DETAILS, enabled)
+            .putString(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_BG, savedLightBg)
+            .putString(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LIGHT_TEXT, savedLightText)
+            .putString(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_DARK_BG, savedDarkBg)
+            .putString(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_DARK_TEXT, savedDarkText)
+            .putString(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_FORMAT, format.ifBlank { AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_FORMAT })
+            .putString(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_TIME_FORMAT, timeFormat.ifBlank { AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_TIME_FORMAT })
+            .putString(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_POSITION, savedPosition)
+            .putInt(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_AVATAR_GAP, savedAvatarGap)
             .putInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_LEFT_MARGIN,
-                leftMargin.toIntOrNull() ?: HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LEFT_MARGIN
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_LEFT_MARGIN,
+                leftMargin.toIntOrNull() ?: AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LEFT_MARGIN
             )
             .putInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_RIGHT_MARGIN,
-                rightMargin.toIntOrNull() ?: HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_RIGHT_MARGIN
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_RIGHT_MARGIN,
+                rightMargin.toIntOrNull() ?: AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_RIGHT_MARGIN
             )
             .putInt(
-                HchatExtraSettings.KEY_MESSAGE_DETAILS_TEXT_SIZE,
-                textSize.toIntOrNull() ?: HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_TEXT_SIZE
+                AeonLabExtraSettings.KEY_MESSAGE_DETAILS_TEXT_SIZE,
+                textSize.toIntOrNull() ?: AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_TEXT_SIZE
             )
-            .putBoolean(HchatExtraSettings.KEY_MESSAGE_DETAILS_CLICK_SHOW, clickShow)
-            .putBoolean(HchatExtraSettings.KEY_MESSAGE_DETAILS_FORMAT_CONTENT, formatContent)
+            .putBoolean(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_CLICK_SHOW, clickShow)
+            .putBoolean(AeonLabExtraSettings.KEY_MESSAGE_DETAILS_FORMAT_CONTENT, formatContent)
             .apply()
         lightBg = savedLightBg
         lightText = savedLightText
@@ -9387,7 +9387,7 @@ private fun MessageDetailsConfigPage(
                         "浅色模式消息时间背景",
                         lightBg,
                         allowGradient = false,
-                        onReset = { lightBg = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG }
+                        onReset = { lightBg = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_BG }
                     ) { lightBg = it.take(9) }
                     InsetDivider()
                     ColorPickerRow(
@@ -9395,7 +9395,7 @@ private fun MessageDetailsConfigPage(
                         "浅色模式消息时间文字",
                         lightText,
                         allowGradient = false,
-                        onReset = { lightText = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT }
+                        onReset = { lightText = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_LIGHT_TEXT }
                     ) { lightText = it.take(9) }
                     InsetDivider()
                     ColorPickerRow(
@@ -9403,7 +9403,7 @@ private fun MessageDetailsConfigPage(
                         "深色模式消息时间背景",
                         darkBg,
                         allowGradient = false,
-                        onReset = { darkBg = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG }
+                        onReset = { darkBg = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_BG }
                     ) { darkBg = it.take(9) }
                     InsetDivider()
                     ColorPickerRow(
@@ -9411,7 +9411,7 @@ private fun MessageDetailsConfigPage(
                         "深色模式消息时间文字",
                         darkText,
                         allowGradient = false,
-                        onReset = { darkText = HchatExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT }
+                        onReset = { darkText = AeonLabExtraSettings.DEFAULT_MESSAGE_DETAILS_DARK_TEXT }
                     ) { darkText = it.take(9) }
                 }
             }
@@ -9448,7 +9448,7 @@ private fun MessageDetailsConfigPage(
                         onValueChanged = { position = it }
                     )
                     InsetDivider()
-                    if (position == HchatExtraSettings.POSITION_MESSAGE_BOTTOM) {
+                    if (position == AeonLabExtraSettings.POSITION_MESSAGE_BOTTOM) {
                         NumberInputRow("左边距", "单位 dp，对方消息使用", leftMargin, onValueChange = { leftMargin = it })
                         InsetDivider()
                         NumberInputRow("右边距", "单位 dp，自己消息使用", rightMargin, onValueChange = { rightMargin = it })
@@ -9490,20 +9490,20 @@ private fun messageDetailsTimeFormatChoices(current: String): List<PopupChoice<S
 }
 
 private fun messageDetailsPositionValues(): Set<String> = setOf(
-    HchatExtraSettings.POSITION_MESSAGE_BOTTOM,
-    HchatExtraSettings.POSITION_AVATAR_ABOVE,
-    HchatExtraSettings.POSITION_AVATAR_BELOW
+    AeonLabExtraSettings.POSITION_MESSAGE_BOTTOM,
+    AeonLabExtraSettings.POSITION_AVATAR_ABOVE,
+    AeonLabExtraSettings.POSITION_AVATAR_BELOW
 )
 
 private fun messageDetailsPositionChoices(): List<PopupChoice<String>> = listOf(
-    PopupChoice(label = "消息下方", value = HchatExtraSettings.POSITION_MESSAGE_BOTTOM),
-    PopupChoice(label = "头像上方", value = HchatExtraSettings.POSITION_AVATAR_ABOVE),
-    PopupChoice(label = "头像下方", value = HchatExtraSettings.POSITION_AVATAR_BELOW)
+    PopupChoice(label = "消息下方", value = AeonLabExtraSettings.POSITION_MESSAGE_BOTTOM),
+    PopupChoice(label = "头像上方", value = AeonLabExtraSettings.POSITION_AVATAR_ABOVE),
+    PopupChoice(label = "头像下方", value = AeonLabExtraSettings.POSITION_AVATAR_BELOW)
 )
 
 private fun messageDetailsPositionLabel(value: String): String = when (value) {
-    HchatExtraSettings.POSITION_AVATAR_ABOVE -> "头像上方"
-    HchatExtraSettings.POSITION_AVATAR_BELOW -> "头像下方"
+    AeonLabExtraSettings.POSITION_AVATAR_ABOVE -> "头像上方"
+    AeonLabExtraSettings.POSITION_AVATAR_BELOW -> "头像下方"
     else -> "消息下方"
 }
 
@@ -9533,7 +9533,7 @@ private fun ProfileIdMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, ProfileIdSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, ProfileIdSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -9661,7 +9661,7 @@ private fun SettingsEntryMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, SettingsEntrySettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, SettingsEntrySettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -9688,7 +9688,7 @@ private fun SettingsEntryMiuixPage(
                         sp,
                         SettingsEntrySettings.KEY_PLUS_MENU_ENABLE,
                         "注入加号菜单",
-                        "在微信右上角加号菜单中显示 Hchat 入口，重启微信后生效",
+                        "在微信右上角加号菜单中显示 AeonLab 入口，重启微信后生效",
                         SettingsEntrySettings.DEFAULT_PLUS_MENU_ENABLE
                     )
                     InsetDivider()
@@ -9696,7 +9696,7 @@ private fun SettingsEntryMiuixPage(
                         sp,
                         SettingsEntrySettings.KEY_PLUS_LONG_PRESS_ENABLE,
                         "长按加号入口",
-                        "长按微信右上角加号打开 Hchat 设置，重启微信后生效",
+                        "长按微信右上角加号打开 AeonLab 设置，重启微信后生效",
                         SettingsEntrySettings.DEFAULT_PLUS_LONG_PRESS_ENABLE
                     )
                 }
@@ -9711,7 +9711,7 @@ private fun PluginAgentEntryMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, SettingsEntrySettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, SettingsEntrySettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -9761,7 +9761,7 @@ private fun FloatingShortcutMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, FloatingShortcutSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, FloatingShortcutSettings.PREFS_NAME) }
     var enabled by remember { mutableStateOf(FloatingShortcutRuntime.isEnabled(context)) }
     var scope by remember {
         mutableStateOf(
@@ -10074,7 +10074,7 @@ private fun FloatingShortcutMiuixPage(
                     PopupChoiceRow(
                         title = "动作类型",
                         summary = when (draft.actionType) {
-                            FloatingShortcutSettings.ACTION_MODULE_SETTINGS -> "打开 Hchat 设置"
+                            FloatingShortcutSettings.ACTION_MODULE_SETTINGS -> "打开 AeonLab 设置"
                             FloatingShortcutSettings.ACTION_PLUGIN_AGENT -> "展开或收起插件 Agent"
                             else -> "打开微信页面"
                         },
@@ -10192,7 +10192,7 @@ private fun FloatingShortcutAppearanceMiuixPage(
     context: Context,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, FloatingShortcutSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, FloatingShortcutSettings.PREFS_NAME) }
     var bubbleSize by remember {
         mutableStateOf(
             sp.getInt(
@@ -10584,7 +10584,7 @@ private fun QuickMarkReadMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, QuickMarkReadSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, QuickMarkReadSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -10634,7 +10634,7 @@ private fun WeChatKeepAliveMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, WeChatKeepAliveSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, WeChatKeepAliveSettings.PREFS_NAME) }
     var enabled by remember { mutableStateOf(sp.getBoolean(WeChatKeepAliveSettings.KEY_ENABLE, WeChatKeepAliveSettings.DEFAULT_ENABLE)) }
     var foregroundService by remember { mutableStateOf(sp.getBoolean(WeChatKeepAliveSettings.KEY_FOREGROUND_SERVICE, WeChatKeepAliveSettings.DEFAULT_FOREGROUND_SERVICE)) }
     var wakeLock by remember { mutableStateOf(sp.getBoolean(WeChatKeepAliveSettings.KEY_WAKE_LOCK, WeChatKeepAliveSettings.DEFAULT_WAKE_LOCK)) }
@@ -10782,7 +10782,7 @@ private fun CustomNotificationMiuixPage(
     onBack: () -> Unit
 ) {
     val settings = remember { CustomNotificationSettings(context) }
-    val sp = remember { HchatStorage.preferences(context, CustomNotificationSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, CustomNotificationSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<CustomNotificationRoute>(CustomNotificationRoute.Main) }
     var rules by remember { mutableStateOf(settings.rules()) }
     var defaultPrivateRule by remember { mutableStateOf(settings.defaultPrivateRule()) }
@@ -11008,7 +11008,7 @@ private fun AutoReplyMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, AutoReplySettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, AutoReplySettings.PREFS_NAME) }
     val settings = remember { AutoReplySettings(context) }
     var rules by remember { mutableStateOf(settings.rules()) }
     var route by remember { mutableStateOf("main") }
@@ -12523,7 +12523,7 @@ private fun AutoReplyLabelPickerPage(
                     error = result.exceptionOrNull()?.message.orEmpty()
                     loading = false
                 }
-            }, "HchatAutoReplyLabels").start()
+            }, "AeonLabAutoReplyLabels").start()
         }
     }
     val visible = labels.filter { label ->
@@ -13213,7 +13213,7 @@ private fun AutoReplyAiPage(context: Context, sp: SharedPreferences, onBack: () 
                                 SwitchRow(
                                     checked = xiaozhiMcpBridge,
                                     title = "启用MCP桥接实验",
-                                    summary = "把 Hchat 能力暴露给小智调用；端点地址包含 token，请勿外传",
+                                    summary = "把 AeonLab 能力暴露给小智调用；端点地址包含 token，请勿外传",
                                     onCheckedChange = { xiaozhiMcpBridge = it }
                                 )
                                 InsetDivider()
@@ -14878,7 +14878,7 @@ private fun KeywordNotificationMiuixPage(
     onBack: () -> Unit
 ) {
     val settings = remember { KeywordNotificationSettings(context) }
-    val sp = remember { HchatStorage.preferences(context, KeywordNotificationSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, KeywordNotificationSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<KeywordNotificationRoute>(KeywordNotificationRoute.Main) }
     var keywords by remember { mutableStateOf(settings.keywords()) }
     var excludeContacts by remember { mutableStateOf(settings.excludeContacts()) }
@@ -15013,7 +15013,7 @@ private fun TextSpeechMiuixPage(
     onBack: () -> Unit
 ) {
     val settings = remember { TextSpeechSettings(context) }
-    val sp = remember { HchatStorage.preferences(context, TextSpeechSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, TextSpeechSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<TextSpeechRoute>(TextSpeechRoute.Main) }
     var allowedContacts by remember { mutableStateOf(settings.allowedContacts()) }
     val mainListState = rememberLazyListState()
@@ -15535,7 +15535,7 @@ private fun ZombieCheckMainPage(
     onDismissDelete: () -> Unit,
     onConfirmDelete: (Boolean, Int) -> ZombieCheckActionResult
 ) {
-    val sp = remember { HchatStorage.preferences(context, ZombieCheckSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, ZombieCheckSettings.PREFS_NAME) }
     var snapshot by remember { mutableStateOf(ZombieCheckController.snapshot()) }
     var enabled by remember { mutableStateOf(sp.getBoolean(ZombieCheckSettings.KEY_ENABLE, ZombieCheckSettings.DEFAULT_ENABLE)) }
     var autoTag by remember { mutableStateOf(sp.getBoolean(ZombieCheckSettings.KEY_AUTO_TAG, ZombieCheckSettings.DEFAULT_AUTO_TAG)) }
@@ -15892,7 +15892,7 @@ private fun QQMusicOrderMiuixPage(
     onBack: () -> Unit
 ) {
     val settings = remember { QQMusicOrderSettings(context) }
-    val sp = remember { HchatStorage.preferences(context, QQMusicOrderSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, QQMusicOrderSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<QQMusicOrderRoute>(QQMusicOrderRoute.Main) }
     var allowedTalkers by remember { mutableStateOf(settings.allowedTalkers()) }
 
@@ -16525,7 +16525,7 @@ private fun QuoteDeleteClearMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, QuoteDeleteClearSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, QuoteDeleteClearSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -16567,7 +16567,7 @@ private fun EmojiSaveMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, EmojiSaveSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, EmojiSaveSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -16607,7 +16607,7 @@ private fun SwipeQuoteMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, SwipeQuoteSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, SwipeQuoteSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -16669,7 +16669,7 @@ private fun FakeVoiceDurationMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, FakeVoiceDurationSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, FakeVoiceDurationSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     var enabled by remember {
@@ -16747,7 +16747,7 @@ private fun VoicePreviewMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, VoicePreviewSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, VoicePreviewSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -16787,7 +16787,7 @@ private fun FakeMiniProgramBaseLibMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, FakeMiniProgramBaseLibSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, FakeMiniProgramBaseLibSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     var enabled by remember {
@@ -16839,7 +16839,7 @@ private fun SkipMiniProgramVideoAdsMiuixPage(
     onBack: () -> Unit
 ) {
     val sp = remember {
-        HchatStorage.preferences(context, SkipMiniProgramVideoAdsSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context, SkipMiniProgramVideoAdsSettings.PREFS_NAME)
     }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
@@ -16895,7 +16895,7 @@ private fun SkipGlobalMiniProgramSplashAdsMiuixPage(
     onBack: () -> Unit
 ) {
     val sp = remember {
-        HchatStorage.preferences(context, SkipGlobalMiniProgramSplashAdsSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context, SkipGlobalMiniProgramSplashAdsSettings.PREFS_NAME)
     }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
@@ -16950,7 +16950,7 @@ private fun FakeLocationMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, FakeLocationSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, FakeLocationSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(sp.getBoolean(FakeLocationSettings.KEY_ENABLE, FakeLocationSettings.DEFAULT_ENABLE))
     }
@@ -17017,11 +17017,11 @@ private fun FakeLocationMiuixPage(
                     }
                     InsetDivider()
                     InfoRow("当前纬度", latitude) {
-                        copyFakeLocationCoordinate(context, "Hchat 纬度", latitude)
+                        copyFakeLocationCoordinate(context, "AeonLab 纬度", latitude)
                     }
                     InsetDivider()
                     InfoRow("当前经度", longitude) {
-                        copyFakeLocationCoordinate(context, "Hchat 经度", longitude)
+                        copyFakeLocationCoordinate(context, "AeonLab 经度", longitude)
                     }
                 }
             }
@@ -17054,7 +17054,7 @@ private fun GameEmojiMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, GameEmojiSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, GameEmojiSettings.PREFS_NAME) }
     var fixedResult by remember {
         mutableStateOf(
             sp.getBoolean(
@@ -17259,7 +17259,7 @@ private fun MessageBubbleMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MessageBubbleSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MessageBubbleSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(sp.getBoolean(MessageBubbleSettings.KEY_ENABLE, MessageBubbleSettings.DEFAULT_ENABLE))
     }
@@ -17460,7 +17460,7 @@ private fun MessageTextColorMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MessageTextColorSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MessageTextColorSettings.PREFS_NAME) }
     var leftLightColor by remember {
         mutableStateOf(
             sp.getString(
@@ -17591,7 +17591,7 @@ private fun ChatTimeStyleMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, ChatTimeStyleSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, ChatTimeStyleSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(
             sp.getBoolean(
@@ -17699,7 +17699,7 @@ private fun HideChatAvatarMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, HideChatAvatarSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, HideChatAvatarSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -17749,7 +17749,7 @@ private fun RoundAvatarMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, RoundAvatarSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, RoundAvatarSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(sp.getBoolean(RoundAvatarSettings.KEY_ENABLE, RoundAvatarSettings.DEFAULT_ENABLE))
     }
@@ -17837,7 +17837,7 @@ private fun CustomFriendAvatarMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, CustomFriendAvatarSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, CustomFriendAvatarSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(sp.getBoolean(CustomFriendAvatarSettings.KEY_ENABLE, CustomFriendAvatarSettings.DEFAULT_ENABLE))
     }
@@ -17938,7 +17938,7 @@ private fun CustomFriendAvatarMiuixPage(
                                     InsetDivider()
                                     SwitchRow(sp, CustomFriendAvatarSettings.KEY_DESKTOP_SHORTCUT, "桌面快捷方式", "替换添加到桌面的好友和群聊头像", true)
                                     InsetDivider()
-                                    SwitchRow(sp, CustomFriendAvatarSettings.KEY_NOTIFICATIONS, "消息通知", "替换微信原生通知和 Hchat 通知中的好友和群聊头像", true)
+                                    SwitchRow(sp, CustomFriendAvatarSettings.KEY_NOTIFICATIONS, "消息通知", "替换微信原生通知和 AeonLab 通知中的好友和群聊头像", true)
                                     InsetDivider()
                                     SwitchRow(sp, CustomFriendAvatarSettings.KEY_MOMENTS_NOTIFICATIONS, "朋友圈通知", "替换朋友圈发布通知中的好友头像", true)
                                 }
@@ -18051,7 +18051,7 @@ private fun MessageBlockMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MessageBlockSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MessageBlockSettings.PREFS_NAME) }
     val initialState = remember { initialMessageBlockState(sp) }
     var templates by remember {
         mutableStateOf(initialState.templates)
@@ -20647,7 +20647,7 @@ private fun GroupRenameMonitorMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, GroupRenameMonitorSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, GroupRenameMonitorSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<GroupRenameRoute>(GroupRenameRoute.Main) }
     var templates by remember {
         mutableStateOf(GroupRenameMonitorSettings.parseTemplates(sp.getString(GroupRenameMonitorSettings.KEY_TEMPLATES, "").orEmpty()))
@@ -21723,7 +21723,7 @@ private fun GroupLeaveMonitorMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, GroupLeaveMonitorSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, GroupLeaveMonitorSettings.PREFS_NAME) }
     var groupPicker by remember { mutableStateOf<ContactPickerRequest?>(null) }
     var favoritePicker by remember { mutableStateOf<FavoritePickerRequest?>(null) }
     var showGroupManager by remember { mutableStateOf(false) }
@@ -23757,7 +23757,7 @@ private fun TextVoiceMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, TextVoiceSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, TextVoiceSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<TextVoiceRoute>(TextVoiceRoute.Main) }
     var selectedVoice by remember {
         mutableStateOf(TextVoiceSettings.selectedVoiceKey(context))
@@ -24017,7 +24017,7 @@ private fun VoiceForwardMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, VoiceForwardSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, VoiceForwardSettings.PREFS_NAME) }
     val legacyDefault = remember { sp.getBoolean(VoiceForwardSettings.KEY_ENABLE, VoiceForwardSettings.DEFAULT_ENABLE) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
@@ -24105,7 +24105,7 @@ private object AudioTransformSettingsPage {
         provider: FeatureSettingsProvider,
         onBack: () -> Unit
     ) {
-    val sp = remember { HchatStorage.preferences(context, AudioTransformSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, AudioTransformSettings.PREFS_NAME) }
     val bridge = remember { AudioTransformBridge() }
     val handler = remember { Handler(Looper.getMainLooper()) }
     val mainListState = rememberLazyListState()
@@ -25125,7 +25125,7 @@ private fun ScheduledTaskMiuixPage(
     onBack: () -> Unit
 ) {
     val settings = remember { ScheduledTaskSettings(context) }
-    val sp = remember { HchatStorage.preferences(context, ScheduledTaskSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, ScheduledTaskSettings.PREFS_NAME) }
     var route by remember { mutableStateOf<ScheduledTaskRoute>(ScheduledTaskRoute.Main) }
     var enabled by remember {
         mutableStateOf(
@@ -26309,7 +26309,7 @@ private fun FakeScanCameraMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, FakeScanCameraSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, FakeScanCameraSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -26351,7 +26351,7 @@ private fun RedPacketMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, RedPacketSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, RedPacketSettings.PREFS_NAME) }
     var templates by remember {
         mutableStateOf(
             RedPacketRuleConfig.parseTemplates(sp.getString(RedPacketRuleConfig.KEY_TEMPLATES, "") ?: "")
@@ -27322,7 +27322,7 @@ private fun RedPacketTemplatePage(
     onSave: (RedPacketRuleTemplate) -> Unit,
     onDelete: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, RedPacketSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, RedPacketSettings.PREFS_NAME) }
     var name by remember(request) { mutableStateOf(request.template.name) }
     var enabled by remember(request) { mutableStateOf(request.template.enabled) }
     var grabMode by remember(request) { mutableStateOf(request.template.grabMode) }
@@ -27953,7 +27953,7 @@ private fun AntiRecallMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, AntiRecallSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, AntiRecallSettings.PREFS_NAME) }
     var noticeText by remember {
         mutableStateOf(
             normalizeAntiRecallNoticeText(sp.getString(
@@ -28075,7 +28075,7 @@ private fun CrashReportMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, CrashReportSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, CrashReportSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(
             sp.getBoolean(CrashReportSettings.KEY_ENABLE, CrashReportSettings.DEFAULT_ENABLE)
@@ -28129,7 +28129,7 @@ private fun ProtobufPacketMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, ProtobufPacketSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, ProtobufPacketSettings.PREFS_NAME) }
     var blockTypes by remember {
         mutableStateOf(sp.getString(
             ProtobufPacketSettings.KEY_BLOCK_TYPES,
@@ -30876,7 +30876,7 @@ fun ScriptPluginAgentWorkspacePage(
                     ScriptPluginAgentSessionStore.discardEmptySession(context, emptySessionId)
                 }.onFailure { error ->
                     com.aeonlab.toolkit.utils.HLog.e(
-                        "[Hchat:ScriptAgent] 清理空会话失败: $emptySessionId",
+                        "[AeonLab:ScriptAgent] 清理空会话失败: $emptySessionId",
                         error
                     )
                 }
@@ -31336,7 +31336,7 @@ fun ScriptPluginAgentWorkspacePage(
         Thread({
             runCatching { ScriptPluginAgentWorkspaceTools.discard(context, checkpoint) }
                 .onFailure { error ->
-                    com.aeonlab.toolkit.utils.HLog.e("[Hchat:ScriptAgent] 清理恢复工作区失败", error)
+                    com.aeonlab.toolkit.utils.HLog.e("[AeonLab:ScriptAgent] 清理恢复工作区失败", error)
                 }
         }, "AeonLab-Script-Agent-Workspace-Discard").start()
     }
@@ -32334,7 +32334,7 @@ fun ScriptPluginAgentWorkspacePage(
                         val applied = runCatching { onReady(restoredHistory) }
                             .onFailure { error ->
                                 com.aeonlab.toolkit.utils.HLog.e(
-                                    "[Hchat:ScriptAgent] ${actionName}失败",
+                                    "[AeonLab:ScriptAgent] ${actionName}失败",
                                     error
                                 )
                                 Toast.makeText(context, "${actionName}失败，请重试", Toast.LENGTH_SHORT).show()
@@ -32357,13 +32357,13 @@ fun ScriptPluginAgentWorkspacePage(
                                         if (removedMessages.isNotEmpty()) deleteToolResults(removedMessages)
                                     }.onFailure { error ->
                                         com.aeonlab.toolkit.utils.HLog.e(
-                                            "[Hchat:ScriptAgent] ${actionName}清理工具结果失败",
+                                            "[AeonLab:ScriptAgent] ${actionName}清理工具结果失败",
                                             error
                                         )
                                     }
                                 }.onFailure { error ->
                                     com.aeonlab.toolkit.utils.HLog.e(
-                                        "[Hchat:ScriptAgent] ${actionName}保存会话失败",
+                                        "[AeonLab:ScriptAgent] ${actionName}保存会话失败",
                                         error
                                     )
                                     Handler(Looper.getMainLooper()).post {
@@ -32379,7 +32379,7 @@ fun ScriptPluginAgentWorkspacePage(
                     },
                     onFailure = { error ->
                         mutationState.applyingFileOperation.value = false
-                        com.aeonlab.toolkit.utils.HLog.e("[Hchat:ScriptAgent] ${actionName}重建历史失败", error)
+                        com.aeonlab.toolkit.utils.HLog.e("[AeonLab:ScriptAgent] ${actionName}重建历史失败", error)
                         Toast.makeText(context, "${actionName}失败，请重试", Toast.LENGTH_SHORT).show()
                     }
                 )
@@ -32445,7 +32445,7 @@ fun ScriptPluginAgentWorkspacePage(
                     Toast.makeText(context, "已从此处创建分支", Toast.LENGTH_SHORT).show()
                     historyVersion++
                 }.onFailure { error ->
-                    com.aeonlab.toolkit.utils.HLog.e("[Hchat:ScriptAgent] 创建会话分支失败", error)
+                    com.aeonlab.toolkit.utils.HLog.e("[AeonLab:ScriptAgent] 创建会话分支失败", error)
                     Toast.makeText(context, error.message ?: "创建分支失败", Toast.LENGTH_LONG).show()
                 }
             }
@@ -32714,7 +32714,7 @@ fun ScriptPluginAgentWorkspacePage(
             }.onSuccess {
                 Handler(Looper.getMainLooper()).post { historyVersion++ }
             }.onFailure { error ->
-                com.aeonlab.toolkit.utils.HLog.e("[Hchat:ScriptAgent] 保存历史会话排序失败", error)
+                com.aeonlab.toolkit.utils.HLog.e("[AeonLab:ScriptAgent] 保存历史会话排序失败", error)
             }
         }, "AeonLab-Agent-Session-Order").start()
     }
@@ -36383,7 +36383,7 @@ private fun ScriptPluginAgentHistoryDrawer(
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
-    val uiPrefs = remember(context) { HchatStorage.preferences(context, UI_PREFS_NAME) }
+    val uiPrefs = remember(context) { AeonLabStorage.preferences(context, UI_PREFS_NAME) }
     var actionSessionId by remember { mutableStateOf<String?>(null) }
     var renameSessionId by remember { mutableStateOf<String?>(null) }
     var deleteSessionId by remember { mutableStateOf<String?>(null) }
@@ -37435,7 +37435,7 @@ fun ScriptPluginSettingsContent(
     onOpenManager: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    val sp = remember { HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME) }
     val pluginRootPath = remember(context) { ScriptPluginRuntime.scriptDir(context).absolutePath }
     var pluginListVersion by remember { mutableStateOf(0) }
     val managedPlugins = remember(pluginListVersion) { ScriptPluginManager.listForDisplay(context) }
@@ -38681,7 +38681,7 @@ private fun showAfterDialogDismiss(context: Context, action: () -> Unit) {
 }
 
 private fun showScriptPluginManagerError(context: Context, error: Throwable) {
-    com.aeonlab.toolkit.utils.HLog.e("[Hchat:ScriptManager] ${error.message ?: "操作失败"}", error)
+    com.aeonlab.toolkit.utils.HLog.e("[AeonLab:ScriptManager] ${error.message ?: "操作失败"}", error)
     Toast.makeText(context, error.message ?: "操作失败", Toast.LENGTH_LONG).show()
 }
 
@@ -38828,7 +38828,7 @@ private fun ScriptPluginPathDialog(
                     text = "复制路径",
                     onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-                        clipboard?.setPrimaryClip(ClipData.newPlainText("HchatScriptDir", path))
+                        clipboard?.setPrimaryClip(ClipData.newPlainText("AeonLabScriptDir", path))
                         Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
                         onClose()
                     },
@@ -38863,7 +38863,7 @@ fun FirstUseAgreementDialog(
     }
     val agreement = remember {
         """
-        Hchat 使用协议与免责声明
+        AeonLab 使用协议与免责声明
 
         1. 本模块为免费模块，仅供个人学习、研究、测试、逆向分析和备份用途使用，不提供任何商业授权、售后承诺或稳定性保证。
         2. 本模块与微信、腾讯及其关联主体无关，不代表官方立场，也不是官方客户端、官方插件或官方服务的一部分。
@@ -39369,7 +39369,7 @@ private fun WeChatTabletMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, WeChatTabletSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, WeChatTabletSettings.PREFS_NAME) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -39411,7 +39411,7 @@ private fun AutoTransferMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, AutoTransferSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, AutoTransferSettings.PREFS_NAME) }
     var templates by remember {
         mutableStateOf(TransferRuleConfig.parseTemplates(sp.getString(TransferRuleConfig.KEY_TEMPLATES, "")))
     }
@@ -40370,7 +40370,7 @@ private fun FakeWalletBalanceMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, FakeWalletBalanceSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, FakeWalletBalanceSettings.PREFS_NAME) }
     var balanceEnabled by remember {
         mutableStateOf(
             FakeWalletBalanceSettings.isAccountEnabled(
@@ -40633,7 +40633,7 @@ private fun MemberTitleMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, MemberTitleSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, MemberTitleSettings.PREFS_NAME) }
     var ownerTitle by remember { mutableStateOf(sp.getString(MemberTitleSettings.KEY_OWNER_TITLE, MemberTitleSettings.DEFAULT_OWNER_TITLE) ?: MemberTitleSettings.DEFAULT_OWNER_TITLE) }
     var adminTitle by remember { mutableStateOf(sp.getString(MemberTitleSettings.KEY_ADMIN_TITLE, MemberTitleSettings.DEFAULT_ADMIN_TITLE) ?: MemberTitleSettings.DEFAULT_ADMIN_TITLE) }
     var memberTitle by remember { mutableStateOf(sp.getString(MemberTitleSettings.KEY_MEMBER_TITLE, MemberTitleSettings.DEFAULT_MEMBER_TITLE) ?: MemberTitleSettings.DEFAULT_MEMBER_TITLE) }
@@ -40739,7 +40739,7 @@ private fun GroupNicknameColorMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, GroupNicknameColorSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, GroupNicknameColorSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(
             sp.getBoolean(GroupNicknameColorSettings.KEY_ENABLE, GroupNicknameColorSettings.DEFAULT_ENABLE)
@@ -40823,7 +40823,7 @@ private fun RealNameTailMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, RealNameTailSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, RealNameTailSettings.PREFS_NAME) }
     var prefix by remember { mutableStateOf(sp.getString(RealNameTailSettings.KEY_GLOBAL_PREFIX, "") ?: "") }
     var maleText by remember { mutableStateOf(sp.getString(RealNameTailSettings.KEY_GENDER_MALE_TEXT, RealNameTailSettings.DEFAULT_GENDER_MALE_TEXT) ?: RealNameTailSettings.DEFAULT_GENDER_MALE_TEXT) }
     var femaleText by remember { mutableStateOf(sp.getString(RealNameTailSettings.KEY_GENDER_FEMALE_TEXT, RealNameTailSettings.DEFAULT_GENDER_FEMALE_TEXT) ?: RealNameTailSettings.DEFAULT_GENDER_FEMALE_TEXT) }
@@ -44352,7 +44352,7 @@ private fun AboutCard(context: Context) {
     var historyItems by remember { mutableStateOf<List<ModuleVersionHistory>>(emptyList()) }
     var showHistoryDialog by remember { mutableStateOf(false) }
     var historyError by remember { mutableStateOf("") }
-    val updatePrefs = remember { HchatStorage.preferences(context, MODULE_UPDATE_PREFS) }
+    val updatePrefs = remember { AeonLabStorage.preferences(context, MODULE_UPDATE_PREFS) }
     val checkForUpdate: () -> Unit = {
         updateError = "正在检查更新…"
         scope.launch {
@@ -46127,7 +46127,7 @@ private fun loadMessageBlockContacts(
         } catch (throwable: Throwable) {
             main.post { callback(MessageBlockContactData(), throwable) }
         }
-    }, "HchatMessageBlockContacts").start()
+    }, "AeonLabMessageBlockContacts").start()
 }
 
 private fun loadContacts(
@@ -46181,7 +46181,7 @@ private fun loadContacts(
         } catch (throwable: Throwable) {
             main.post { callback(emptyList(), throwable) }
         }
-    }, "HchatContactPicker").start()
+    }, "AeonLabContactPicker").start()
 }
 
 private fun loadGroupMembers(
@@ -46216,7 +46216,7 @@ private fun loadGroupMembers(
         } catch (throwable: Throwable) {
             main.post { callback(emptyList(), throwable) }
         }
-    }, "HchatGroupMemberPicker").start()
+    }, "AeonLabGroupMemberPicker").start()
 }
 
 private fun WeChatContact?.toOption(

@@ -5,7 +5,7 @@ import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 
@@ -24,10 +24,10 @@ class StatusTextLimitFeature : BaseFeature() {
 
     companion object {
         const val ID = "status_text_limit"
-        private const val TAG = "[Hchat:StatusTextLimit]"
+        private const val TAG = "[AeonLab:StatusTextLimit]"
         private const val STATUS_ACTIVITY = "com.tencent.mm.plugin.textstatus.ui.TextStatusDoWhatActivityV2"
         private const val WECHAT_DEFAULT_LIMIT = 10
-        private const val HCHAT_LIMIT = 2000
+        private const val AEONLAB_LIMIT = 2000
 
         @Volatile
         private var installed = false
@@ -35,7 +35,7 @@ class StatusTextLimitFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            val sp = HchatStorage.preferences(context, StatusTextLimitSettings.PREFS_NAME)
+            val sp = AeonLabStorage.preferences(context, StatusTextLimitSettings.PREFS_NAME)
             return sp.getBoolean(StatusTextLimitSettings.KEY_ENABLE, StatusTextLimitSettings.DEFAULT_ENABLE)
         }
 
@@ -76,7 +76,7 @@ class StatusTextLimitFeature : BaseFeature() {
                 .filter { it.type == Integer.TYPE && !KavaReflector.isStatic(it) }
                 .filter { KavaReflector.readField(it, activity) == WECHAT_DEFAULT_LIMIT }
                 .forEach { field ->
-                    if (KavaReflector.writeField(field, activity, HCHAT_LIMIT)) {
+                    if (KavaReflector.writeField(field, activity, AEONLAB_LIMIT)) {
                         changed = true
                     }
                 }

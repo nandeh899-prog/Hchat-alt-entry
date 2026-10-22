@@ -2,7 +2,7 @@ package com.aeonlab.toolkit.hooks.items.messageaffix
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -27,7 +27,7 @@ object MessageAffixSettings {
     const val VAR_FILE_MESSAGES = "\${fileMsg}"
     const val VAR_SEND_DURATION = "\${sendDuration}"
 
-    fun preferences(context: Context) = HchatStorage.preferences(context, PREFS_NAME)
+    fun preferences(context: Context) = AeonLabStorage.preferences(context, PREFS_NAME)
 
     fun textFormat(preferences: SharedPreferences): String {
         return normalizeTextFormat(preferences.getString(KEY_TEXT_FORMAT, DEFAULT_TEXT_FORMAT))

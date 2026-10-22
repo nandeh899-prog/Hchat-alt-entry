@@ -10,7 +10,7 @@ import android.os.Looper
 import android.os.Process
 import com.aeonlab.toolkit.BuildConfig
 import com.aeonlab.toolkit.loader.utils.NativeLibraryLoader
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.utils.HLog
 import java.io.ByteArrayOutputStream
@@ -29,7 +29,7 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
 object CrashReportRuntime : Application.ActivityLifecycleCallbacks {
-    private const val TAG = "[Hchat:Crash]"
+    private const val TAG = "[AeonLab:Crash]"
     private const val SHOW_DELAY_MS = 700L
     private const val DISPLAY_LIMIT = 32 * 1024
     private const val FILE_LIMIT = 1024 * 1024
@@ -92,7 +92,7 @@ object CrashReportRuntime : Application.ActivityLifecycleCallbacks {
             return
         }
         runCatching {
-            crashDir = File(HchatStorage.storageDir(application), "crash").apply { mkdirs() }
+            crashDir = File(AeonLabStorage.storageDir(application), "crash").apply { mkdirs() }
             javaPendingFile = File(crashDir, JAVA_PENDING)
             nativePendingFile = File(crashDir, NATIVE_PENDING)
             pendingReportFile = File(crashDir, REPORT_PENDING)
@@ -155,8 +155,8 @@ object CrashReportRuntime : Application.ActivityLifecycleCallbacks {
     private fun ensureJavaHandler() {
         if (!captureEnabled || !::javaPendingFile.isInitialized) return
         val current = Thread.getDefaultUncaughtExceptionHandler()
-        if (current is HchatUncaughtExceptionHandler) return
-        Thread.setDefaultUncaughtExceptionHandler(HchatUncaughtExceptionHandler(current))
+        if (current is AeonLabUncaughtExceptionHandler) return
+        Thread.setDefaultUncaughtExceptionHandler(AeonLabUncaughtExceptionHandler(current))
     }
 
     private fun ensureNativeHandler() {
@@ -554,7 +554,7 @@ object CrashReportRuntime : Application.ActivityLifecycleCallbacks {
         }
     }
 
-    private class HchatUncaughtExceptionHandler(
+    private class AeonLabUncaughtExceptionHandler(
         private val previous: Thread.UncaughtExceptionHandler?
     ) : Thread.UncaughtExceptionHandler {
         override fun uncaughtException(thread: Thread, throwable: Throwable) {

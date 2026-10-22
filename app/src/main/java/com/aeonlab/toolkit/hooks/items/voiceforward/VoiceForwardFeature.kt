@@ -29,7 +29,7 @@ import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.messageforward.MessageForwardSettings
 import com.aeonlab.toolkit.hooks.items.selectedmessages.ForwardSendPolicy
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.ui.miuix.pickerDisplayName
 import com.aeonlab.toolkit.utils.KavaReflector
@@ -97,8 +97,8 @@ private class VoiceForwardHooker(
     private val context: FeatureContext,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), VoiceForwardSettings.PREFS_NAME)
-    private val messageForwardPrefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), VoiceForwardSettings.PREFS_NAME)
+    private val messageForwardPrefs = AeonLabStorage.preferences(
         context.hostContext(),
         MessageForwardSettings.PREFS_NAME
     )

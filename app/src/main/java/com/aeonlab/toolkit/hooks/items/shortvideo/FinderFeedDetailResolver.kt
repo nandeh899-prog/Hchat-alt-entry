@@ -89,7 +89,7 @@ internal class FinderFeedDetailResolver private constructor(
     private data class CachedFeed(val finderObject: Any, val savedAt: Long)
 
     companion object {
-        private const val TAG = "[Hchat:FinderDetail]"
+        private const val TAG = "[AeonLab:FinderDetail]"
         private const val PREFS_NAME = "AeonLab_finder_feed_detail_cache"
         private const val CACHE_CONSTRUCTOR = "request_constructor_v2"
         private const val CACHE_CALLBACK = "request_callback_v2"

@@ -9,7 +9,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Method
@@ -52,7 +52,7 @@ class HideChatMenuFeature : BaseFeature() {
 private class HideChatMenuRuntime(
     private val context: FeatureContext
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), HideChatMenuSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), HideChatMenuSettings.PREFS_NAME)
     private val hookedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
 
     @Synchronized
@@ -116,6 +116,6 @@ private class HideChatMenuRuntime(
     }
 
     companion object {
-        private const val TAG = "[Hchat:HideChatMenu]"
+        private const val TAG = "[AeonLab:HideChatMenu]"
     }
 }

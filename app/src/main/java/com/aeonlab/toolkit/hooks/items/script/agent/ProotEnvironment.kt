@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 // proot 终端环境：proot 二进制随 APK 的 jniLibs 打包，运行时取可执行副本，容器内假 UID 0
 object ProotEnvironment {
-    private const val TAG = "[Hchat:Proot]"
+    private const val TAG = "[AeonLab:Proot]"
 
     private const val ROOTFS_PATH = "/rootfs/ubuntu-base-arm64-v3.tar.gz"
     private const val ROOTFS_SHA256 =
@@ -550,8 +550,8 @@ object ProotEnvironment {
 
     private fun isStockCodexConfig(text: String): Boolean {
         val markers = listOf(
-            "# Hchat 内置 codex 配置",
-            "# Hchat 内置 codex 默认配置",
+            "# AeonLab 内置 codex 配置",
+            "# AeonLab 内置 codex 默认配置",
             "# proot 环境里关闭 codex 自带沙箱",
         )
         if (markers.none { text.contains(it) }) return false
@@ -734,7 +734,7 @@ object ProotEnvironment {
         |""".trimMargin()
 
     private val SHELL_BASHRC = """
-        |# Hchat Ubuntu 终端配置（可自行修改，不会被覆盖）
+        |# AeonLab Ubuntu 终端配置（可自行修改，不会被覆盖）
         |export PS1='\[\e[1;32m\]\u@\h\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '
         |export TERM=xterm-256color
         |export COLORTERM=truecolor
@@ -748,12 +748,12 @@ object ProotEnvironment {
         |alias grep='grep --color=auto'
         |alias ..='cd ..'
         |
-        |# 模型密钥不写在这个文件里（明文不安全），由 Hchat 在打开终端时自动注入环境变量 a_API_KEY，
+        |# 模型密钥不写在这个文件里（明文不安全），由 AeonLab 在打开终端时自动注入环境变量 a_API_KEY，
         |# codex 配置里 env_key 用的就是这个变量名。
         |""".trimMargin()
 
     private val SHELL_PROFILE = """
-        |# Hchat Ubuntu 终端配置（自动生成，勿手工编辑）
+        |# AeonLab Ubuntu 终端配置（自动生成，勿手工编辑）
         |[ -n "${'$'}BASH_VERSION" ] && [ -f ~/.bashrc ] && . ~/.bashrc
         |""".trimMargin()
 
@@ -767,7 +767,7 @@ object ProotEnvironment {
     )
 
     private fun codexDefaultConfig(context: Context): String = """
-            |# Hchat 内置 codex 配置（可自行修改）
+            |# AeonLab 内置 codex 配置（可自行修改）
             |
             |# 这两行不要删除
             |sandbox_mode = "danger-full-access"
@@ -780,7 +780,7 @@ object ProotEnvironment {
             |[model_providers.1]
             |name = "1"  # 供应商名字，和上面 model_provider 对应即可
             |base_url = "模型供应商的URL"  # API 接口地址，一般以 /v1 结尾
-            |env_key = "a_API_KEY"  # 这里填「环境变量名」不是密钥本身；密钥由 Hchat 自动注入，不会明文保存在这里
+            |env_key = "a_API_KEY"  # 这里填「环境变量名」不是密钥本身；密钥由 AeonLab 自动注入，不会明文保存在这里
             |
             |# 内置微信逆向工具（DexClub），codex 会自动用它确认 hook 点，不要删除
             |[mcp_servers.dexclub]
@@ -790,7 +790,7 @@ object ProotEnvironment {
     private fun codexAgentsMd(context: Context): String {
         val pluginDir = scriptPluginDir(context)
         return """
-            |# Hchat 脚本插件开发说明（自动生成，可自行修改）
+            |# AeonLab 脚本插件开发说明（自动生成，可自行修改）
             |
             |## 插件目录
             |$pluginDir
@@ -802,7 +802,7 @@ object ProotEnvironment {
             |
             |## 常见任务
             |- 开发 / 修改插件：直接读写上面目录里对应插件的文件，保存即改。
-            |- 测试插件：改动会在 Hchat 的「脚本插件」页面重新加载后生效（支持热重载），
+            |- 测试插件：改动会在 AeonLab 的「脚本插件」页面重新加载后生效（支持热重载），
             |  在手机上观察日志与实际效果。
             |- 新建插件：在插件目录下新建子目录，补上 `main.java` 与 `info.prop`。
             |
@@ -821,7 +821,7 @@ object ProotEnvironment {
             |用 `cat` 读取，只在需要时查对应章节，不要整篇读进上下文。
             |
             |## 环境说明
-            |- 这是 Hchat 内置的 Ubuntu 24.04（arm64）proot 容器，以 root 身份运行。
+            |- 这是 AeonLab 内置的 Ubuntu 24.04（arm64）proot 容器，以 root 身份运行。
             |- `/root` 是模块的 HOME，重启微信后仍然保留。
             |- 插件目录在容器内与手机上路径完全一致（经 /storage 直接可见）。
             |""".trimMargin()

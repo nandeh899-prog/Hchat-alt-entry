@@ -76,7 +76,7 @@ import top.yukonga.miuix.kmp.theme.darkColorScheme
 import top.yukonga.miuix.kmp.theme.lightColorScheme
 
 internal object ConversationGroupQuickDialog {
-    private const val TAG = "[Hchat:ConversationGroup]"
+    private const val TAG = "[AeonLab:ConversationGroup]"
     private val active = Collections.synchronizedMap(WeakHashMap<Activity, WeakReference<OverlayHandle>>())
     private val main = Handler(Looper.getMainLooper())
 
@@ -890,7 +890,7 @@ internal object ConversationGroupQuickDialog {
 }
 
 private object ConversationGroupDocumentBridge {
-    private const val TAG = "[Hchat:ConversationGroup]"
+    private const val TAG = "[AeonLab:ConversationGroup]"
     private const val MAX_IMPORT_BYTES = 8 * 1024 * 1024
     private const val REQUEST_CODE_START = 0x7510
     private const val REQUEST_CODE_END = 0x75ff

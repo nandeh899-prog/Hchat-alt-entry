@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.momentsfake
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -49,7 +49,7 @@ internal data class FakeSnsComment(
 }
 
 internal class MomentsFakeInteractionStore(context: Context) {
-    private val prefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(
         context,
         MomentsFakeInteractionSettings.PREFS_NAME
     )

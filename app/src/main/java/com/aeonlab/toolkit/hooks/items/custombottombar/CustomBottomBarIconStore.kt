@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.AtomicFile
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
@@ -115,7 +115,7 @@ object CustomBottomBarIconStore {
     }
 
     private fun iconDirectory(context: Context): File {
-        return File(HchatStorage.storageDir(context), DIRECTORY_NAME)
+        return File(AeonLabStorage.storageDir(context), DIRECTORY_NAME)
     }
 
     private const val DIRECTORY_NAME = "custom_bottom_bar_icons"

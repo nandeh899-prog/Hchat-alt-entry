@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 internal object ConversationGroupSendPicker {
-    private const val TAG = "[Hchat:ConversationGroup]"
+    private const val TAG = "[AeonLab:ConversationGroup]"
     private const val REQUEST_CODE_START = 0x7610
     private const val REQUEST_CODE_END = 0x76ff
     private const val CACHE_MAX_AGE_MS = 24L * 60L * 60L * 1000L

@@ -145,7 +145,7 @@ object TermuxSessions {
         override fun getTerminalCursorStyle(): Int? = null
 
         override fun logError(tag: String?, message: String?) {
-            HLog.e("[Hchat:Term] $tag $message")
+            HLog.e("[AeonLab:Term] $tag $message")
         }
 
         override fun logWarn(tag: String?, message: String?) {}
@@ -153,11 +153,11 @@ object TermuxSessions {
         override fun logDebug(tag: String?, message: String?) {}
         override fun logVerbose(tag: String?, message: String?) {}
         override fun logStackTraceWithMessage(tag: String?, message: String?, e: Exception?) {
-            HLog.e("[Hchat:Term] $tag $message", e)
+            HLog.e("[AeonLab:Term] $tag $message", e)
         }
 
         override fun logStackTrace(tag: String?, e: Exception?) {
-            HLog.e("[Hchat:Term] $tag", e)
+            HLog.e("[AeonLab:Term] $tag", e)
         }
     }
 }

@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.script
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import java.io.File
 import java.io.RandomAccessFile
 import java.util.concurrent.locks.ReentrantLock
@@ -18,7 +18,7 @@ internal object ScriptPluginTransactionCoordinator {
             val depth = lockDepth.get() ?: 0
             if (depth > 0) return@withLock block()
 
-            val lockRoot = HchatStorage.storageDir(context.applicationContext ?: context)
+            val lockRoot = AeonLabStorage.storageDir(context.applicationContext ?: context)
             check(lockRoot.isDirectory) { "插件事务锁目录不可用" }
             val lockFile = File(lockRoot, LOCK_FILE)
             lockDepth.set(1)

@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.hooks.items.messageforward
 import com.aeonlab.toolkit.hooks.api.sns.SnsContextMenuDispatcher
 import com.aeonlab.toolkit.hooks.api.sns.SnsForwardContentResolver
 import com.aeonlab.toolkit.hooks.core.FeatureContext
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 internal class SnsForwardMenuHooker(
     private val context: FeatureContext,
@@ -11,7 +11,7 @@ internal class SnsForwardMenuHooker(
     private val onForward: (android.app.Activity, com.aeonlab.toolkit.hooks.api.sns.SnsForwardSnapshot) -> Unit,
     private val logger: (String, Throwable?) -> Unit
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), MessageForwardSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), MessageForwardSettings.PREFS_NAME)
 
     init {
         SnsContextMenuDispatcher.register(

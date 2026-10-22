@@ -8,7 +8,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.matchers.MethodMatcher
@@ -49,7 +49,7 @@ class FakeVoiceDurationFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            val sp = HchatStorage.preferences(context, FakeVoiceDurationSettings.PREFS_NAME)
+            val sp = AeonLabStorage.preferences(context, FakeVoiceDurationSettings.PREFS_NAME)
             return sp.getBoolean(
                 FakeVoiceDurationSettings.KEY_ENABLE,
                 FakeVoiceDurationSettings.DEFAULT_ENABLE
@@ -59,7 +59,7 @@ class FakeVoiceDurationFeature : BaseFeature() {
         @JvmStatic
         fun durationMillis(context: Context?): Int {
             if (context == null) return FakeVoiceDurationSettings.DEFAULT_DURATION_SECONDS * 1000
-            val sp = HchatStorage.preferences(context, FakeVoiceDurationSettings.PREFS_NAME)
+            val sp = AeonLabStorage.preferences(context, FakeVoiceDurationSettings.PREFS_NAME)
             val seconds = sp.getInt(
                 FakeVoiceDurationSettings.KEY_DURATION_SECONDS,
                 FakeVoiceDurationSettings.DEFAULT_DURATION_SECONDS

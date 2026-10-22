@@ -32,7 +32,7 @@ object TermsGate {
             committed && prefs.getBoolean(KEY_ACCEPTED, false) &&
                 prefs.getInt(KEY_VERSION, 0) == TERMS_VERSION
         } catch (e: Throwable) {
-            HLog.e("[Hchat:TermsGate] 保存协议状态失败: ${e.message}", e)
+            HLog.e("[AeonLab:TermsGate] 保存协议状态失败: ${e.message}", e)
             false
         }
     }

@@ -26,7 +26,7 @@ import com.aeonlab.toolkit.hooks.items.custombottombar.CustomBottomBarIconPicker
 import com.aeonlab.toolkit.hooks.items.custombottombar.CustomBottomBarIconStore
 import com.aeonlab.toolkit.hooks.items.custombottombar.CustomBottomBarSettings
 import com.aeonlab.toolkit.hooks.items.custombottombar.FloatingBottomBarSettings
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.FeatureSettingsProvider
 import java.util.concurrent.atomic.AtomicBoolean
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -41,8 +41,8 @@ internal fun CustomBottomBarMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, CustomBottomBarSettings.PREFS_NAME) }
-    val floatingSp = remember { HchatStorage.preferences(context, FloatingBottomBarSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, CustomBottomBarSettings.PREFS_NAME) }
+    val floatingSp = remember { AeonLabStorage.preferences(context, FloatingBottomBarSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(
             sp.getBoolean(CustomBottomBarSettings.KEY_ENABLE, CustomBottomBarSettings.DEFAULT_ENABLE)
@@ -291,8 +291,8 @@ internal fun FloatingBottomBarMiuixPage(
     provider: FeatureSettingsProvider,
     onBack: () -> Unit
 ) {
-    val sp = remember { HchatStorage.preferences(context, FloatingBottomBarSettings.PREFS_NAME) }
-    val customSp = remember { HchatStorage.preferences(context, CustomBottomBarSettings.PREFS_NAME) }
+    val sp = remember { AeonLabStorage.preferences(context, FloatingBottomBarSettings.PREFS_NAME) }
+    val customSp = remember { AeonLabStorage.preferences(context, CustomBottomBarSettings.PREFS_NAME) }
     var enabled by remember {
         mutableStateOf(
             sp.getBoolean(FloatingBottomBarSettings.KEY_ENABLE, FloatingBottomBarSettings.DEFAULT_ENABLE) &&

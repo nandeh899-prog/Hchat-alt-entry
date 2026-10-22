@@ -36,7 +36,7 @@ import com.aeonlab.toolkit.hooks.items.selectedmessages.SelectedMessagesRuntimeC
 import com.aeonlab.toolkit.hooks.items.selectedmessages.SelectedMessagesSettings
 import com.aeonlab.toolkit.hooks.items.scheduledtask.ScheduledTaskContentItem
 import com.aeonlab.toolkit.hooks.items.scheduledtask.ScheduledTaskSettings
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.io.File
@@ -105,7 +105,7 @@ private class MessageForwardHooker(
     private val logger: (String, Throwable?) -> Unit
 ) {
     private val main = Handler(Looper.getMainLooper())
-    private val prefs = HchatStorage.preferences(context.hostContext(), MessageForwardSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), MessageForwardSettings.PREFS_NAME)
     private val hookedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
     private val bindingsByItem = Collections.synchronizedMap(WeakHashMap<MenuItem, MessageBinding>())
     private val bindingsByGroup = ConcurrentHashMap<Int, MessageBinding>()
@@ -232,7 +232,7 @@ private class MessageForwardHooker(
     private fun handleForwardClick(param: XC_MethodHook.MethodHookParam) {
         if (!singleForwardEnabled()) return
         val item = param.args?.firstNotNullOfOrNull { it as? MenuItem } ?: return
-        if (item.itemId != SingleMessageMenuLocator.HCHAT_FORWARD_MENU_ITEM_ID) return
+        if (item.itemId != SingleMessageMenuLocator.AEONLAB_FORWARD_MENU_ITEM_ID) return
         val binding = consumeBinding(item)
         val activity = currentActivity()
         if (binding == null || activity == null) {
@@ -309,7 +309,7 @@ private class MessageForwardHooker(
         if (KavaReflector.invokeMethod(
                 args.getOrNull(0) ?: return,
                 "findItem",
-                FavoriteMenuLocator.HCHAT_VOICE_FAVORITE_FORWARD_MENU_ITEM_ID
+                FavoriteMenuLocator.AEONLAB_VOICE_FAVORITE_FORWARD_MENU_ITEM_ID
             ) != null
         ) return
         val localId = FavoriteMenuItemResolver.localId(favorite)
@@ -1393,7 +1393,7 @@ private class MessageForwardHooker(
             menu = menu,
             view = view,
             groupId = groupId,
-            itemId = SingleMessageMenuLocator.HCHAT_FORWARD_MENU_ITEM_ID,
+            itemId = SingleMessageMenuLocator.AEONLAB_FORWARD_MENU_ITEM_ID,
             title = MENU_TITLE
         )
     }
@@ -1470,12 +1470,12 @@ private class MessageForwardHooker(
                 val items = KavaReflector.readField(field, menu) as? MutableList<Any?> ?: continue
                 val itemIndex = items.indexOfFirst { candidate ->
                     candidate === item ||
-                        (candidate as? MenuItem)?.itemId == SingleMessageMenuLocator.HCHAT_FORWARD_MENU_ITEM_ID
+                        (candidate as? MenuItem)?.itemId == SingleMessageMenuLocator.AEONLAB_FORWARD_MENU_ITEM_ID
                 }
                 if (itemIndex < 0) continue
                 val moved = items.removeAt(itemIndex)
                 val repeatIndex = items.indexOfFirst { candidate ->
-                    (candidate as? MenuItem)?.itemId == SingleMessageMenuLocator.HCHAT_REPEAT_MENU_ITEM_ID
+                    (candidate as? MenuItem)?.itemId == SingleMessageMenuLocator.AEONLAB_REPEAT_MENU_ITEM_ID
                 }
                 val targetIndex = if (repeatIndex >= 0) repeatIndex + 1 else 0
                 items.add(targetIndex.coerceAtMost(items.size), moved)
@@ -1487,7 +1487,7 @@ private class MessageForwardHooker(
 
     private fun findMenuItem(
         menu: Any,
-        itemId: Int = SingleMessageMenuLocator.HCHAT_FORWARD_MENU_ITEM_ID
+        itemId: Int = SingleMessageMenuLocator.AEONLAB_FORWARD_MENU_ITEM_ID
     ): MenuItem? {
         return KavaReflector.invokeMethod(
             menu,

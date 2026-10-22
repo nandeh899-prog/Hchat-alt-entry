@@ -25,7 +25,7 @@ object OutgoingMessageStatsRepository {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor { task ->
-        Thread(task, "HchatOutgoingStats").apply { isDaemon = true }
+        Thread(task, "AeonLabOutgoingStats").apply { isDaemon = true }
     }
     private val listeners = CopyOnWriteArrayList<() -> Unit>()
     private val refreshLock = Any()

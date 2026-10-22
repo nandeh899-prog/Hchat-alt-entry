@@ -10,7 +10,7 @@ import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.util.Collections
 import java.util.WeakHashMap
@@ -40,7 +40,7 @@ class MomentsContactFilterFeature : BaseFeature() {
     }
 
     override fun onFeatureInstall(context: FeatureContext) {
-        preferences = HchatStorage.preferences(
+        preferences = AeonLabStorage.preferences(
             context.hostContext(),
             MomentsContactFilterSettings.PREFS_NAME
         ).also { it.registerOnSharedPreferenceChangeListener(preferenceListener) }

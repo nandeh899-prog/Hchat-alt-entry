@@ -305,7 +305,7 @@ public class RedPacketSilentHandler {
 
                         if (jsonObj == null || !matchesRequestSendId(jsonObj, sendId)) return;
                         if (param.args[0] instanceof Number && ((Number) param.args[0]).intValue() != 0) {
-                            HLog.e("[Hchat:RedPacket] 收红包响应失败: sendid=" + sendId
+                            HLog.e("[AeonLab:RedPacket] 收红包响应失败: sendid=" + sendId
                                     + " errorCode=" + param.args[0]);
                             return;
                         }
@@ -525,7 +525,7 @@ public class RedPacketSilentHandler {
         for (String key : new String[]{"sendId", "sendid"}) {
             String responseId = RedPacketReflector.readJsonString(jsonObj, key);
             if (!TextUtils.isEmpty(responseId) && !sendId.equals(responseId)) {
-                HLog.e("[Hchat:RedPacket] 红包响应ID不匹配: request=" + sendId + " response=" + responseId);
+                HLog.e("[AeonLab:RedPacket] 红包响应ID不匹配: request=" + sendId + " response=" + responseId);
                 return false;
             }
         }
@@ -564,7 +564,7 @@ public class RedPacketSilentHandler {
         try {
             failureCallback.onFailed(talker, nativeUrl, sendId, reason);
         } catch (Throwable error) {
-            HLog.e("[Hchat:RedPacket] 失败通知异常", error);
+            HLog.e("[AeonLab:RedPacket] 失败通知异常", error);
         }
     }
 

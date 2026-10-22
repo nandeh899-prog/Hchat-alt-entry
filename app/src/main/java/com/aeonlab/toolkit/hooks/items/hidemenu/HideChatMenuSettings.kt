@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.hidemenu
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 object HideChatMenuSettings {
     const val PREFS_NAME = "AeonLab_hide_chat_menu_config"
@@ -10,7 +10,7 @@ object HideChatMenuSettings {
     const val DEFAULT_ENABLE = false
     const val DEFAULT_TITLES = "提醒,搜一搜,收藏"
 
-    fun preferences(context: Context) = HchatStorage.preferences(context, PREFS_NAME)
+    fun preferences(context: Context) = AeonLabStorage.preferences(context, PREFS_NAME)
 
     fun parseTitles(value: String?): Set<String> {
         return value.orEmpty()

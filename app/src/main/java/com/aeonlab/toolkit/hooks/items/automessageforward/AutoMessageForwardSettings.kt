@@ -2,7 +2,7 @@ package com.aeonlab.toolkit.hooks.items.automessageforward
 
 import android.content.Context
 import com.aeonlab.toolkit.hooks.api.message.WeChatMessageObserveApi
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KeywordReplacementRule
 import com.aeonlab.toolkit.utils.KeywordReplacementRules
 import org.json.JSONArray
@@ -57,7 +57,7 @@ object AutoMessageForwardSettings {
         .map { it.trim() }
         .filter { it.isNotEmpty() }
 
-    private fun preferences(context: Context) = HchatStorage.preferences(context, PREFS_NAME)
+    private fun preferences(context: Context) = AeonLabStorage.preferences(context, PREFS_NAME)
 
     private fun parseRules(value: String): List<AutoMessageForwardRule> {
         if (value.isBlank()) return emptyList()

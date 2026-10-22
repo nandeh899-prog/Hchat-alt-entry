@@ -2,13 +2,13 @@ package com.aeonlab.toolkit.hooks.items.customnotify
 
 import android.content.Context
 import android.text.TextUtils
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 
 class CustomNotificationSettings(context: Context?) {
-    private val prefs = context?.let { HchatStorage.preferences(it, PREFS_NAME) }
+    private val prefs = context?.let { AeonLabStorage.preferences(it, PREFS_NAME) }
 
     fun isEnabled(): Boolean = getBoolean(KEY_ENABLE, DEFAULT_ENABLE)
 

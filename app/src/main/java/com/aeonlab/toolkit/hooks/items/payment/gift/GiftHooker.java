@@ -11,7 +11,7 @@ import com.aeonlab.toolkit.dexkit.DexFinder;
 import com.aeonlab.toolkit.utils.HLog;
 
 public class GiftHooker {
-    private static final String TAG = "HchatGift";
+    private static final String TAG = "AeonLabGift";
 
     private final Context hostContext;
     private final ClassLoader classLoader;

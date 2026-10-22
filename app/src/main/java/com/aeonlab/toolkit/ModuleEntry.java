@@ -55,7 +55,7 @@ import com.aeonlab.toolkit.xposed.compat.XC_LoadPackage;
  * 进程过滤：普通功能只在微信主进程加载；:appbrand* 使用独立的轻量运行时。
  */
 public class ModuleEntry {
-    private static final String TAG = "[Hchat:Entry]";
+    private static final String TAG = "[AeonLab:Entry]";
     private static final String WECHAT_PKG = "com.tencent.mm";
     private static final Object DEXKIT_CREATE_LOCK = new Object();
     private static final Map<String, DexKitBridge> DEXKIT_BRIDGES = new ConcurrentHashMap<>();
@@ -92,7 +92,7 @@ public class ModuleEntry {
         // 3. Mars CDN 管理器可能早于模块 API 初始化创建，先按稳定类名捕获实例。
         WeChatImageApi.installMarsCdnManagerHook(
                 lpparam.classLoader,
-                message -> HLog.e("[Hchat:WechatApi] " + message));
+                message -> HLog.e("[AeonLab:WechatApi] " + message));
 
         // 底栏在 LauncherUI 首帧前创建，必须早于完整 DexKit 初始化安装 Hook。
         installCustomBottomBarEarlyHook(lpparam);
@@ -424,7 +424,7 @@ public class ModuleEntry {
                 DexFinder finder = new DexFinder(dexKit, hostClassLoader, hostContext);
                 WeChatImageApi.installMarsCdnManagerHook(
                         finder.marsCdnManagerClass,
-                        message -> HLog.e("[Hchat:WechatApi] " + message));
+                        message -> HLog.e("[AeonLab:WechatApi] " + message));
 
                 // 4. 创建共享 DexKit 服务
                 DexBridgeHolder dexBridgeHolder = new DexBridgeHolder(
@@ -470,7 +470,7 @@ public class ModuleEntry {
         try {
             finder.resolveMsgDescTextApi();
             if (finder.msgDescTextMethods.isEmpty()) {
-                HLog.e("[Hchat:WechatApi] 消息描述防崩兜底未定位到方法");
+                HLog.e("[AeonLab:WechatApi] 消息描述防崩兜底未定位到方法");
                 return;
             }
             for (Method m : finder.msgDescTextMethods) {
@@ -492,7 +492,7 @@ public class ModuleEntry {
                             }
                     ));
                 } catch (Throwable e) {
-                    HLog.e("[Hchat:WechatApi] 消息描述防崩兜底安装失败: " + m, e);
+                    HLog.e("[AeonLab:WechatApi] 消息描述防崩兜底安装失败: " + m, e);
                 }
             }
         } catch (Throwable e) {

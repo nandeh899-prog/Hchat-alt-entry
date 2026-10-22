@@ -5,7 +5,7 @@ import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.json.JSONObject
@@ -26,7 +26,7 @@ class SkipMiniProgramVideoAdsFeature : BaseFeature() {
 
     companion object {
         const val ID = "skip_mini_program_video_ads"
-        private const val TAG = "[Hchat:MiniProgramVideoAds]"
+        private const val TAG = "[AeonLab:MiniProgramVideoAds]"
         private const val BRIDGE_CLASS =
             "com.tencent.mm.appbrand.commonjni.AppBrandJsBridgeBinding"
         private const val EVENT_VIDEO_TIME_UPDATE = "onVideoTimeUpdate"
@@ -35,7 +35,7 @@ class SkipMiniProgramVideoAdsFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            return HchatStorage.preferences(
+            return AeonLabStorage.preferences(
                 context,
                 SkipMiniProgramVideoAdsSettings.PREFS_NAME
             ).getBoolean(

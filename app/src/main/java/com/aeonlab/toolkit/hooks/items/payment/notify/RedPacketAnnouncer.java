@@ -27,7 +27,7 @@ import com.aeonlab.toolkit.utils.HLog;
  * 红包领取成功后的本机 TTS 播报。
  */
 public final class RedPacketAnnouncer {
-    private static final String TAG = "[Hchat:RedPacketAnnouncer]";
+    private static final String TAG = "[AeonLab:RedPacketAnnouncer]";
     private static final String DEFAULT_TEXT = "抢到红包 {amount} 元";
     private static final int MAX_TTS_RETRY = 1;
     private static final long TTS_RETRY_DELAY_MS = 800L;

@@ -3,7 +3,7 @@ package com.aeonlab.toolkit.hooks.items.payment.core;
 import com.aeonlab.toolkit.utils.HLog;
 
 public final class RedPacketLogger {
-    private static final String TAG = "[Hchat:RedPacket]";
+    private static final String TAG = "[AeonLab:RedPacket]";
 
     private RedPacketLogger() {
     }

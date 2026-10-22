@@ -41,6 +41,6 @@ class AutoMessageForwardFeature : BaseFeature() {
 
     companion object {
         const val ID = "auto_message_forward"
-        private const val TAG = "[Hchat:AutoMessageForward]"
+        private const val TAG = "[AeonLab:AutoMessageForward]"
     }
 }

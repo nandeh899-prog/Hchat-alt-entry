@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.text.TextUtils
 import com.aeonlab.toolkit.hooks.items.payment.detect.RedPacketReflector
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 /**
  * 红包统计写入层。
@@ -90,7 +90,7 @@ class RedPacketStats(
     }
 
     private fun preferences(): SharedPreferences {
-        return HchatStorage.preferences(hostContext, RedPacketSettings.PREFS_NAME)
+        return AeonLabStorage.preferences(hostContext, RedPacketSettings.PREFS_NAME)
     }
 
     private fun log(message: String) {

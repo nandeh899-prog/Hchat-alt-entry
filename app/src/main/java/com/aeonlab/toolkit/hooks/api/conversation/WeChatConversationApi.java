@@ -22,7 +22,7 @@ import java.util.Map;
  * 会话查询只读取 rconversation 稳定字段，删除使用微信原生会话存储入口。
  */
 public final class WeChatConversationApi {
-    private static final String HCHAT_INTERNAL_PREFIX = "wxid_hchat_group_";
+    private static final String AEONLAB_INTERNAL_PREFIX = "wxid_hchat_group_";
 
     public interface Logger {
         void log(String message);
@@ -82,7 +82,7 @@ public final class WeChatConversationApi {
                             + "ORDER BY conversationTime DESC LIMIT ?",
                     new String[]{String.valueOf(safeLimit)})) {
                 String username = str(row, "username");
-                if (TextUtils.isEmpty(username) || username.startsWith(HCHAT_INTERNAL_PREFIX)) continue;
+                if (TextUtils.isEmpty(username) || username.startsWith(AEONLAB_INTERNAL_PREFIX)) continue;
                 result.add(username);
             }
         } catch (Throwable e) {
@@ -232,7 +232,7 @@ public final class WeChatConversationApi {
         String value = databaseApi.queryFirstString(
                 "SELECT IFNULL(SUM(unReadCount),0) AS total FROM rconversation "
                         + "WHERE username NOT LIKE ?",
-                new String[]{HCHAT_INTERNAL_PREFIX + "%"},
+                new String[]{AEONLAB_INTERNAL_PREFIX + "%"},
                 "total");
         return parseInt(value);
     }
@@ -310,7 +310,7 @@ public final class WeChatConversationApi {
         if (databaseApi == null) return result;
         try {
             for (Map<String, Object> row : databaseApi.query(sql, args)) {
-                if (str(row, "username").startsWith(HCHAT_INTERNAL_PREFIX)) continue;
+                if (str(row, "username").startsWith(AEONLAB_INTERNAL_PREFIX)) continue;
                 result.add(toConversation(row));
             }
         } catch (Throwable e) {

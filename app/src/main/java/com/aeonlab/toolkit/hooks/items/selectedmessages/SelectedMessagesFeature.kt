@@ -21,7 +21,7 @@ import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.scheduledtask.ScheduledTaskContentItem
 import com.aeonlab.toolkit.hooks.items.scheduledtask.ScheduledTaskRuntimeCoordinator
 import com.aeonlab.toolkit.hooks.items.scheduledtask.ScheduledTaskSettings
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
@@ -74,7 +74,7 @@ private class SelectedMessagesHooker(
     private val logger: (String, Throwable?) -> Unit
 ) {
     private val main = Handler(Looper.getMainLooper())
-    private val settings = HchatStorage.preferences(context.hostContext(), SelectedMessagesSettings.PREFS_NAME)
+    private val settings = AeonLabStorage.preferences(context.hostContext(), SelectedMessagesSettings.PREFS_NAME)
     private val hookedMethods = Collections.newSetFromMap(ConcurrentHashMap<Method, Boolean>())
     private val methodPrefs = DexMethodCache.prefs(context.hostContext(), PREFS_NAME)
     private val moduleSender = SelectedMessageModuleSender(context, logger)

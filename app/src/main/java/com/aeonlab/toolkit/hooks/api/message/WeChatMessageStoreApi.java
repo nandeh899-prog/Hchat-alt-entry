@@ -97,7 +97,7 @@ public final class WeChatMessageStoreApi {
                 (proxy, callbackMethod, args) -> {
                     if (callbackMethod.getDeclaringClass() == Object.class) {
                         String name = callbackMethod.getName();
-                        if ("toString".equals(name)) return "HchatMessageClearCallback";
+                        if ("toString".equals(name)) return "AeonLabMessageClearCallback";
                         if ("hashCode".equals(name)) return System.identityHashCode(proxy);
                         if ("equals".equals(name)) return proxy == (args != null && args.length > 0 ? args[0] : null);
                     }

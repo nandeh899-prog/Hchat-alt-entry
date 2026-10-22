@@ -23,7 +23,7 @@ import com.aeonlab.toolkit.hooks.core.ConversationMenuExtensionTarget
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Method
@@ -90,7 +90,7 @@ private class QuickContactEditRuntime(
     )
     private data class UpdateResult(val success: Boolean, val message: String)
 
-    private val prefs = HchatStorage.preferences(context.hostContext(), QuickContactEditSettings.PREFS_NAME)
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), QuickContactEditSettings.PREFS_NAME)
     private val main = Handler(Looper.getMainLooper())
     private val hookedMethods = ConcurrentHashMap.newKeySet<Method>()
     private val bindings = Collections.synchronizedMap(WeakHashMap<MenuItem, MenuTarget>())

@@ -7,7 +7,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.enums.StringMatchType
@@ -300,7 +300,7 @@ internal class CallMediaLimitHooker(
     }
 
     private fun isEnabled(): Boolean {
-        return HchatStorage.preferences(context.hostContext(), CallMediaLimitSettings.PREFS_NAME)
+        return AeonLabStorage.preferences(context.hostContext(), CallMediaLimitSettings.PREFS_NAME)
             .getBoolean(CallMediaLimitSettings.KEY_ENABLE, CallMediaLimitSettings.DEFAULT_ENABLE)
     }
 

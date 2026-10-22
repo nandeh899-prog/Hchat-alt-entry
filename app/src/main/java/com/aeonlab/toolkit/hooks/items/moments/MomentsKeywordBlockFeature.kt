@@ -19,7 +19,7 @@ import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.matchers.MethodMatcher
@@ -110,7 +110,7 @@ class MomentsKeywordBlockFeature : BaseFeature() {
         @JvmStatic
         fun isEnabled(context: Context?): Boolean {
             if (context == null) return false
-            return HchatStorage.preferences(context, MomentsKeywordBlockSettings.PREFS_NAME)
+            return AeonLabStorage.preferences(context, MomentsKeywordBlockSettings.PREFS_NAME)
                 .getBoolean(MomentsKeywordBlockSettings.KEY_ENABLE, MomentsKeywordBlockSettings.DEFAULT_ENABLE)
         }
     }
@@ -154,11 +154,11 @@ private class MomentsKeywordBlockRuntime(
         val hidden: Boolean
     )
 
-    private val prefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(
         context.hostContext(),
         MomentsKeywordBlockSettings.PREFS_NAME
     )
-    private val contactFilterPrefs = HchatStorage.preferences(
+    private val contactFilterPrefs = AeonLabStorage.preferences(
         context.hostContext(),
         MomentsContactFilterSettings.PREFS_NAME
     )

@@ -1,4 +1,4 @@
-package com.aeonlab.toolkit.hooks.items.hchatextra
+package com.aeonlab.toolkit.hooks.items.aeonlabextra
 
 import com.aeonlab.toolkit.hooks.api.model.WeChatMessageTypes
 import org.xmlpull.v1.XmlPullParser

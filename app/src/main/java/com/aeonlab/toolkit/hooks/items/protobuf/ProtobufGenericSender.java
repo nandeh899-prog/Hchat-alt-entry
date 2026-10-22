@@ -13,7 +13,7 @@ import com.aeonlab.toolkit.utils.HLog;
 import com.aeonlab.toolkit.utils.KavaReflector;
 
 final class ProtobufGenericSender {
-    private static final String TAG = "[Hchat:Protobuf]";
+    private static final String TAG = "[AeonLab:Protobuf]";
     private final DexFinder dexFinder;
     private final ClassLoader classLoader;
 
@@ -66,7 +66,7 @@ final class ProtobufGenericSender {
                 (proxy, method, args) -> {
                     if ("hashCode".equals(method.getName())) return System.identityHashCode(proxy);
                     if ("equals".equals(method.getName())) return proxy == (args != null && args.length > 0 ? args[0] : null);
-                    if ("toString".equals(method.getName())) return "HchatProtobufCallback";
+                    if ("toString".equals(method.getName())) return "AeonLabProtobufCallback";
                     handleCallback(cgiId, uri, method, args, callback);
                     return 0;
                 });

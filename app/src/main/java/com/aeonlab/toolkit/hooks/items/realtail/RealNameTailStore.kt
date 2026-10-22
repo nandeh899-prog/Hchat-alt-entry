@@ -4,13 +4,13 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import com.aeonlab.toolkit.hooks.items.membertitle.MemberTitleStore
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.WeChatIdRules
 import java.util.concurrent.ConcurrentHashMap
 
 class RealNameTailStore(context: Context) {
     private val prefs: SharedPreferences =
-        HchatStorage.preferences(context, RealNameTailSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context, RealNameTailSettings.PREFS_NAME)
     private val memory = ConcurrentHashMap<String, String>()
 
     fun isEnabled(): Boolean =

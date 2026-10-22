@@ -25,15 +25,15 @@ import com.aeonlab.toolkit.xposed.compat.XposedBridge;
  * 负责从模块 APK 中提取并加载 Native so，避免模块入口混入底层加载细节。
  */
 public class NativeLibraryLoader {
-    private static final String TAG = "[Hchat:NativeLoader]";
+    private static final String TAG = "[AeonLab:NativeLoader]";
     private static final Object EXTRACTION_LOCK = new Object();
     private static final NativeLoadCache LOADED_LIBRARIES = new NativeLoadCache();
     private static final String DEXKIT_SO = "libdexkit.so";
     private static final String DEXKIT_LIB = "dexkit";
     private static final String SILK_CODEC_SO = "libsilk_codec.so";
     private static final String SILK_CODEC_LIB = "silk_codec";
-    private static final String CRASH_GUARD_SO = "libhchat_crash.so";
-    private static final String CRASH_GUARD_LIB = "hchat_crash";
+    private static final String CRASH_GUARD_SO = "libaeonlab_crash.so";
+    private static final String CRASH_GUARD_LIB = "aeonlab_crash";
     private static final String TERMUX_SO = "libtermux.so";
     private static final String TERMUX_LIB_PATH_PROPERTY = "hchat.termux.lib.path";
 

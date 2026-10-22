@@ -5,7 +5,7 @@ import android.system.Os
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginRuntime
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginSettings
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginTransactionCoordinator
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
@@ -28,7 +28,7 @@ object ScriptPluginAgentWriter {
                 if (!target.isDirectory && !target.mkdirs()) check(target.isDirectory) { "创建插件目录失败" }
                 atomicWrite(File(target, "main.java"), normalized.mainJava)
                 atomicWrite(File(target, "info.prop"), normalized.infoProp)
-                HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME).edit()
+                AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME).edit()
                     .putBoolean(ScriptPluginSettings.pluginEnableKey(normalized.pluginId), false)
                     .commit()
                 target
@@ -53,7 +53,7 @@ object ScriptPluginAgentWriter {
 
                 ScriptPluginRuntime.setPluginEnabled(context, id, false).getOrThrow()
                 deleteTree(target)
-                HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME).edit()
+                AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME).edit()
                     .remove(ScriptPluginSettings.pluginEnableKey(id))
                     .commit()
                 Unit

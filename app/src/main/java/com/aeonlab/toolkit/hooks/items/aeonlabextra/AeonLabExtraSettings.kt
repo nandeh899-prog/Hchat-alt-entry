@@ -1,9 +1,9 @@
-package com.aeonlab.toolkit.hooks.items.hchatextra
+package com.aeonlab.toolkit.hooks.items.aeonlabextra
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
-object HchatExtraSettings {
+object AeonLabExtraSettings {
     const val PREFS_NAME = "AeonLab_extra_config"
     private const val LEGACY_PREFS_NAME = "AeonLab_wekit_port_config"
 
@@ -50,10 +50,10 @@ object HchatExtraSettings {
     @JvmStatic
     @Synchronized
     fun migrateLegacyPreferences(context: Context) {
-        val legacy = HchatStorage.preferences(context, LEGACY_PREFS_NAME)
+        val legacy = AeonLabStorage.preferences(context, LEGACY_PREFS_NAME)
         val legacyValues = legacy.all
         if (legacyValues.isEmpty()) return
-        val current = HchatStorage.preferences(context, PREFS_NAME)
+        val current = AeonLabStorage.preferences(context, PREFS_NAME)
         if (current.all.isEmpty()) {
             val editor = current.edit()
             legacyValues.forEach { (key, value) ->

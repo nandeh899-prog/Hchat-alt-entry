@@ -5,7 +5,7 @@ import android.system.Os
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginRuntime
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginSettings
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginTransactionCoordinator
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import org.json.JSONArray
 import org.json.JSONObject
@@ -154,7 +154,7 @@ object ScriptPluginAgentWorkspaceTools {
             "plugin_id" to stringSchema("插件目录名")
         ), listOf("plugin_id"))
         return JSONObject().apply {
-            put("source", "Hchat 插件工作区工具")
+            put("source", "AeonLab 插件工作区工具")
             put("instructions", "所有路径均相对单个插件目录。权限异常或写入失败时先调用 check_access，必要时设置 repair=true；修改代码先 list/read/search。局部小改优先用 replace_text（给原文片段+新文本，不依赖行号）；多文件/新增/移动/整文件用 Codex 风格 apply_patch。完成前必须依次调用 workspace_status 和 show_diff。停止条件：当 workspace_status 返回 canApply=true 且 show_diff 结果符合你的意图时，立即提交，不要反复检查；若校验错误连续两次修改仍未改善，停止并说明原因。")
             put("tools", tools)
         }.toString()
@@ -463,18 +463,18 @@ object ScriptPluginAgentWorkspaceTools {
                     }
                 }
                 restoreFailure?.let { restoreError ->
-                    HLog.e("[Hchat:ScriptAgent] 恢复插件目录失败: ${change.pluginId}", restoreError)
+                    HLog.e("[AeonLab:ScriptAgent] 恢复插件目录失败: ${change.pluginId}", restoreError)
                 }
                 if (restored && activeBackup != null) {
                     runCatching {
                         ScriptPluginRuntime.refreshPluginObserver(context, change.pluginId)
                     }.onFailure { observerError ->
-                        HLog.e("[Hchat:ScriptAgent] 恢复插件目录观察失败: ${change.pluginId}", observerError)
+                        HLog.e("[AeonLab:ScriptAgent] 恢复插件目录观察失败: ${change.pluginId}", observerError)
                     }
                     runCatching {
                         deleteBackupArtifacts(activeBackup)
                     }.onFailure { cleanupError ->
-                        HLog.e("[Hchat:ScriptAgent] 清理已恢复的插件备份失败: ${activeBackup.path}", cleanupError)
+                        HLog.e("[AeonLab:ScriptAgent] 清理已恢复的插件备份失败: ${activeBackup.path}", cleanupError)
                     }
                 }
                 val restoreLoadError = if (restored && wasEnabled) {
@@ -497,20 +497,20 @@ object ScriptPluginAgentWorkspaceTools {
                 throw error
             }
             runCatching { deleteTreeIfExists(prepared) }.onFailure { error ->
-                HLog.e("[Hchat:ScriptAgent] 清理插件提交准备目录失败: ${prepared.path}", error)
+                HLog.e("[AeonLab:ScriptAgent] 清理插件提交准备目录失败: ${prepared.path}", error)
             }
             runCatching { deleteBackupArtifacts(movedBackup) }.onFailure { error ->
-                HLog.e("[Hchat:ScriptAgent] 清理插件事务备份失败: ${movedBackup.path}", error)
+                HLog.e("[AeonLab:ScriptAgent] 清理插件事务备份失败: ${movedBackup.path}", error)
             }
             runCatching { deleteBackupArtifacts(copiedBackup) }.onFailure { error ->
-                HLog.e("[Hchat:ScriptAgent] 清理插件事务备份失败: ${copiedBackup.path}", error)
+                HLog.e("[AeonLab:ScriptAgent] 清理插件事务备份失败: ${copiedBackup.path}", error)
             }
             runCatching {
                 ScriptPluginRuntime.refreshPluginObserver(context, change.pluginId)
             }.onFailure { error ->
-                HLog.e("[Hchat:ScriptAgent] 刷新插件目录观察失败: ${change.pluginId}", error)
+                HLog.e("[AeonLab:ScriptAgent] 刷新插件目录观察失败: ${change.pluginId}", error)
             }
-            HchatStorage.preferences(context, ScriptPluginSettings.PREFS_NAME).edit().apply {
+            AeonLabStorage.preferences(context, ScriptPluginSettings.PREFS_NAME).edit().apply {
                 if (change.deletePlugin) {
                     remove(ScriptPluginSettings.pluginEnableKey(change.pluginId))
                 } else {
@@ -2373,7 +2373,7 @@ object ScriptPluginAgentWorkspaceTools {
                     }
                     if (corruptBackups.isNotEmpty()) {
                         HLog.e(
-                            "[Hchat:ScriptAgent] 插件事务备份校验失败，已保留现场: " +
+                            "[AeonLab:ScriptAgent] 插件事务备份校验失败，已保留现场: " +
                                 corruptBackups.joinToString { it.path }
                         )
                         return@pluginRecovery
@@ -2393,7 +2393,7 @@ object ScriptPluginAgentWorkspaceTools {
                         val recovered = runCatching {
                             replaceDirectory(recoveryBackup, target, "恢复插件事务备份失败")
                         }.onFailure { error ->
-                            HLog.e("[Hchat:ScriptAgent] 恢复插件事务失败: ${recoveryBackup.path}", error)
+                            HLog.e("[AeonLab:ScriptAgent] 恢复插件事务失败: ${recoveryBackup.path}", error)
                         }.isSuccess
                         if (!recovered) return@pluginRecovery
                     }
@@ -2401,7 +2401,7 @@ object ScriptPluginAgentWorkspaceTools {
                         runCatching {
                             if (type == "new") deleteTreeIfExists(artifact) else deleteBackupArtifacts(artifact)
                         }.onFailure { error ->
-                            HLog.e("[Hchat:ScriptAgent] 清理插件事务残留失败: ${artifact.path}", error)
+                            HLog.e("[AeonLab:ScriptAgent] 清理插件事务残留失败: ${artifact.path}", error)
                         }
                     }
                 }

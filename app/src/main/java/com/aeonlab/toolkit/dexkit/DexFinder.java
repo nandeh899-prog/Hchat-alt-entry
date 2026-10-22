@@ -6,7 +6,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.util.Pair;
 import com.aeonlab.toolkit.hooks.api.runtime.WeChatVersionApi;
-import com.aeonlab.toolkit.preferences.HchatStorage;
+import com.aeonlab.toolkit.preferences.AeonLabStorage;
 import com.aeonlab.toolkit.utils.KavaReflector;
 
 import org.luckypray.dexkit.DexKitBridge;
@@ -37,7 +37,7 @@ import com.aeonlab.toolkit.xposed.compat.XposedBridge;
  */
 public class DexFinder {
 
-    private static final String TAG = "[Hchat:DexFinder]";
+    private static final String TAG = "[AeonLab:DexFinder]";
     private static final String CACHE_PREFS = "AeonLab_dex_cache";
     private static final String CACHE_COMPLETE = "cache.complete";
     private static final String CACHE_KEY = "cache.key";
@@ -273,7 +273,7 @@ public class DexFinder {
         this.dexKit = dexKit;
         this.classLoader = classLoader;
         this.cachePrefs = hostContext != null
-                ? HchatStorage.preferences(hostContext, CACHE_PREFS)
+                ? AeonLabStorage.preferences(hostContext, CACHE_PREFS)
                 : null;
         this.runtimeCacheKey = buildRuntimeCacheKey(hostContext, classLoader);
     }

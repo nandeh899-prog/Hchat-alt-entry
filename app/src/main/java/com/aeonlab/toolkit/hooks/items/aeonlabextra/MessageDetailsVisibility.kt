@@ -1,4 +1,4 @@
-package com.aeonlab.toolkit.hooks.items.hchatextra
+package com.aeonlab.toolkit.hooks.items.aeonlabextra
 
 /** Only controls Hchat's extra label; native message rows and time separators remain intact. */
 internal object MessageDetailsVisibility {

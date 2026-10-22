@@ -32,7 +32,7 @@ internal object CompatRuntime {
     }
 
     fun hook(executable: Executable, callback: XC_MethodHook): XC_MethodHook.Unhook {
-        val current = bridge ?: throw IllegalStateException("Hchat 兼容层运行时未初始化")
+        val current = bridge ?: throw IllegalStateException("AeonLab 兼容层运行时未初始化")
         return current.hook(executable, callback)
     }
 

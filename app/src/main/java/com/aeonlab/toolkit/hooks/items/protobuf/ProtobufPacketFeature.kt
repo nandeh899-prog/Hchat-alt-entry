@@ -4,7 +4,7 @@ import com.aeonlab.toolkit.event.Events
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 class ProtobufPacketFeature : BaseFeature() {
     override fun featureId(): String = ID
@@ -25,7 +25,7 @@ class ProtobufPacketFeature : BaseFeature() {
     private fun scheduleInstall(context: FeatureContext) {
         DexInstallScheduler.schedule(ID, name(), stage = DexInstallScheduler.Stage.WARMUP) {
             try {
-                val prefs = HchatStorage.preferences(context.hostContext(), ProtobufPacketSettings.PREFS_NAME)
+                val prefs = AeonLabStorage.preferences(context.hostContext(), ProtobufPacketSettings.PREFS_NAME)
                 val hook = ProtobufPacketHook(
                     context.hostClassLoader(),
                     context.dexFinder(),

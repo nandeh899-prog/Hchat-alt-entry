@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.customfriendavatar
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 
 object CustomFriendAvatarSettings {
     const val PREFS_NAME = "AeonLab_custom_friend_avatar_config"
@@ -56,7 +56,7 @@ object CustomFriendAvatarSettings {
         return enabled(context) && preferences(context).getBoolean(KEY_CONVERSATION_MENU, DEFAULT_MENU)
     }
 
-    internal fun preferences(context: Context) = HchatStorage.preferences(context, PREFS_NAME)
+    internal fun preferences(context: Context) = AeonLabStorage.preferences(context, PREFS_NAME)
 }
 
 enum class AvatarSurface {

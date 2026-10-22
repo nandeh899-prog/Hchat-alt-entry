@@ -16,7 +16,7 @@ import com.aeonlab.toolkit.utils.HLog
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal object ConversationGroupMenu {
-    private const val TAG = "[Hchat:ConversationGroup]"
+    private const val TAG = "[AeonLab:ConversationGroup]"
     private val main = Handler(Looper.getMainLooper())
 
     fun show(activity: Activity, groupId: String, onChanged: () -> Unit) {
@@ -26,7 +26,7 @@ internal object ConversationGroupMenu {
             title = group.name,
             summary = "",
             choices = listOf(
-                "Hchat模块" to "打开 Hchat 设置",
+                "AeonLab模块" to "打开 AeonLab 设置",
                 "所有消息标为已读" to "标记当前分组及子分组内全部会话",
                 "批量删除消息" to "选择会话并清空聊天记录",
                 "批量屏蔽消息" to "选择会话并屏蔽后续收到的消息",

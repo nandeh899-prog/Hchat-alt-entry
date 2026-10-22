@@ -7,7 +7,7 @@ import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.hooks.core.BaseFeature
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Method
@@ -42,7 +42,7 @@ class AutoOriginalImageFeature : BaseFeature() {
 private class AutoOriginalImageRuntime(
     private val context: FeatureContext
 ) {
-    private val prefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(
         context.hostContext(),
         AutoOriginalImageSettings.PREFS_NAME
     )
@@ -101,7 +101,7 @@ private class AutoOriginalImageRuntime(
     }
 
     companion object {
-        private const val TAG = "[Hchat:AutoOriginalImage]"
+        private const val TAG = "[AeonLab:AutoOriginalImage]"
         private const val CHAT_SOURCE_TYPE = 3
         private val TARGET_CLASSES = listOf(
             "com.tencent.mm.plugin.gallery.ui.AlbumPreviewUI",

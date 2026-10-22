@@ -2,7 +2,7 @@ package com.aeonlab.toolkit.hooks.items.floatingshortcut
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -71,7 +71,7 @@ object FloatingShortcutSettings {
     const val DEFAULT_LABEL_COLOR = ""
 
     fun loadItems(context: Context): List<FloatingShortcutItem> {
-        val preferences = HchatStorage.preferences(context, PREFS_NAME)
+        val preferences = AeonLabStorage.preferences(context, PREFS_NAME)
         migrateLegacyAgentSettings(context, preferences)
         val value = preferences.getString(KEY_ITEMS, null)
         if (value.isNullOrBlank()) {
@@ -123,7 +123,7 @@ object FloatingShortcutSettings {
 
     private fun migrateLegacyAgentSettings(context: Context, preferences: SharedPreferences) {
         if (preferences.getBoolean(KEY_LEGACY_AGENT_SETTINGS_MIGRATED, false)) return
-        val legacy = HchatStorage.preferences(context, LEGACY_AGENT_PREFS_NAME)
+        val legacy = AeonLabStorage.preferences(context, LEGACY_AGENT_PREFS_NAME)
         val editor = preferences.edit()
         val legacyEnabled = runCatching {
             legacy.getBoolean(LEGACY_KEY_ENABLE, false)
@@ -152,7 +152,7 @@ object FloatingShortcutSettings {
     }
 
     fun saveItems(context: Context, items: List<FloatingShortcutItem>) {
-        HchatStorage.preferences(context, PREFS_NAME).edit()
+        AeonLabStorage.preferences(context, PREFS_NAME).edit()
             .putString(KEY_ITEMS, encodeItems(items).toString())
             .putBoolean(KEY_AGENT_ITEM_MIGRATED, true)
             .apply()

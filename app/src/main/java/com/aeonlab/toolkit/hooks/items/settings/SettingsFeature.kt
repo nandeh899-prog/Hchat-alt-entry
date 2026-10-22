@@ -56,7 +56,7 @@ class SettingsFeature : Feature {
             )
             injector.hookSettings()
         } catch (e: Throwable) {
-            HLog.e("[Hchat:Settings] 设置入口安装失败", e)
+            HLog.e("[AeonLab:Settings] 设置入口安装失败", e)
         }
     }
 

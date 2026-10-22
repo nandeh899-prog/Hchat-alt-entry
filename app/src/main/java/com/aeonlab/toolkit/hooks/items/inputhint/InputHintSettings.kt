@@ -2,7 +2,7 @@ package com.aeonlab.toolkit.hooks.items.inputhint
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,7 +46,7 @@ object InputHintSettings {
     const val DEFAULT_TEMPLATE = "今日已发\${totalMsg}条"
 
     fun preferences(context: Context): SharedPreferences =
-        HchatStorage.preferences(context, PREFS_NAME)
+        AeonLabStorage.preferences(context, PREFS_NAME)
 
     fun template(preferences: SharedPreferences): String = normalizeTemplate(
         preferences.getString(KEY_TEMPLATE, DEFAULT_TEMPLATE)

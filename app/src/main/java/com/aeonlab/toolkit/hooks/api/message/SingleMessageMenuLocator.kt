@@ -11,8 +11,8 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
 object SingleMessageMenuLocator {
-    const val HCHAT_REPEAT_MENU_ITEM_ID = 0x48435250
-    const val HCHAT_FORWARD_MENU_ITEM_ID = 0x48434657
+    const val AEONLAB_REPEAT_MENU_ITEM_ID = 0x48435250
+    const val AEONLAB_FORWARD_MENU_ITEM_ID = 0x48434657
 
     private const val CHAT_VIEWITEMS_PACKAGE = "com.tencent.mm.ui.chatting.viewitems."
     private const val PREFS_NAME = "AeonLab_single_message_menu_method_cache"

@@ -4,12 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import com.aeonlab.toolkit.hooks.api.contact.WeChatChatroomApi
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.WeChatIdRules
 
 class MemberTitleStore(context: Context) {
     private val prefs: SharedPreferences =
-        HchatStorage.preferences(context, MemberTitleSettings.PREFS_NAME)
+        AeonLabStorage.preferences(context, MemberTitleSettings.PREFS_NAME)
 
     fun isEnabled(): Boolean =
         prefs.getBoolean(MemberTitleSettings.KEY_ENABLE, MemberTitleSettings.DEFAULT_ENABLE)

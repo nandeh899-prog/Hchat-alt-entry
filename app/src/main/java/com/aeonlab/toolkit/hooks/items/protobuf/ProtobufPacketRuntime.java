@@ -63,7 +63,7 @@ public final class ProtobufPacketRuntime {
             try {
                 listener.onPacket(packet);
             } catch (Throwable e) {
-                HLog.e("[Hchat:Protobuf] 数据包监听器处理失败", e);
+                HLog.e("[AeonLab:Protobuf] 数据包监听器处理失败", e);
             }
         }
     }

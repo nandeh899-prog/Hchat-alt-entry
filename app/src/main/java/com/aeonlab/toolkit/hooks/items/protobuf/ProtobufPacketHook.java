@@ -28,7 +28,7 @@ import com.aeonlab.toolkit.utils.HLog;
 import com.aeonlab.toolkit.utils.KavaReflector;
 
 public class ProtobufPacketHook {
-    private static final String TAG = "[Hchat:Protobuf]";
+    private static final String TAG = "[AeonLab:Protobuf]";
     private static final long SNAPSHOT_TTL_MS = 10 * 60 * 1000L;
 
     private final ClassLoader classLoader;

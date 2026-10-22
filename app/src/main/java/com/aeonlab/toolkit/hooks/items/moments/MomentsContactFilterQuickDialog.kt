@@ -4,18 +4,18 @@ import android.app.Activity
 import android.widget.Toast
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.model.WeChatContact
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.utils.HLog
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal object MomentsContactFilterQuickDialog {
-    private const val TAG = "[Hchat:${MomentsContactFilterFeature.ID}]"
+    private const val TAG = "[AeonLab:${MomentsContactFilterFeature.ID}]"
 
     fun show(activity: Activity) {
         if (activity.isFinishing || activity.isDestroyed) return
-        val prefs = HchatStorage.preferences(activity, MomentsContactFilterSettings.PREFS_NAME)
+        val prefs = AeonLabStorage.preferences(activity, MomentsContactFilterSettings.PREFS_NAME)
         val enabled = prefs.getBoolean(
             MomentsContactFilterSettings.KEY_ENABLE,
             MomentsContactFilterSettings.DEFAULT_ENABLE
@@ -117,7 +117,7 @@ internal object MomentsContactFilterQuickDialog {
                             allowEmpty = true,
                             showClearSelectionAction = true,
                             onConfirm = { selected ->
-                                HchatStorage.preferences(
+                                AeonLabStorage.preferences(
                                     activity,
                                     MomentsContactFilterSettings.PREFS_NAME
                                 ).edit()
@@ -136,7 +136,7 @@ internal object MomentsContactFilterQuickDialog {
                     }
                 }
             }
-        }, "HchatMomentsFilterPicker").start()
+        }, "AeonLabMomentsFilterPicker").start()
     }
 
     private fun loadContacts(initialTargets: Set<String>): List<VoiceForwardMiuixDialog.ContactItem> {

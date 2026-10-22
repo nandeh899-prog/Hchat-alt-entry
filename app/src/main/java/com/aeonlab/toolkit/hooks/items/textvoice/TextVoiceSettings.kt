@@ -1,7 +1,7 @@
 package com.aeonlab.toolkit.hooks.items.textvoice
 
 import android.content.Context
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import kotlin.math.roundToInt
 
 object TextVoiceSettings {
@@ -98,7 +98,7 @@ object TextVoiceSettings {
         voice(64, "wuu-CN-XiaotongNeural", "上海话")
     )
 
-    fun preferences(context: Context) = HchatStorage.preferences(context, PREFS_NAME)
+    fun preferences(context: Context) = AeonLabStorage.preferences(context, PREFS_NAME)
 
     fun selectedVoiceKey(context: Context): String {
         val value = preferences(context).getString(KEY_VOICE, DEFAULT_VOICE).orEmpty()

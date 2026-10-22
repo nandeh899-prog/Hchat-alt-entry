@@ -19,7 +19,7 @@ import com.aeonlab.toolkit.hooks.core.DexInstallScheduler
 import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.hooks.items.messagetextcolor.MessageTextColorSettings
-import com.aeonlab.toolkit.preferences.HchatStorage
+import com.aeonlab.toolkit.preferences.AeonLabStorage
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import org.luckypray.dexkit.query.FindMethod
@@ -57,8 +57,8 @@ class MessageBubbleFeature : BaseFeature() {
 private class MessageBubbleRenderer(
     private val context: FeatureContext
 ) {
-    private val prefs = HchatStorage.preferences(context.hostContext(), MessageBubbleSettings.PREFS_NAME)
-    private val textColorPrefs = HchatStorage.preferences(
+    private val prefs = AeonLabStorage.preferences(context.hostContext(), MessageBubbleSettings.PREFS_NAME)
+    private val textColorPrefs = AeonLabStorage.preferences(
         context.hostContext(),
         MessageTextColorSettings.PREFS_NAME
     )
@@ -1000,7 +1000,7 @@ private class MessageBubbleRenderer(
     )
 
     private companion object {
-        const val TAG = "[Hchat:MessageBubble]"
+        const val TAG = "[AeonLab:MessageBubble]"
         const val HOST_PACKAGE = "com.tencent.mm"
         const val CHATTING_VIEW_ITEMS_PACKAGE = "com.tencent.mm.ui.chatting.viewitems."
         const val FOLD_SYSTEM_VIEW_CLASS =

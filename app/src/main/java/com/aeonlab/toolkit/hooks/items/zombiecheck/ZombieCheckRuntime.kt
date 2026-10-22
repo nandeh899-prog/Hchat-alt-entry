@@ -23,10 +23,10 @@ class ZombieCheckRuntime(
     private val settings = ZombieCheckSettings(context)
     private val lock = Any()
     private val worker = ScheduledThreadPoolExecutor(1) { runnable ->
-        Thread(runnable, "HchatZombieCheck").apply { isDaemon = true }
+        Thread(runnable, "AeonLabZombieCheck").apply { isDaemon = true }
     }.apply { removeOnCancelPolicy = true }
     private val actionWorker = ScheduledThreadPoolExecutor(1) { runnable ->
-        Thread(runnable, "HchatZombieAction").apply { isDaemon = true }
+        Thread(runnable, "AeonLabZombieAction").apply { isDaemon = true }
     }.apply { removeOnCancelPolicy = true }
     private val queue = ArrayDeque<QueueItem>()
     private val results = ArrayList<ZombieCheckResult>()
