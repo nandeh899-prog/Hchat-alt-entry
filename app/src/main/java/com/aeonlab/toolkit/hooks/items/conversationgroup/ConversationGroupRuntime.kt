@@ -723,8 +723,8 @@ object ConversationGroupRuntime {
             suspendingParentExtra = true
             runCatching { activity.intent?.removeExtra(CONTACT_USER_EXTRA) }
             main.postDelayed({ suspendingParentExtra = false }, 5000)
-            // 微信在折叠页销毁后“稍晚”才会把 LauncherUI 切到父会话聊天视图（实测是内嵌视图，
-            // 不是独立 ChattingUI），单次延迟检测会错过；这里短轮询并逐步升级退出方式。
+            // 微信在折叠页销毁后“稍晚”才把 LauncherUI 切到父会话聊天视图（实测是内嵌视图，
+            // 不是独立 ChattingUI），单次延迟检测会错过；这里短轮询，每次命中都下发一次返回键。
             var sweepTries = 0
             var backAttempts = 0
             val sweepAction = object : Runnable {
@@ -735,40 +735,42 @@ object ConversationGroupRuntime {
                     }.getOrNull()
                     val name = resumed?.javaClass?.name ?: "null"
                     if (resumed == null || !name.endsWith("ui.LauncherUI")) {
-                        HLog.e(
-                            "$TAG sweep#$sweepTries 跳过: activity=$name",
-                            RuntimeException("sweepProbe")
-                        )
+                        if (sweepTries % 3 == 1) {
+                            HLog.e(
+                                "$TAG sweep#$sweepTries 跳过: activity=$name",
+                                RuntimeException("sweepProbe")
+                            )
+                        }
                     } else {
                         val hit = hasChattingView(resumed.window?.decorView)
-                        HLog.e(
-                            "$TAG sweep#$sweepTries activity=$name chattingView=$hit",
-                            RuntimeException("sweepProbe")
-                        )
-                        if (hit) {
-                            backAttempts++
+                        if (hit || sweepTries % 3 == 1) {
                             HLog.e(
-                                "$TAG 命中虚拟分组空白聊天视图，第 $backAttempts 次尝试退出",
-                                RuntimeException("sweepVirtualGroupChat")
+                                "$TAG sweep#$sweepTries activity=$name chattingView=$hit",
+                                RuntimeException("sweepProbe")
                             )
-                            if (backAttempts > 2) {
+                        }
+                        if (hit) {
+                            if (backAttempts >= 3) {
                                 HLog.e(
-                                    "$TAG 两次退出尝试无效，放弃",
+                                    "$TAG 返回键未能退出虚拟会话聊天视图，放弃",
                                     RuntimeException("sweepGiveUp")
                                 )
                                 return
                             }
+                            backAttempts++
+                            HLog.e(
+                                "$TAG 命中虚拟分组空白聊天视图，第 $backAttempts 次下发返回键",
+                                RuntimeException("sweepVirtualGroupChat")
+                            )
+                            // 微信这个内嵌聊天视图是在按键事件上处理返回的；直接调 Activity.onBackPressed
+                            // 会被默认实现当成“退出应用”（实测微信直接被退到后台），所以下发真实返回键。
                             runCatching {
-                                if (backAttempts == 1) {
-                                    resumed.onBackPressed()
-                                } else {
-                                    resumed.dispatchKeyEvent(
-                                        KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
-                                    )
-                                    resumed.dispatchKeyEvent(
-                                        KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK)
-                                    )
-                                }
+                                resumed.dispatchKeyEvent(
+                                    KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
+                                )
+                                resumed.dispatchKeyEvent(
+                                    KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK)
+                                )
                             }.onFailure {
                                 HLog.e("$TAG 退出虚拟会话聊天视图失败: ${it.message}", it)
                             }
@@ -780,7 +782,7 @@ object ConversationGroupRuntime {
                             return
                         }
                     }
-                    if (sweepTries < 20) main.postDelayed(this, 300)
+                    if (sweepTries < 33) main.postDelayed(this, 300)
                 }
             }
             main.postDelayed(sweepAction, 300)
