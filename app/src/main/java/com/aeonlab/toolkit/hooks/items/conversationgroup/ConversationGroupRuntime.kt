@@ -823,6 +823,40 @@ object ConversationGroupRuntime {
         if (!virtualChatBlocked) {
             HLog.e("$TAG 虚拟分组会话聊天页拦截 Hook 安装失败")
         }
+        // 微信退出“折叠聊天”页时会通过通用入口“回到父会话”。我们的父会话是虚拟分组 talker，
+        // 微信因此会进入一个空白聊天页（实测是 LauncherUI 内嵌的聊天视图，不是独立 ChattingUI），
+        // 于是用户要按两次返回。这里在“打开聊天”的通用入口上把虚拟 talker 拦掉。
+        val virtualChatStartBlocked = runCatching {
+            val dexFinder = context.dexFinder()
+            dexFinder.resolveChatPageApi()
+            val method = dexFinder.chatPageStartMethod
+            if (method == null) {
+                false
+            } else {
+                KavaReflector.accessible(method)
+                hook(method, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val talker = param.args?.firstOrNull { it is String } as? String
+                            ?: return
+                        if (!isVirtualTalker(talker)) return
+                        HLog.e(
+                            "$TAG 拦截打开虚拟分组会话聊天的请求: talker=$talker",
+                            RuntimeException("blockVirtualGroupChat")
+                        )
+                        when (method.returnType) {
+                            Void.TYPE -> param.result = null
+                            Integer.TYPE -> param.result = 0
+                            java.lang.Long.TYPE -> param.result = 0L
+                            java.lang.Boolean.TYPE -> param.result = false
+                            else -> param.result = null
+                        }
+                    }
+                })
+            }
+        }.getOrDefault(false)
+        if (!virtualChatStartBlocked) {
+            HLog.e("$TAG 虚拟分组会话聊天入口拦截 Hook 安装失败")
+        }
 
         val lifecycleContextInstalled = listOf("onPause", "onResume").all { name ->
             val method = KavaReflector.findDeclaredMethod(fragmentClass, name) ?: return@all false
