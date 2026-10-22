@@ -112,6 +112,14 @@ object ConversationGroupRuntime {
     private val syncScheduled = AtomicBoolean(false)
     private val syncRequested = AtomicBoolean(false)
     private val hookedMethods = ConcurrentHashMap.newKeySet<Method>()
+
+    /**
+     * 分组页正在退出。微信借用的“折叠聊天”页在销毁时会“回到父会话”，而这个父会话是我们
+     * 塞进去的虚拟分组 talker，于是 LauncherUI 会切到一个空白聊天视图（对方还不是你的朋友），
+     * 用户要按两次返回。退出期间阻断 Contact_User 的读取并清掉 intent，微信就拿不到父会话。
+     */
+    @Volatile
+    private var suspendingParentExtra = false
     private val menuBindings = Collections.synchronizedMap(
         WeakHashMap<MenuItem, ConversationMenuTarget>()
     )
@@ -709,6 +717,12 @@ object ConversationGroupRuntime {
     }
 
     private fun installNativeGroupPageHooks(context: FeatureContext): Boolean {
+        // 分组页退出前先切断“父会话”：清 intent 并让 getStringExtra 在退出窗口内返回 null。
+        fun beginGroupPageExit(activity: Activity) {
+            suspendingParentExtra = true
+            runCatching { activity.intent?.removeExtra(CONTACT_USER_EXTRA) }
+            main.postDelayed({ suspendingParentExtra = false }, 5000)
+        }
         val fragmentClass = KavaReflector.loadClass(NATIVE_GROUP_FRAGMENT, context.hostClassLoader())
             ?: return false
         val lifecycle = KavaReflector.findDeclaredMethod(
@@ -737,6 +751,11 @@ object ConversationGroupRuntime {
                     ?: return
                 val talker = activity.intent?.getStringExtra(CONTACT_USER_EXTRA)
                     ?.takeIf(::isVirtualTalker) ?: return
+                if (suspendingParentExtra) {
+                    // 页面正在关闭：此时微信是在“回到父会话”，必须让它拿不到 talker。
+                    param.result = null
+                    return
+                }
                 param.result = talker
             }
         })
@@ -765,6 +784,7 @@ object ConversationGroupRuntime {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val activity = param.thisObject as? Activity ?: return
                         if (!isVirtualGroupPage(activity)) return
+                        beginGroupPageExit(activity)
                         param.result = null
                         runCatching { activity.finish() }.onFailure {
                             HLog.e("$TAG 关闭微信原生分组页面失败: ${it.message}", it)
@@ -786,6 +806,7 @@ object ConversationGroupRuntime {
                         val activity = param.thisObject as? Activity ?: return
                         if (!isVirtualGroupPage(activity)) return
                         if (event.action == KeyEvent.ACTION_UP) {
+                            beginGroupPageExit(activity)
                             runCatching { activity.finish() }.onFailure {
                                 HLog.e("$TAG 关闭微信原生分组页面失败: ${it.message}", it)
                             }
