@@ -670,7 +670,7 @@ object ScriptPluginRuntime {
         val sourceFile = resolvePluginFile(pluginDir, path)
         require(sourceFile.isFile) { "Dex文件不存在: ${sourceFile.absolutePath}" }
         val context = appContext ?: error("宿主Context不可用")
-        val dexRoot = processScopedCacheRoot(context, "hchat_plugin_dex")
+        val dexRoot = processScopedCacheRoot(context, "aeonlab_plugin_dex")
         val pluginDexDir = File(dexRoot, safeFileName(pluginId)).apply { mkdirs() }
         val optimizedDir = File(pluginDexDir, "opt").apply { mkdirs() }
         val digest = sha256(sourceFile).take(16)
@@ -701,7 +701,7 @@ object ScriptPluginRuntime {
         validateNativeLibrary(sourceFile)
         val context = appContext ?: error("宿主Context不可用")
         val sourceDigest = sha256(sourceFile)
-        val nativeRoot = processScopedCacheRoot(context, "hchat_plugin_native")
+        val nativeRoot = processScopedCacheRoot(context, "aeonlab_plugin_native")
         val pluginNativeDir = File(nativeRoot, safeFileName(pluginId))
         require(pluginNativeDir.isDirectory || pluginNativeDir.mkdirs()) {
             "无法创建Native缓存目录: ${pluginNativeDir.absolutePath}"

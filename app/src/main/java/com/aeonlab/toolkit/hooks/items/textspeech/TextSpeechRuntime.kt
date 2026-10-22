@@ -733,7 +733,7 @@ class TextSpeechRuntime(context: Context) {
         val remainingText = speech.text.substring(baseOffset)
         if (remainingText.isEmpty()) return false
         activeUtteranceBaseOffset = baseOffset
-        val utteranceId = "hchat_text_speech_${++sequence}"
+        val utteranceId = "aeonlab_text_speech_${++sequence}"
         activeUtteranceId = utteranceId
         val result = runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {

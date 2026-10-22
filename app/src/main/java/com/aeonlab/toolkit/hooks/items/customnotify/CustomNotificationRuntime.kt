@@ -55,22 +55,22 @@ import java.util.concurrent.atomic.AtomicInteger
 
 object CustomNotificationRuntime {
     private const val TAG = "[AeonLab:CustomNotification]"
-    private const val MARK_HCHAT = "hchat_custom_notification"
-    private const val MARK_KEYWORD_NOTIFICATION = "hchat_keyword_notification"
-    private const val EXTRA_TALKER = "hchat_custom_notification_talker"
-    private const val EXTRA_NATIVE_TITLE = "hchat_custom_notification_native_title"
-    private const val EXTRA_NATIVE_TEXT = "hchat_custom_notification_native_text"
-    private const val EXTRA_NATIVE_SUMMARY = "hchat_custom_notification_native_summary"
-    private const val EXTRA_NATIVE_MSG_SVR_ID = "hchat_custom_notification_native_msg_svr_id"
-    private const val EXTRA_UNREAD_COUNT = "hchat_custom_notification_unread_count"
-    private const val EXTRA_MERGED_LINES = "hchat_custom_notification_merged_lines"
-    private const val EXTRA_NOTIFY_ID = "hchat_custom_notification_id"
-    private const val EXTRA_REPLY_MSG_ID = "hchat_custom_notification_reply_msg_id"
-    private const val EXTRA_QUOTE_QUICK_REPLY = "hchat_custom_notification_quote_quick_reply"
-    private const val EXTRA_NOTIFICATION_TOKEN = "hchat_custom_notification_token"
+    private const val MARK_HCHAT = "aeonlab_custom_notification"
+    private const val MARK_KEYWORD_NOTIFICATION = "aeonlab_keyword_notification"
+    private const val EXTRA_TALKER = "aeonlab_custom_notification_talker"
+    private const val EXTRA_NATIVE_TITLE = "aeonlab_custom_notification_native_title"
+    private const val EXTRA_NATIVE_TEXT = "aeonlab_custom_notification_native_text"
+    private const val EXTRA_NATIVE_SUMMARY = "aeonlab_custom_notification_native_summary"
+    private const val EXTRA_NATIVE_MSG_SVR_ID = "aeonlab_custom_notification_native_msg_svr_id"
+    private const val EXTRA_UNREAD_COUNT = "aeonlab_custom_notification_unread_count"
+    private const val EXTRA_MERGED_LINES = "aeonlab_custom_notification_merged_lines"
+    private const val EXTRA_NOTIFY_ID = "aeonlab_custom_notification_id"
+    private const val EXTRA_REPLY_MSG_ID = "aeonlab_custom_notification_reply_msg_id"
+    private const val EXTRA_QUOTE_QUICK_REPLY = "aeonlab_custom_notification_quote_quick_reply"
+    private const val EXTRA_NOTIFICATION_TOKEN = "aeonlab_custom_notification_token"
     private const val ACTION_QUICK_REPLY = "com.aeonlab.toolkit.action.CUSTOM_NOTIFICATION_REPLY"
     private const val ACTION_MARK_READ = "com.aeonlab.toolkit.action.CUSTOM_NOTIFICATION_MARK_READ"
-    private const val REMOTE_INPUT_KEY = "hchat_reply_text"
+    private const val REMOTE_INPUT_KEY = "aeonlab_reply_text"
     private const val CHANNEL_PREFIX = "AeonLab_custom_notification_"
     private const val KEYWORD_CHANNEL_PREFIX = "AeonLab_keyword_notification_"
     private const val NOTIFICATION_ITEM = "com.tencent.mm.booter.notification.NotificationItem"
@@ -95,7 +95,7 @@ object CustomNotificationRuntime {
     private const val NOTIFICATION_DEDUP_TTL_MS = 60_000L
     private const val NOTIFICATION_DEDUP_CLEANUP_THRESHOLD = 256
     private const val QUICK_REPLY_CANCEL_DELAY_MS = 1_200L
-    private const val EXTRA_REPLY_COMPLETION_TOKEN = "hchat_custom_notification_reply_completion_token"
+    private const val EXTRA_REPLY_COMPLETION_TOKEN = "aeonlab_custom_notification_reply_completion_token"
     private const val MAX_MERGED_NOTIFICATION_LINES = 7
 
     private val installed = java.util.concurrent.atomic.AtomicBoolean(false)

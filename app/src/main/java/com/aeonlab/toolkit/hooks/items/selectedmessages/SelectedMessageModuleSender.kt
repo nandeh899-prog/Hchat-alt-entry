@@ -375,7 +375,7 @@ class SelectedMessageModuleSender(
 
     companion object {
         const val MSG_RETRANSMIT_UI = "com.tencent.mm.ui.transmit.MsgRetransmitUI"
-        const val EXTRA_TOKEN = "hchat_selected_message_send_token"
+        const val EXTRA_TOKEN = "aeonlab_selected_message_send_token"
         private const val SEND_TIMEOUT_MS = 120_000L
         private const val NEXT_MESSAGE_DELAY_MS = 350L
     }

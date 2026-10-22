@@ -499,7 +499,7 @@ private class CustomFriendAvatarRuntime(
         const val MAX_RADIUS_FACTOR = 0.5f
         const val GROUP_CACHE_MS = 1000L
         const val GROUP_CACHE_MAX_ENTRIES = 256
-        const val ORIGINAL_GROUP_WXID = "hchat_original_group_wxid"
+        const val ORIGINAL_GROUP_WXID = "aeonlab_original_group_wxid"
         val DRAW_PAINT = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     }
 

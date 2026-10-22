@@ -206,7 +206,7 @@ private class MomentsPostNotificationRuntime(
             .setVisibility(Notification.VISIBILITY_PRIVATE)
             .setContentIntent(openMomentsIntent(post.key.hashCode()))
         loadAvatarBitmap(post.userName)?.let { builder.setLargeIcon(it) }
-        manager.notify(("hchat_sns_" + post.key).hashCode(), builder.build())
+        manager.notify(("aeonlab_sns_" + post.key).hashCode(), builder.build())
     }
 
     private fun openMomentsIntent(requestCode: Int): PendingIntent? {
@@ -351,7 +351,7 @@ private class MomentsPostNotificationRuntime(
     }
 
     companion object {
-        private const val CHANNEL_ID = "hchat_moments_post_v2"
+        private const val CHANNEL_ID = "aeonlab_moments_post_v2"
         private const val EMPTY_OBSERVED = "[]"
         private const val MAX_AVATAR_CACHE = 128
         private const val AVATAR_TIMEOUT_MS = 3000

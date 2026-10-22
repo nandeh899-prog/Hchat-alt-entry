@@ -10,6 +10,6 @@ class RedPacketDetailsSettingsProvider : SimpleFeatureSettingsProvider(
     FeatureSettingsProvider.CATEGORY_PRACTICAL
 ) {
     companion object {
-        const val FEATURE_ID = "hchat_red_packet_details"
+        const val FEATURE_ID = "aeonlab_red_packet_details"
     }
 }

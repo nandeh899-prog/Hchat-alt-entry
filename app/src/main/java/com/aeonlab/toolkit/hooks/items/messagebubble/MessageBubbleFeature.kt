@@ -130,11 +130,11 @@ private class MessageBubbleRenderer(
     }
 
     private fun restoreBoundBubble(root: View) {
-        when (val bound = root.getTag(R.id.hchat_message_bubble_target)) {
+        when (val bound = root.getTag(R.id.aeonlab_message_bubble_target)) {
             is View -> restoreOriginal(bound)
             is Collection<*> -> bound.filterIsInstance<View>().forEach(::restoreOriginal)
         }
-        root.setTag(R.id.hchat_message_bubble_target, null)
+        root.setTag(R.id.aeonlab_message_bubble_target, null)
     }
 
     private fun applyBubble(args: Array<Any?>?, state: BindState) {
@@ -228,7 +228,7 @@ private class MessageBubbleRenderer(
             if (additionalTextTargets.isNotEmpty()) associatedTextBound = true
             applied += target
         }
-        if (applied.isNotEmpty()) root.setTag(R.id.hchat_message_bubble_target, applied)
+        if (applied.isNotEmpty()) root.setTag(R.id.aeonlab_message_bubble_target, applied)
     }
 
     private fun resolveDrawable(
@@ -639,7 +639,7 @@ private class MessageBubbleRenderer(
             paddingBottom = view.paddingBottom,
             textColorStates = textColorStates
         )
-        view.setTag(R.id.hchat_message_bubble_original, state)
+        view.setTag(R.id.aeonlab_message_bubble_original, state)
         view.background = drawable
         val textBubbleId = bubbleViewIds[TEXT_BUBBLE_VIEW_RESOURCE]
         if (textBubbleId != null && view.id == textBubbleId) {
@@ -720,8 +720,8 @@ private class MessageBubbleRenderer(
 
     private fun restoreTextColor(state: TextColorState) {
         val target = state.target
-        val messageTextColorActive = target.owner.getTag(R.id.hchat_message_text_color_applied) == true ||
-            target.textView.getTag(R.id.hchat_message_text_color_applied) == true
+        val messageTextColorActive = target.owner.getTag(R.id.aeonlab_message_text_color_applied) == true ||
+            target.textView.getTag(R.id.aeonlab_message_text_color_applied) == true
         if (state.changeTextColor &&
             !messageTextColorActive &&
             target.textView.currentTextColor == state.appliedColor
@@ -796,11 +796,11 @@ private class MessageBubbleRenderer(
     }
 
     private fun restoreOriginal(view: View) {
-        val state = view.getTag(R.id.hchat_message_bubble_original) as? OriginalState ?: return
+        val state = view.getTag(R.id.aeonlab_message_bubble_original) as? OriginalState ?: return
         view.background = state.background
         view.setPadding(state.paddingLeft, state.paddingTop, state.paddingRight, state.paddingBottom)
         state.textColorStates.forEach(::restoreTextColor)
-        view.setTag(R.id.hchat_message_bubble_original, null)
+        view.setTag(R.id.aeonlab_message_bubble_original, null)
         view.invalidate()
     }
 

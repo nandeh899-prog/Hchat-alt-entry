@@ -9,7 +9,7 @@ internal object ScriptPluginAgentCompaction {
         "reasoning", "reasoning_content", "reasoning_details", "thinking", "thinking_blocks",
         "analysis", "signature", "thoughtSignature", "thought_signature", "thinking_signature",
         "reasoning_signature", "encrypted_content", "provider_metadata",
-        "extra_content", "hchat_runtime_state", "hchat_cache_control"
+        "extra_content", "aeonlab_runtime_state", "aeonlab_cache_control"
     )
     private val reasoningTypes = setOf("reasoning", "thinking", "redacted_thinking", "analysis")
     private val imageDataUri = Regex("data:image/[^\\s;,\"']+;base64,[A-Za-z0-9+/=_-]*", RegexOption.IGNORE_CASE)
@@ -65,9 +65,9 @@ internal object ScriptPluginAgentCompaction {
     ): Sequence<String> {
         val entries = (0 until protocol.length()).map { protocol.getJSONObject(it) }
         val userIds = entries.filter { it.optString("role") == "user" }
-            .map { it.optString("hchat_message_id") }.filter { it.isNotBlank() }.toSet()
+            .map { it.optString("aeonlab_message_id") }.filter { it.isNotBlank() }.toSet()
         val legacyUsers = entries.filter {
-            it.optString("role") == "user" && it.optString("hchat_message_id").isBlank()
+            it.optString("role") == "user" && it.optString("aeonlab_message_id").isBlank()
         }.map { protocolContent(it.opt("content")) }.toMutableList()
         val completedCallIds = entries.filter {
             it.optString("role") == "tool" && !interruptedResult(it.opt("content"))
@@ -131,9 +131,9 @@ internal object ScriptPluginAgentCompaction {
         if (event.result.isBlank()) return false
         return entries.any { entry ->
             val text = entry.opt("content") as? String ?: return@any false
-            if (!text.contains("<hchat_tool_result>")) return@any false
+            if (!text.contains("<aeonlab_tool_result>")) return@any false
             val envelope = runCatching {
-                JSONObject(text.substringAfter("<hchat_tool_result>").substringBefore("</hchat_tool_result>"))
+                JSONObject(text.substringAfter("<aeonlab_tool_result>").substringBefore("</aeonlab_tool_result>"))
             }.getOrNull() ?: return@any false
             envelope.optString("tool") in setOf(event.name, event.protocolName) &&
                 equivalentJson(envelope.opt("arguments"), event.arguments) &&

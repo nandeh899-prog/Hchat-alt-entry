@@ -607,7 +607,7 @@ class ZombieCheckRuntime(
     )
 
     companion object {
-        private const val CHANNEL_ID = "hchat_zombie_check"
+        private const val CHANNEL_ID = "aeonlab_zombie_check"
         private const val NOTIFICATION_ID = 0x48435A43
         private const val MAX_LOGS = 80
         private const val MAX_WAKE_LOCK_MILLIS = 60L * 60L * 1000L

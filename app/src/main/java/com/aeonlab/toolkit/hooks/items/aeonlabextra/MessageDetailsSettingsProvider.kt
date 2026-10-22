@@ -10,6 +10,6 @@ class MessageDetailsSettingsProvider : SimpleFeatureSettingsProvider(
     FeatureSettingsProvider.CATEGORY_PRACTICAL
 ) {
     companion object {
-        const val FEATURE_ID = "hchat_message_time"
+        const val FEATURE_ID = "aeonlab_message_time"
     }
 }

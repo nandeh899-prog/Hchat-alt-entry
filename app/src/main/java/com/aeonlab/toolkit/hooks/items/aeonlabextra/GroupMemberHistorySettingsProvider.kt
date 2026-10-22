@@ -10,6 +10,6 @@ class GroupMemberHistorySettingsProvider : SimpleFeatureSettingsProvider(
     FeatureSettingsProvider.CATEGORY_PRACTICAL
 ) {
     companion object {
-        const val FEATURE_ID = "hchat_group_member_history"
+        const val FEATURE_ID = "aeonlab_group_member_history"
     }
 }

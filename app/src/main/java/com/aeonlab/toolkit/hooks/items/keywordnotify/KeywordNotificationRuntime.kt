@@ -50,7 +50,7 @@ object KeywordNotificationRuntime {
     private const val TAG = "[AeonLab:KeywordNotification]"
     private const val CHANNEL_PREFIX = "AeonLab_keyword_notification_"
     private const val CHANNEL_NAME = "AeonLab 关键词通知"
-    private const val EXTRA_KEYWORD_NOTIFY = "hchat_keyword_notification"
+    private const val EXTRA_KEYWORD_NOTIFY = "aeonlab_keyword_notification"
     private const val AVATAR_CACHE_MAX_ENTRIES = 64
     private val notifySeq = AtomicInteger(0)
     private val mainHandler = Handler(Looper.getMainLooper())

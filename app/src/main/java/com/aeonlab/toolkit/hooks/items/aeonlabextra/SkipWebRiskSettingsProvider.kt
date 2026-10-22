@@ -10,6 +10,6 @@ class SkipWebRiskSettingsProvider : SimpleFeatureSettingsProvider(
     FeatureSettingsProvider.CATEGORY_PRACTICAL
 ) {
     companion object {
-        const val FEATURE_ID = "hchat_skip_web_risk"
+        const val FEATURE_ID = "aeonlab_skip_web_risk"
     }
 }

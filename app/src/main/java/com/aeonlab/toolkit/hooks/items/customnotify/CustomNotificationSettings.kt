@@ -117,9 +117,9 @@ class CustomNotificationSettings(context: Context?) {
         const val DEFAULT_ENABLE = false
         const val MODE_DND = 0
         const val MODE_NOTIFY = 1
-        private const val DEFAULT_PRIVATE_TALKER = "__hchat_custom_notification_default_private__"
-        private const val DEFAULT_GROUP_TALKER = "__hchat_custom_notification_default_group__"
-        private const val DEFAULT_OFFICIAL_TALKER = "__hchat_custom_notification_default_official__"
+        private const val DEFAULT_PRIVATE_TALKER = "__aeonlab_custom_notification_default_private__"
+        private const val DEFAULT_GROUP_TALKER = "__aeonlab_custom_notification_default_group__"
+        private const val DEFAULT_OFFICIAL_TALKER = "__aeonlab_custom_notification_default_official__"
         const val DEFAULT_MUTE_START = "23:00:00"
         const val DEFAULT_MUTE_END = "07:00:00"
         private const val LEGACY_KEY_IGNORE_WECHAT_DND = "custom_notification_ignore_wechat_dnd"

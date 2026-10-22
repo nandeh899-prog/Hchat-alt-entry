@@ -47,7 +47,7 @@ class ProfileIdFeature : BaseFeature() {
         private const val ROOM_INFO_ID = "RoomInfo_Id"
         private const val INJECTED_TAG = "Hchat:ProfileId:Row"
         private const val INJECTED_VALUE_TAG = "Hchat:ProfileId:Value:"
-        private const val CHATROOM_PREF_KEY = "hchat_profile_id"
+        private const val CHATROOM_PREF_KEY = "aeonlab_profile_id"
         private const val CHATROOM_NAME_PREF_KEY = "room_name"
         private const val CHATROOM_BIND_RETRY_LIMIT = 8
         private val CHATROOM_ANCHOR_PREF_KEYS = arrayOf(

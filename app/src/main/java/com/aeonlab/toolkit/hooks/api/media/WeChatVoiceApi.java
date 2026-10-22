@@ -785,8 +785,8 @@ public final class WeChatVoiceApi {
             File parent = source.getParentFile();
             File dir = parent != null && parent.isDirectory() && parent.canWrite() ? parent : null;
             return dir != null
-                    ? File.createTempFile("hchat_voice_", ".silk", dir)
-                    : File.createTempFile("hchat_voice_", ".silk");
+                    ? File.createTempFile("aeonlab_voice_", ".silk", dir)
+                    : File.createTempFile("aeonlab_voice_", ".silk");
         } catch (Throwable e) {
             log("创建临时 Silk 文件失败: " + e.getMessage());
             return null;

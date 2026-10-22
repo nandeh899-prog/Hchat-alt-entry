@@ -140,7 +140,7 @@ internal object ScriptPluginAgentProviderAdapter {
                         put("type", "text")
                         put("text", text)
                         if (
-                            message.optBoolean("hchat_cache_control", false) &&
+                            message.optBoolean("aeonlab_cache_control", false) &&
                             promptCacheEnabled
                         ) {
                             put("cache_control", JSONObject().put("type", "ephemeral"))
@@ -244,7 +244,7 @@ internal object ScriptPluginAgentProviderAdapter {
             ScriptPluginAgentReasoning.options(config.endpointMode, config.model).size > 1
         for (messageIndex in 0 until messages.length()) {
             val message = messages.optJSONObject(messageIndex) ?: continue
-            message.remove("hchat_cache_control")
+            message.remove("aeonlab_cache_control")
             if (!keepReasoning) message.remove("reasoning_content")
             val calls = message.optJSONArray("tool_calls") ?: continue
             for (callIndex in 0 until calls.length()) {

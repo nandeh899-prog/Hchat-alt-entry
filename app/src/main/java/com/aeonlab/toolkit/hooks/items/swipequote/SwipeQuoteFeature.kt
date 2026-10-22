@@ -1599,7 +1599,7 @@ private class SwipeQuoteAdapter(
     private companion object {
         const val CHAT_FOOTER = "com.tencent.mm.pluginsdk.ui.chat.ChatFooter"
         const val MSG_RETRANSMIT_UI = "com.tencent.mm.ui.transmit.MsgRetransmitUI"
-        const val EXTRA_HCHAT_SILENT_REPEAT = "hchat_silent_repeat"
+        const val EXTRA_HCHAT_SILENT_REPEAT = "aeonlab_silent_repeat"
         const val MENU_REPEAT_ID = SingleMessageMenuLocator.AEONLAB_REPEAT_MENU_ITEM_ID
         const val MENU_REPEAT_TITLE = "复读[H]"
         const val DEFAULT_VOICE_DURATION_MS = 1000

@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger
 // 网页版保活：服务掉线自动拉起；开关持久化，微信进程重启后自动恢复
 object CodexWebGuard {
     private const val TAG = "[AeonLab:CodexWebGuard]"
-    private const val PREFS_NAME = "hchat_codex_web"
+    private const val PREFS_NAME = "aeonlab_codex_web"
     private const val KEY_AUTO_KEEP = "auto_keep"
     private const val TICK_SECONDS = 15L
     private const val MAX_FAILURES = 6

@@ -904,7 +904,7 @@ private class HomeTextColorRuntime(
         }
         if (appliedOwners.isNotEmpty()) {
             row.setTag(
-                R.id.hchat_home_text_color_row_state,
+                R.id.aeonlab_home_text_color_row_state,
                 RowState(appliedOwners)
             )
         }
@@ -949,9 +949,9 @@ private class HomeTextColorRuntime(
     }
 
     private fun restoreRow(row: View) {
-        val state = row.getTag(R.id.hchat_home_text_color_row_state) as? RowState ?: return
+        val state = row.getTag(R.id.aeonlab_home_text_color_row_state) as? RowState ?: return
         state.owners.forEach(::restoreOwner)
-        row.setTag(R.id.hchat_home_text_color_row_state, null)
+        row.setTag(R.id.aeonlab_home_text_color_row_state, null)
     }
 
     private fun applyColor(
@@ -981,7 +981,7 @@ private class HomeTextColorRuntime(
             originalShader = originalShader,
             appliedColors = confirmedAppliedColors
         )
-        owner.setTag(R.id.hchat_home_text_color_state, state)
+        owner.setTag(R.id.aeonlab_home_text_color_state, state)
         if (spec.isGradient || originalShader != null) {
             val width = textWidth(owner, textView, candidate.text, paint)
             if (width > 0f) {
@@ -1000,7 +1000,7 @@ private class HomeTextColorRuntime(
     }
 
     private fun restoreOwner(owner: View) {
-        val state = owner.getTag(R.id.hchat_home_text_color_state) as? AppliedState ?: return
+        val state = owner.getTag(R.id.aeonlab_home_text_color_state) as? AppliedState ?: return
         val paint = textPaint(owner, state.textView)
         when {
             paint == null -> Unit
@@ -1011,7 +1011,7 @@ private class HomeTextColorRuntime(
         if (textColors(owner, state.textView) === state.appliedColors) {
             setTextColors(owner, state.textView, state.originalColors)
         }
-        owner.setTag(R.id.hchat_home_text_color_state, null)
+        owner.setTag(R.id.aeonlab_home_text_color_state, null)
         owner.invalidate()
     }
 

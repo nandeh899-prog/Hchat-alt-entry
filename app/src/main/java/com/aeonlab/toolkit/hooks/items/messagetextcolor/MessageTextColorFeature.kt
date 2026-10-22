@@ -181,7 +181,7 @@ private class MessageTextColorRenderer(
 
     private fun isBindingApplied(state: AppliedBindingState): Boolean {
         return state.targetViews.isNotEmpty() && state.targetViews.all { reference ->
-            reference.get()?.getTag(R.id.hchat_message_text_color_applied) == true
+            reference.get()?.getTag(R.id.aeonlab_message_text_color_applied) == true
         }
     }
 
@@ -252,9 +252,9 @@ private class MessageTextColorRenderer(
     }
 
     private fun clearAppliedTextView(view: View) {
-        if (view.getTag(R.id.hchat_message_text_color_applied) == true) {
+        if (view.getTag(R.id.aeonlab_message_text_color_applied) == true) {
             val textView = targetTextView(view)
-            val state = view.getTag(R.id.hchat_message_text_color_original) as? AppliedTextState
+            val state = view.getTag(R.id.aeonlab_message_text_color_original) as? AppliedTextState
             if (textView != null && state != null) {
                 if (state.appliedShader != null && textView.paint.shader === state.appliedShader) {
                     textView.paint.shader = state.originalShader
@@ -271,8 +271,8 @@ private class MessageTextColorRenderer(
                     )
                 }
             } else {
-                val originalColor = view.getTag(R.id.hchat_message_text_color_original) as? Int
-                val appliedColor = view.getTag(R.id.hchat_message_text_color_value) as? Int
+                val originalColor = view.getTag(R.id.aeonlab_message_text_color_original) as? Int
+                val appliedColor = view.getTag(R.id.aeonlab_message_text_color_value) as? Int
                 if (originalColor != null &&
                     appliedColor != null &&
                     textView != null &&
@@ -282,9 +282,9 @@ private class MessageTextColorRenderer(
                     setTargetTextColor(view, textView, originalColor)
                 }
             }
-            view.setTag(R.id.hchat_message_text_color_applied, null)
-            view.setTag(R.id.hchat_message_text_color_original, null)
-            view.setTag(R.id.hchat_message_text_color_value, null)
+            view.setTag(R.id.aeonlab_message_text_color_applied, null)
+            view.setTag(R.id.aeonlab_message_text_color_original, null)
+            view.setTag(R.id.aeonlab_message_text_color_value, null)
             view.invalidate()
         }
     }
@@ -299,9 +299,9 @@ private class MessageTextColorRenderer(
             originalShader = textView.paint.shader,
             appliedColor = spec.startColor
         )
-        view.setTag(R.id.hchat_message_text_color_applied, true)
-        view.setTag(R.id.hchat_message_text_color_original, state)
-        view.setTag(R.id.hchat_message_text_color_value, spec.startColor)
+        view.setTag(R.id.aeonlab_message_text_color_applied, true)
+        view.setTag(R.id.aeonlab_message_text_color_original, state)
+        view.setTag(R.id.aeonlab_message_text_color_value, spec.startColor)
         setTargetTextColor(view, textView, spec.startColor)
         setTargetLinkTextColor(view, textView, spec.startColor)
         if (spec.isGradient || overrideSpanColors) {
@@ -322,7 +322,7 @@ private class MessageTextColorRenderer(
                 state.shaderUpdatePosted = true
                 view.post {
                     state.shaderUpdatePosted = false
-                    if (view.getTag(R.id.hchat_message_text_color_original) === state) {
+                    if (view.getTag(R.id.aeonlab_message_text_color_original) === state) {
                         state.shaderRetryCount++
                         updateTextShader(view, textView, spec, state)
                     }

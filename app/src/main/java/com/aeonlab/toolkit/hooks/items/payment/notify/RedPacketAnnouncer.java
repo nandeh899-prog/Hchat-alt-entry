@@ -182,7 +182,7 @@ public final class RedPacketAnnouncer {
                         speech.text,
                         TextToSpeech.QUEUE_ADD,
                         params,
-                        "hchat_redpacket_" + System.currentTimeMillis());
+                        "aeonlab_redpacket_" + System.currentTimeMillis());
             } else {
                 HashMap<String, String> params = new HashMap<>();
                 params.put(TextToSpeech.Engine.KEY_PARAM_STREAM,

@@ -4,8 +4,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 internal object ScriptPluginAgentProtocolTranscript {
-    private const val MESSAGE_ID = "hchat_message_id"
-    private const val RUNTIME_STATE = "hchat_runtime_state"
+    private const val MESSAGE_ID = "aeonlab_message_id"
+    private const val RUNTIME_STATE = "aeonlab_runtime_state"
 
     fun providerMessages(encoded: String): JSONArray {
         val source = parse(encoded)

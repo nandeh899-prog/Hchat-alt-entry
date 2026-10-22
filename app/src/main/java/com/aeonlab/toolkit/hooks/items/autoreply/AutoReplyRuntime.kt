@@ -809,7 +809,7 @@ object AutoReplyRuntime {
             .digest("$talker:${System.currentTimeMillis()}:${Random.nextLong()}".toByteArray())
             .joinToString("") { "%02x".format(it) }
             .take(16)
-        return "hchat_$digest"
+        return "aeonlab_$digest"
     }
 
     private fun xiaozhiSocketSession(
@@ -1119,7 +1119,7 @@ object AutoReplyRuntime {
         val ready = CountDownLatch(1)
         val done = CountDownLatch(1)
         val ok = AtomicBoolean(false)
-        val utteranceId = "hchat_xiaozhi_${System.nanoTime()}"
+        val utteranceId = "aeonlab_xiaozhi_${System.nanoTime()}"
         var initStatus = TextToSpeech.ERROR
         val tts = TextToSpeech(context) { status ->
             initStatus = status
@@ -1784,7 +1784,7 @@ object AutoReplyRuntime {
             return JSONObject().apply {
                 put("tools", JSONArray().apply {
                     put(mcpTool(
-                        "hchat_send_text",
+                        "aeonlab_send_text",
                         "当用户要求你通过微信发送、通知、回复文字时，使用此工具把文字发送到当前触发自动回复的微信会话。不能指定其他会话。",
                         JSONObject().apply {
                             put("text", JSONObject().apply {
@@ -1799,7 +1799,7 @@ object AutoReplyRuntime {
                         JSONArray().put("text")
                     ))
                     put(mcpTool(
-                        "hchat_share_music",
+                        "aeonlab_share_music",
                         "当你已经获得歌曲播放链接时，使用此工具发送微信音乐卡片到当前触发自动回复的微信会话。不能指定其他会话。",
                         JSONObject().apply {
                             put("title", JSONObject().apply {
@@ -1831,7 +1831,7 @@ object AutoReplyRuntime {
                     ))
                     if (kugouEnabled && kugouPluginId.isNotBlank()) {
                         put(mcpTool(
-                            "hchat_kugou_order_music",
+                            "aeonlab_kugou_order_music",
                             "当用户表达想听歌、放一首歌、播放音乐、来一首某歌手或某歌曲时，先从用户话里提取歌曲名、歌手名或组合关键词，然后使用此工具调用 AeonLab 配置的点歌工具，在当前微信会话搜索并发送音乐卡片。",
                             JSONObject().apply {
                                 put("keyword", JSONObject().apply {
@@ -1871,12 +1871,12 @@ object AutoReplyRuntime {
             val name = params?.optString("name").orEmpty()
             val args = params?.optJSONObject("arguments") ?: JSONObject()
             val ok = when (name) {
-                "hchat_send_text" -> {
+                "aeonlab_send_text" -> {
                     val text = args.optString("text").trim()
                     val target = targetFor(args)
                     text.isNotBlank() && AutoReplyRuntime.sendText(target, text)
                 }
-                "hchat_share_music" -> {
+                "aeonlab_share_music" -> {
                     val title = args.optString("title").trim()
                     val description = args.optString("description").trim()
                     val musicUrl = args.optString("musicUrl").trim()
@@ -1894,7 +1894,7 @@ object AutoReplyRuntime {
                             appId
                         ) == true
                 }
-                "hchat_kugou_order_music" -> {
+                "aeonlab_kugou_order_music" -> {
                     val keyword = args.optString("keyword").trim()
                     keyword.isNotBlank() && invokeKugouOrderMusic(args, keyword)
                 }

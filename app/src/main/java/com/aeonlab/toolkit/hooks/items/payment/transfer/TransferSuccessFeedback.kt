@@ -186,7 +186,7 @@ class TransferSuccessFeedback(
 
     private fun speak(text: String) {
         runCatching {
-            tts?.speak(text, TextToSpeech.QUEUE_ADD, Bundle(), "hchat_transfer_${System.currentTimeMillis()}")
+            tts?.speak(text, TextToSpeech.QUEUE_ADD, Bundle(), "aeonlab_transfer_${System.currentTimeMillis()}")
         }.onFailure { logger("自动收款播报失败", it) }
     }
 

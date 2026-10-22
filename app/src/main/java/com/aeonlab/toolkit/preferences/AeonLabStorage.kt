@@ -13,6 +13,9 @@ object AeonLabStorage {
     private const val LEGACY_DIR_NAME = "Hchat"
     private const val FILE_PREFIX = "AeonLab_"
     private const val LEGACY_FILE_PREFIX = "Hchat_"
+    private const val KEY_PREFIX = "aeonlab_"
+    private const val LEGACY_KEY_PREFIX = "aeonlab_"
+    private const val KEY_MIGRATE_MARK = ".keys_migrated_"
     private val MIGRATED_SUBDIRS = setOf("crash", "script_plugin_locks", "message_bubbles")
     private val cache = ConcurrentHashMap<String, SharedPreferences>()
 
@@ -47,7 +50,55 @@ object AeonLabStorage {
 
     private fun create(context: Context, name: String): SharedPreferences {
         val dir = storageDir(context)
-        return FastKV.Builder(dir.absolutePath, name).build()
+        val prefs = FastKV.Builder(dir.absolutePath, name).build()
+        migrateKeys(dir, name, prefs)
+        return prefs
+    }
+
+    /**
+     * 一次性把旧版 `aeonlab_` 前缀配置键改写为 `aeonlab_`。
+     * 值复制成功后删旧键；全部成功才写标记，失败则下次启动重试。
+     */
+    private fun migrateKeys(dir: File, name: String, prefs: SharedPreferences) {
+        val mark = File(dir, "$KEY_MIGRATE_MARK$name")
+        if (mark.exists()) return
+
+        var moved = 0
+        val result = runCatching {
+            val all = prefs.all
+            if (all.isEmpty()) return@runCatching true
+            val editor = prefs.edit()
+            for ((key, value) in all) {
+                if (!key.startsWith(LEGACY_KEY_PREFIX)) continue
+                val target = KEY_PREFIX + key.removePrefix(LEGACY_KEY_PREFIX)
+                if (!all.containsKey(target)) putValue(editor, target, value)
+                editor.remove(key)
+                moved++
+            }
+            editor.commit()
+        }
+
+        if (result.getOrDefault(false)) {
+            if (moved > 0) HLog.i("$TAG 配置键已迁移: $name 共 $moved 项")
+            runCatching { mark.createNewFile() }
+        } else {
+            HLog.e("$TAG 配置键迁移失败，下次启动重试: $name")
+        }
+    }
+
+    private fun putValue(editor: SharedPreferences.Editor, key: String, value: Any?) {
+        when (value) {
+            is Boolean -> editor.putBoolean(key, value)
+            is Int -> editor.putInt(key, value)
+            is Long -> editor.putLong(key, value)
+            is Float -> editor.putFloat(key, value)
+            is String -> editor.putString(key, value)
+            is Set<*> -> {
+                @Suppress("UNCHECKED_CAST")
+                editor.putStringSet(key, value as Set<String>)
+            }
+            else -> Unit
+        }
     }
 
     private fun cacheKey(context: Context, name: String): String = "${context.packageName}:$name"

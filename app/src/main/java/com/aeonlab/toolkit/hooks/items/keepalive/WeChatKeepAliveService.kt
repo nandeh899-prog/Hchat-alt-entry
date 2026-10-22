@@ -73,7 +73,7 @@ class WeChatKeepAliveService : Service() {
 
     companion object {
         private const val TAG = "[AeonLab:KeepAliveService]"
-        private const val CHANNEL_ID = "hchat_wechat_keep_alive"
+        private const val CHANNEL_ID = "aeonlab_wechat_keep_alive"
         private const val NOTIFICATION_ID = 520134
         private const val WATCHDOG_INTERVAL_MS = 60_000L
         private const val EXTRA_WATCHDOG = "com.aeonlab.toolkit.extra.WATCHDOG"

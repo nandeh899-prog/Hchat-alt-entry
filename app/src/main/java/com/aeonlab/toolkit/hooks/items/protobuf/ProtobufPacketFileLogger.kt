@@ -41,7 +41,7 @@ class ProtobufPacketFileLogger(context: Context) {
             null
         }
         val root = mediaRoot ?: File("/storage/emulated/0/Android/media/${appContext.packageName}")
-        return File(root, "Hchat/抓包日志")
+        return File(root, "AeonLab/抓包日志")
     }
 
     private fun bucketFileName(): String {

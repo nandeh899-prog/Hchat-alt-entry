@@ -94,16 +94,16 @@ class AeonLabExtraFeature : BaseFeature() {
         DexInstallScheduler.schedule(ID, name()) {
             hooker?.install() == true
         }
-        DexInstallScheduler.schedule("hchat_extra_message_details", "消息显示时间") {
+        DexInstallScheduler.schedule("aeonlab_extra_message_details", "消息显示时间") {
             hooker?.installMessageDetails() == true
         }
-        DexInstallScheduler.schedule("hchat_extra_forwarded_types", "聊天记录消息类型") {
+        DexInstallScheduler.schedule("aeonlab_extra_forwarded_types", "聊天记录消息类型") {
             hooker?.installForwardedRecordTypes() == true
         }
     }
 
     companion object {
-        const val ID = "hchat_extra"
+        const val ID = "aeonlab_extra"
     }
 }
 
@@ -3078,11 +3078,11 @@ private class AeonLabExtraHooker(
 
     private fun wrapCardDetailsAnchor(anchor: BottomDetailsAnchor): BottomDetailsAnchor {
         val content = anchor.layoutView
-        if (content is ViewGroup && content.tag == "hchat_card_details_column") {
+        if (content is ViewGroup && content.tag == "aeonlab_card_details_column") {
             val card = content.getChildAt(0) ?: return anchor
             return BottomDetailsAnchor(content, card, card)
         }
-        (content.parent as? ViewGroup)?.takeIf { it.tag == "hchat_card_details_column" }?.let {
+        (content.parent as? ViewGroup)?.takeIf { it.tag == "aeonlab_card_details_column" }?.let {
             return BottomDetailsAnchor(it, content, content)
         }
         val parent = content.parent as? ViewGroup ?: return anchor
@@ -3101,7 +3101,7 @@ private class AeonLabExtraHooker(
             }
             else -> return anchor
         }
-        column.tag = "hchat_card_details_column"
+        column.tag = "aeonlab_card_details_column"
         val innerParams: ViewGroup.LayoutParams = when (column) {
             is RelativeLayout -> RelativeLayout.LayoutParams(width, height)
             else -> LinearLayout.LayoutParams(width, height)
@@ -3716,8 +3716,8 @@ private class AeonLabExtraHooker(
     }
 
     companion object {
-        private const val PREF_GROUP_MEMBER_HISTORY = "hchat_group_member_history"
-        private const val TAG_MESSAGE_DETAILS_VIEW = "hchat_message_details_view"
+        private const val PREF_GROUP_MEMBER_HISTORY = "aeonlab_group_member_history"
+        private const val TAG_MESSAGE_DETAILS_VIEW = "aeonlab_message_details_view"
         private const val LV_BUFFER_STRING_MAX_LENGTH = 3072
         private val MESSAGE_DETAILS_TOKEN_PATTERN = Regex("\\$\\{([A-Za-z][A-Za-z0-9]*)\\}|\\$([A-Za-z][A-Za-z0-9]*)")
         private val AT_USER_LIST_PATTERN = Regex(
@@ -3731,7 +3731,7 @@ private class AeonLabExtraHooker(
         private const val RED_PACKET_RECORD_TIME_ID_NAME = "j6q"
         private val RED_PACKET_TIME_SECONDS_RANGE = 1_262_304_000L..4_102_444_800L
         private val RED_PACKET_TIME_MILLIS_RANGE = 1_262_304_000_000L..4_102_444_800_000L
-        private const val PREF_PROFILE_ID = "hchat_profile_id"
+        private const val PREF_PROFILE_ID = "aeonlab_profile_id"
         private const val MESSAGE_DETAILS_MAX_RETRY = 2
         private const val MESSAGE_DETAILS_POSITION_MAX_RETRY = 4
         private val MESSAGE_DETAILS_COLOR_KEYS = setOf(

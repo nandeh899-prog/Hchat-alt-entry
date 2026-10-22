@@ -558,18 +558,18 @@ public final class WeChatImageApi {
 
     private String generateFileKey(String fileId) {
         if (TextUtils.isEmpty(fileId)) {
-            return "hchat_cdn_empty";
+            return "aeonlab_cdn_empty";
         }
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
             byte[] bytes = digest.digest(fileId.getBytes(StandardCharsets.UTF_8));
-            StringBuilder builder = new StringBuilder("hchat_cdn_");
+            StringBuilder builder = new StringBuilder("aeonlab_cdn_");
             for (byte b : bytes) {
                 builder.append(String.format(Locale.US, "%02x", b & 0xff));
             }
             return builder.toString();
         } catch (Throwable ignored) {
-            return "hchat_cdn_" + Integer.toHexString(fileId.hashCode()).toLowerCase(Locale.US);
+            return "aeonlab_cdn_" + Integer.toHexString(fileId.hashCode()).toLowerCase(Locale.US);
         }
     }
 

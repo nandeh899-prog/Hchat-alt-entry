@@ -115,7 +115,7 @@ internal class AndroidTtsFileSynthesizer(private val context: Context) {
                 if (!dir.isDirectory && !dir.mkdirs()) error("无法创建语音缓存目录")
             }
             target.delete()
-            val utteranceId = "hchat_${UUID.randomUUID()}"
+            val utteranceId = "aeonlab_${UUID.randomUUID()}"
             val completionLatch = CountDownLatch(1)
             val synthesisError = AtomicReference<String?>()
             engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {

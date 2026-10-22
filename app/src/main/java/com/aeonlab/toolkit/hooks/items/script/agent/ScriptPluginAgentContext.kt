@@ -21,7 +21,7 @@ object ScriptPluginAgentContext {
                 return@mapNotNull message
             }
             val retainedEvents = message.toolEvents.filterNot { event ->
-                event.kind == "workspace" || event.protocolName.startsWith("hchat_workspace_")
+                event.kind == "workspace" || event.protocolName.startsWith("aeonlab_workspace_")
             }
             when {
                 retainedEvents.isEmpty() -> null

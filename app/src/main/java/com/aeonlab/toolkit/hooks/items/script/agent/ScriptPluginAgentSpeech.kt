@@ -46,7 +46,7 @@ object ScriptPluginAgentSpeech {
             text,
             TextToSpeech.QUEUE_FLUSH,
             Bundle(),
-            "hchat_script_agent_${System.currentTimeMillis()}"
+            "aeonlab_script_agent_${System.currentTimeMillis()}"
         )
     }
 }

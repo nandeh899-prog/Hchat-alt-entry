@@ -1029,7 +1029,7 @@ object MiuixSettingsPage {
         val activity = context as? Activity ?: return false
         val decor = activity.window?.decorView as? ViewGroup ?: return false
         val existing = findExistingPage(decor)
-        val tag = existing?.getTag(R.id.hchat_settings_page_host) as? SettingsPageHostTag
+        val tag = existing?.getTag(R.id.aeonlab_settings_page_host) as? SettingsPageHostTag
         if (tag?.floatingAgent == true) {
             (tag.collapseAgent ?: tag.close)?.invoke()
             return true
@@ -1043,7 +1043,7 @@ object MiuixSettingsPage {
         val activity = context as? Activity ?: return false
         val decor = activity.window?.decorView as? ViewGroup ?: return false
         val page = findExistingPage(decor) ?: return false
-        val tag = page.getTag(R.id.hchat_settings_page_host) as? SettingsPageHostTag ?: return false
+        val tag = page.getTag(R.id.aeonlab_settings_page_host) as? SettingsPageHostTag ?: return false
         if (!tag.floatingAgent) return false
         (tag.collapseAgent ?: tag.close)?.invoke()
         return true
@@ -1171,7 +1171,7 @@ object MiuixSettingsPage {
             }
         }.apply {
             tag = PAGE_TAG
-            setTag(R.id.hchat_settings_page_host, hostTag)
+            setTag(R.id.aeonlab_settings_page_host, hostTag)
             addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(view: View) = Unit
                 override fun onViewDetachedFromWindow(view: View) {
@@ -1366,7 +1366,7 @@ object MiuixSettingsPage {
             .map { decor.getChildAt(it) }
             .filter { it.tag == PAGE_TAG }
         pages.forEach { child ->
-            val close = (child.getTag(R.id.hchat_settings_page_host) as? SettingsPageHostTag)?.close
+            val close = (child.getTag(R.id.aeonlab_settings_page_host) as? SettingsPageHostTag)?.close
             if (close != null) close() else decor.removeView(child)
         }
     }
@@ -44337,7 +44337,7 @@ private fun StatsCard(sp: SharedPreferences) {
     }
 }
 
-private const val MODULE_UPDATE_PREFS = "hchat_module_updates"
+private const val MODULE_UPDATE_PREFS = "aeonlab_module_updates"
 private const val MODULE_UPDATE_IGNORED_CODE = "ignored_version_code"
 
 @Composable

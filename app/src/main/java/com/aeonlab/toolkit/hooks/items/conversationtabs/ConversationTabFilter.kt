@@ -13,8 +13,8 @@ internal class ConversationTabFilter(val tab: ConversationTab) {
     private fun predicateFor(qualifier: String): String {
         val user = "$qualifier.username"
         val group = "($user LIKE '%@chatroom' OR $user LIKE '%@im.chatroom')"
-        val official = "($user GLOB 'gh_*' OR EXISTS (SELECT 1 FROM rcontact AS hchat_tab_contact " +
-            "WHERE hchat_tab_contact.username=$user AND hchat_tab_contact.verifyFlag!=0))"
+        val official = "($user GLOB 'gh_*' OR EXISTS (SELECT 1 FROM rcontact AS aeonlab_tab_contact " +
+            "WHERE aeonlab_tab_contact.username=$user AND aeonlab_tab_contact.verifyFlag!=0))"
         return when (tab.kind) {
             ConversationTabKind.ALL -> "1"
             ConversationTabKind.UNREAD -> "($qualifier.unReadCount>0 OR $qualifier.unReadMuteCount>0)"
