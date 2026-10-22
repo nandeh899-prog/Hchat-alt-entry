@@ -135,6 +135,11 @@ object ConversationGroupRuntime {
      */
     @Volatile
     private var pendingVirtualChatExit = false
+
+    /** 临时诊断：EditText 构造探针是否已安装，以及本次退出已记录的次数。 */
+    @Volatile
+    private var editTextProbeInstalled = false
+    private val editTextProbeCount = java.util.concurrent.atomic.AtomicInteger(0)
     private val menuBindings = Collections.synchronizedMap(
         WeakHashMap<MenuItem, ConversationMenuTarget>()
     )
@@ -736,6 +741,7 @@ object ConversationGroupRuntime {
         fun beginGroupPageExit(activity: Activity) {
             suspendingParentExtra = true
             pendingVirtualChatExit = true
+            editTextProbeCount.set(0)
             runCatching { activity.intent?.removeExtra(CONTACT_USER_EXTRA) }
             main.postDelayed({ suspendingParentExtra = false }, 5000)
             main.postDelayed({ pendingVirtualChatExit = false }, 20000)
@@ -846,6 +852,43 @@ object ConversationGroupRuntime {
                 KavaReflector.findMethodRecursive(launcherClass, "onResume"),
                 KavaReflector.findMethodRecursive(launcherClass, "onNewIntent", Intent::class.java)
             ).filterNotNull().forEach { hook(it, remember) }
+        }
+        // 临时诊断探针：虚拟分组的空白聊天视图里必定有一个 EditText 输入框（首页会话列表没有）。
+        // 只在“刚退出分组页”的窗口期内记录它的构造调用栈，用来定位微信把聊天视图挂上来的真实入口；
+        // 定位到之后改为在该入口精准拦截，不再依赖“返回后再补救”。
+        if (!editTextProbeInstalled) {
+            runCatching {
+                val probe = object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        if (!pendingVirtualChatExit) return
+                        val index = editTextProbeCount.incrementAndGet()
+                        if (index > 3) return
+                        val frames = Throwable().stackTrace
+                            .drop(1).take(22)
+                            .joinToString(" | ") {
+                                it.className.substringAfterLast('.') + "." + it.methodName
+                            }
+                        HLog.e(
+                            "$TAG editTextProbe#$index $frames",
+                            RuntimeException("editTextProbe")
+                        )
+                    }
+                }
+                listOf(
+                    KavaReflector.findConstructor(
+                        android.widget.EditText::class.java,
+                        Context::class.java
+                    ),
+                    KavaReflector.findConstructor(
+                        android.widget.EditText::class.java,
+                        Context::class.java,
+                        android.util.AttributeSet::class.java
+                    )
+                ).filterNotNull().forEach { hook(it, probe) }
+                editTextProbeInstalled = true
+            }.onFailure {
+                HLog.e("$TAG EditText 探针安装失败: ${it.message}", it)
+            }
         }
         val fragmentClass = KavaReflector.loadClass(NATIVE_GROUP_FRAGMENT, context.hostClassLoader())
             ?: return false
