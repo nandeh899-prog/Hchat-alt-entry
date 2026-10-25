@@ -777,33 +777,17 @@ object ConversationGroupRuntime {
                             )
                         }
                         if (hit) {
-                            if (backAttempts >= 5) {
+                            if (backAttempts == 0) {
+                                backAttempts = 1
                                 HLog.e(
-                                    "$TAG 返回键未能退出虚拟会话聊天视图，放弃",
-                                    RuntimeException("sweepGiveUp")
+                                    "$TAG 观测：分组页退出后出现聊天视图（本版只记录，不下发返回键）",
+                                    RuntimeException("observedChattingView")
                                 )
-                                pendingVirtualChatExit = false
-                                return
-                            }
-                            backAttempts++
-                            HLog.e(
-                                "$TAG 命中虚拟分组空白聊天视图，第 $backAttempts 次下发返回键",
-                                RuntimeException("sweepVirtualGroupChat")
-                            )
-                            runCatching {
-                                launcher.dispatchKeyEvent(
-                                    KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
-                                )
-                                launcher.dispatchKeyEvent(
-                                    KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK)
-                                )
-                            }.onFailure {
-                                HLog.e("$TAG 退出虚拟会话聊天视图失败: ${it.message}", it)
                             }
                         } else if (backAttempts > 0) {
                             HLog.e(
-                                "$TAG 已退出虚拟会话聊天视图，停止轮询",
-                                RuntimeException("sweepDone")
+                                "$TAG 观测：聊天视图已消失",
+                                RuntimeException("observedChattingGone")
                             )
                             pendingVirtualChatExit = false
                             return
@@ -861,16 +845,16 @@ object ConversationGroupRuntime {
             runCatching {
                 val probe = object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        if (!pendingVirtualChatExit) return
                         val index = editTextProbeCount.incrementAndGet()
-                        if (index > 3) return
+                        if (index > 12) return
                         val frames = Throwable().stackTrace
-                            .drop(1).take(22)
+                            .drop(1).take(26)
                             .joinToString(" | ") {
                                 it.className.substringAfterLast('.') + "." + it.methodName
                             }
                         HLog.e(
-                            "$TAG editTextProbe#$index $frames",
+                            "$TAG editTextProbe#$index thread=${Thread.currentThread().name} " +
+                                "pending=$pendingVirtualChatExit $frames",
                             RuntimeException("editTextProbe")
                         )
                     }
@@ -1076,11 +1060,18 @@ object ConversationGroupRuntime {
         return parentExtraInstalled && lifecycleInstalled && lifecycleContextInstalled
     }
 
-    /**判断当前视图里是否已经有聊天页（聊天输入框或 Chatting* 容器）。首页会话列表不含 EditText。 */
+    /**
+     * 判断当前视图里是否已经有聊天页。
+     *
+     * 注意：不能按类名里是否有 “Chatting” 来判断——微信首页的 LauncherUI 视图树里本来就挂着
+     * `com.tencent.mm.ui.tools.TestTimeForChatting`（框架自带的计时辅助 View），按类名判断会恒为真。
+     * 实测首页整棵 LauncherUI 视图树没有任何 EditText，而聊天页必定有一个输入框，因此只认 EditText。
+     */
     private fun hasChattingView(view: View?): Boolean {
         val target = view ?: return false
-        if (target.javaClass.name.contains("Chatting", ignoreCase = true)) return true
-        if (target is android.widget.EditText) return true
+        if (target is android.widget.EditText) {
+            return target.visibility == View.VISIBLE
+        }
         if (target is ViewGroup) {
             for (index in 0 until target.childCount) {
                 if (hasChattingView(target.getChildAt(index))) return true
