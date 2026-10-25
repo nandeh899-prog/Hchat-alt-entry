@@ -780,7 +780,10 @@ object ConversationGroupRuntime {
                             if (backAttempts == 0) {
                                 backAttempts = 1
                                 HLog.e(
-                                    "$TAG 观测：分组页退出后出现聊天视图（本版只记录，不下发返回键）",
+                                    "$TAG 观测：分组页退出后出现聊天视图 chain=" +
+                                        describeViewChain(
+                                            findChattingEditText(launcher.window?.decorView)
+                                        ),
                                     RuntimeException("observedChattingView")
                                 )
                             }
@@ -810,25 +813,17 @@ object ConversationGroupRuntime {
                     val activity = param.thisObject as? Activity ?: return
                     launcherViewRef = WeakReference(activity)
                     if (!pendingVirtualChatExit || activity.isFinishing) return
-                    // 刚退出分组页：如果 LauncherUI 恢复时还挂着虚拟会话聊天视图，
-                    // 说明退出期间的轮询没赶上（微信被切到后台等），这里再下发一次返回键。
+                    // 刚退出分组页：如果 LauncherUI 恢复时还挂着聊天视图，说明空白页确实存在于 LauncherUI 内。
+                    // 本版只记录（含视图祖先链），不下发返回键。
                     main.postDelayed({
                         if (!pendingVirtualChatExit || activity.isFinishing) return@postDelayed
-                        if (!hasChattingView(activity.window?.decorView)) return@postDelayed
+                        val edit = findChattingEditText(activity.window?.decorView)
+                            ?: return@postDelayed
                         HLog.e(
-                            "$TAG LauncherUI 恢复时仍是虚拟分组空白聊天视图，下发返回键",
-                            RuntimeException("resumeVirtualGroupChat")
+                            "$TAG 观测：LauncherUI 恢复时存在聊天视图 chain=" +
+                                describeViewChain(edit),
+                            RuntimeException("resumeChattingView")
                         )
-                        runCatching {
-                            activity.dispatchKeyEvent(
-                                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
-                            )
-                            activity.dispatchKeyEvent(
-                                KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK)
-                            )
-                        }.onFailure {
-                            HLog.e("$TAG 恢复时退出虚拟会话聊天视图失败: ${it.message}", it)
-                        }
                     }, 400)
                 }
             }
@@ -1068,16 +1063,39 @@ object ConversationGroupRuntime {
      * 实测首页整棵 LauncherUI 视图树没有任何 EditText，而聊天页必定有一个输入框，因此只认 EditText。
      */
     private fun hasChattingView(view: View?): Boolean {
-        val target = view ?: return false
+        return findChattingEditText(view) != null
+    }
+
+    /** 找到聊天页的输入框（首页会话列表没有 EditText，这是唯一可靠的判据）。 */
+    private fun findChattingEditText(view: View?): android.widget.EditText? {
+        val target = view ?: return null
         if (target is android.widget.EditText) {
-            return target.visibility == View.VISIBLE
+            return if (target.visibility == View.VISIBLE) target else null
         }
         if (target is ViewGroup) {
             for (index in 0 until target.childCount) {
-                if (hasChattingView(target.getChildAt(index))) return true
+                val found = findChattingEditText(target.getChildAt(index))
+                if (found != null) return found
             }
         }
-        return false
+        return null
+    }
+
+    /** 诊断用：打印一个 View 的祖先链（类名 + 资源 id），用来确定聊天页的容器类。 */
+    private fun describeViewChain(view: View?): String {
+        val parts = ArrayList<String>()
+        var current: View? = view
+        var depth = 0
+        while (current != null && depth < 14) {
+            val name = current.javaClass.name
+            val id = current.id
+            parts.add(
+                if (id == View.NO_ID) name else name + "@0x" + Integer.toHexString(id)
+            )
+            current = current.parent as? View
+            depth++
+        }
+        return parts.joinToString(" <- ")
     }
 
     private fun customizeNativeGroupPage(fragment: Any?, context: Context) {
