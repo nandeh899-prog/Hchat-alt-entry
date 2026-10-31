@@ -1178,15 +1178,11 @@ object ConversationGroupRuntime {
     }
 
     private fun closeVirtualChattingView(activity: Activity, attempt: Int): String {
-        return when (attempt) {
-            1 -> closeChattingViaLauncher(activity)
-            2 -> invokePlatformBackCallback(activity)
-            else -> runCatching {
-                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
-                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK))
-                "keyevent"
-            }.getOrElse { "keyevent-fail:" + it.message }
-        }
+        // 只走微信自己的 LauncherUI.closeChatting()。
+        // 实测：onBackPressed / dispatchKeyEvent 只会让微信“退到后台”（LauncherUI 的默认返回），
+        // 平台 OnBackInvokedDispatcher 上没有注册回调（no-callback:0），androidx dispatcher 的
+        // 无参方法调用同样会退后台。这些方式一旦失败就会把微信踢到后台，比不动更糟，故全部移除。
+        return closeChattingViaLauncher(activity)
     }
 
     /**
@@ -1226,35 +1222,6 @@ object ConversationGroupRuntime {
             }
             "closeChatting-fail:" + error
         }.getOrElse { "closeChatting-fail:" + (it.cause?.message ?: it.message) }
-    }
-
-    /**
-     * 直接调用平台 OnBackInvokedDispatcher 上注册的回调。
-     *
-     * 微信 8.0.49 的返回走 Android 13+ 的 OnBackInvokedCallback：系统返回键能关掉内嵌聊天视图，
-     * 而 `Activity.onBackPressed()` / `dispatchKeyEvent()` 都只是触发 LauncherUI 自己的逻辑
-     * （结果是“退到后台”）。这里枚举 dispatcher 上的回调队列（字段名被改成私有，按类型匹配），
-     * 取最后注册的一个（栈顶优先）直接调用。
-     */
-    private fun invokePlatformBackCallback(activity: Activity): String {
-        if (android.os.Build.VERSION.SDK_INT < 33) return "sdk<33"
-        return runCatching {
-            val dispatcher = activity.onBackInvokedDispatcher ?: return@runCatching "no-platform"
-            val deque = dispatcher.javaClass.declaredFields
-                .firstOrNull { java.util.Collection::class.java.isAssignableFrom(it.type) }
-                ?.apply { isAccessible = true }
-                ?.get(dispatcher) as? java.util.Collection<*>
-                ?: return@runCatching "no-field:" + dispatcher.javaClass.declaredFields.joinToString(
-                    ","
-                ) { it.name + ":" + it.type.simpleName }
-            val callbacks = deque.toList()
-                .mapNotNull { (it as? java.lang.ref.WeakReference<*>)?.get() }
-                .filterIsInstance<android.window.OnBackInvokedCallback>()
-            val target = callbacks.lastOrNull()
-                ?: return@runCatching "no-callback:" + deque.size()
-            target.onBackInvoked()
-            "platform:" + target.javaClass.name.substringAfterLast('.')
-        }.getOrElse { "platform-fail:" + (it.cause?.message ?: it.message) }
     }
 
     /** 诊断：打印 LauncherUI 上所有和聊天/会话相关的方法签名，用来找“回到会话列表”的入口。 */
