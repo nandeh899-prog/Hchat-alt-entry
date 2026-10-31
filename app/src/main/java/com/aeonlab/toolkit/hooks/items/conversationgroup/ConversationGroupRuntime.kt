@@ -17,6 +17,7 @@ import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AbsListView
 import android.widget.Adapter
 import android.widget.AdapterView
 import android.widget.TextView
@@ -905,6 +906,8 @@ object ConversationGroupRuntime {
                 override fun afterHookedMethod(param: MethodHookParam) {
                     val activity = param.thisObject as? Activity ?: return
                     launcherViewRef = WeakReference(activity)
+                    // 首页列表点击：在微信之前把虚拟分组行吞掉（不依赖 DexKit 锚点）。
+                    runCatching { installHomeListClickHook(activity) }
                     if (!pendingVirtualChatExit || activity.isFinishing) return
                     // 刚退出分组页：如果 LauncherUI 恢复时已经挂着空白聊天视图，直接下发一次返回键。
                     main.postDelayed({
@@ -1097,10 +1100,9 @@ object ConversationGroupRuntime {
                 "com.tencent.mm.ui.LauncherUI",
                 context.hostClassLoader()
             ) ?: return@runCatching
-            val candidates = listOf(
-                KavaReflector.findMethodRecursive(launcherClass, "startChatting", Intent::class.java),
-                KavaReflector.findMethodRecursive(launcherClass, "startChatting", String::class.java)
-            ).filterNotNull()
+            val candidates = launcherClass.declaredMethods
+                .filter { it.name == "startChatting" }
+                .onEach { runCatching { KavaReflector.accessible(it) } }
             if (candidates.isEmpty()) {
                 HLog.e("$TAG 未找到 LauncherUI.startChatting，空白聊天页仍可能闪现")
                 return@runCatching
@@ -1216,6 +1218,74 @@ object ConversationGroupRuntime {
     }
 
     /** 诊断用：打印一个 View 的祖先链（类名 + 资源 id），用来确定聊天页的容器类。 */
+    /** 已经在运行时 hook 过的点击监听类，避免每次 onResume 重复 hook。 */
+    private val homeClickHookedClasses: MutableSet<Class<*>> =
+        java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<Class<*>, Boolean>())
+
+    private fun findConversationList(root: View?): AbsListView? {
+        if (root == null) return null
+        if (root is AbsListView && (root.adapter?.count ?: 0) > 0) return root
+        if (root is ViewGroup) {
+            for (i in 0 until root.childCount) {
+                findConversationList(root.getChildAt(i))?.let { return it }
+            }
+        }
+        return null
+    }
+
+    /**
+     * 首页会话列表点击的“运行时”拦截。
+     *
+     * 原来靠 DexKit 字符串锚点定位微信的 ConversationClickListener，一旦锚点失配就装不上，
+     * 于是点虚拟分组行会先走微信的“打开聊天”，在 LauncherUI 里预建出内嵌聊天视图——退出分组页
+     * 时就会闪一张空白聊天页，并把那一行标成“正在打开”（标题栏高亮）。
+     *
+     * 这里不依赖任何字符串：直接从 ListView 取已注册的 OnItemClickListener，hook 它自己的
+     * onItemClick，先于微信把虚拟分组行吞掉。
+     */
+    private fun installHomeListClickHook(activity: Activity) {
+        val list = findConversationList(activity.window?.decorView) ?: return
+        val listener = runCatching { list.onItemClickListener }.getOrNull() ?: return
+        val hookClass = listener.javaClass
+        if (!homeClickHookedClasses.add(hookClass)) return
+        var target: Class<*>? = hookClass
+        while (target != null && target != Any::class.java) {
+            val method = target.declaredMethods.firstOrNull {
+                it.name == "onItemClick" && it.parameterTypes.size == 4
+            }
+            if (method != null) {
+                runCatching { KavaReflector.accessible(method) }
+                hook(method, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val adapter = param.args?.getOrNull(0) as? AdapterView<*> ?: return
+                        val view = param.args?.getOrNull(1) as? View ?: return
+                        val position = param.args?.getOrNull(2) as? Int ?: return
+                        val item = runCatching { adapter.getItemAtPosition(position) }.getOrNull()
+                            ?: return
+                        val talker = conversationTalkerFromItem(item) ?: return
+                        if (!isVirtualTalker(talker)) return
+                        val host = findActivity(view.context) ?: return
+                        param.result = null
+                        HLog.e("$TAG 首页点击虚拟分组行（运行时拦截）: talker=$talker")
+                        main.post {
+                            val group = ConversationGroupStore.load(host)
+                                .firstOrNull { virtualTalker(it.id) == talker }
+                            if (group != null) {
+                                showGroup(host, group.id)
+                            } else {
+                                HLog.e("$TAG 首页点击未找到对应分组: talker=$talker")
+                            }
+                        }
+                    }
+                })
+                HLog.e("$TAG 首页列表点击拦截已安装: ${hookClass.name}")
+                return
+            }
+            target = target.superclass
+        }
+        HLog.e("$TAG 首页列表点击拦截安装失败: ${hookClass.name} 没有 onItemClick")
+    }
+
     private fun describeViewChain(view: View?): String {
         val parts = ArrayList<String>()
         var current: View? = view
