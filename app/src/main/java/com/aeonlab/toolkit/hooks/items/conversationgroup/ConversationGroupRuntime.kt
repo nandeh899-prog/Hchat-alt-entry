@@ -1185,6 +1185,10 @@ object ConversationGroupRuntime {
                             syncAsync(context.hostContext())
                             updateNativeGroupUnread(param.thisObject)
                             updateNativeGroupTitle(param.thisObject, context.hostContext())
+                            hideChattingLayer(
+                                (KavaReflector.invokeMethod(param.thisObject, "getActivity")
+                                    ?: KavaReflector.invokeMethod(param.thisObject, "thisActivity")) as? Activity
+                            )
                         }
                     } finally {
                         nativeGroupPageParent.remove()
@@ -1210,6 +1214,37 @@ object ConversationGroupRuntime {
     }
 
     /** 找到聊天页的输入框（首页会话列表没有 EditText，这是唯一可靠的判据）。 */
+    private fun findViewBySimpleClass(view: View?, simpleName: String): View? {
+        val target = view ?: return null
+        if (target.javaClass.simpleName == simpleName) return target
+        if (target is ViewGroup) {
+            for (index in 0 until target.childCount) {
+                findViewBySimpleClass(target.getChildAt(index), simpleName)?.let { return it }
+            }
+        }
+        return null
+    }
+
+    /**
+     * 隐藏分组页里预建的父会话聊天层。
+     *
+     * 微信的“折叠的群聊”页（ConvBoxServiceConversationUI）继承自 BaseConversationUI，打开时会在
+     * 空闲阶段（queueIdle → ChattingUIProxy.onInit）把父会话的聊天容器 ChattingUILayout 一起建好。
+     * 我们的父会话是虚拟 talker，这个容器就是用户看到的“空白聊天页 / 对方还不是你的朋友”。
+     * 它平时被分组列表盖住，只有在退出分组页的那一帧会露出来。直接 GONE 掉，退出时就不会闪。
+     */
+    private fun hideChattingLayer(activity: Activity?): Boolean {
+        val target = activity ?: return false
+        val decor = target.window?.decorView ?: return false
+        val layer = findViewBySimpleClass(decor, "ChattingUILayout") ?: return false
+        if (layer.visibility == View.GONE) return true
+        return runCatching {
+            layer.visibility = View.GONE
+            HLog.e("$TAG 已隐藏分组页内预建的空白聊天层: ${target.javaClass.simpleName}")
+            true
+        }.getOrDefault(false)
+    }
+
     private fun findChattingEditText(view: View?): android.widget.EditText? {
         val target = view ?: return null
         if (target is android.widget.EditText) {
@@ -1432,6 +1467,10 @@ object ConversationGroupRuntime {
         }
         setNativeGroupTitle(target, talker, group.name, adapter)
         installNativeGroupPageMenu(target, context, group.id)
+        hideChattingLayer(
+            (KavaReflector.invokeMethod(target, "getActivity")
+                ?: KavaReflector.invokeMethod(target, "thisActivity")) as? Activity
+        )
     }
 
     private fun installNativeGroupPageMenu(fragment: Any, context: Context, groupId: String) {
