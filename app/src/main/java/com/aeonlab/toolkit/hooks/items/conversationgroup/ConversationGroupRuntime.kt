@@ -91,6 +91,9 @@ object ConversationGroupRuntime {
         "com.tencent.mm.ui.conversation.ConvBoxServiceConversationUI\$ConvBoxServiceConversationFmUI"
     private const val FRAGMENT_ACTIVITY_SUPPORT = "com.tencent.mm.ui.FragmentActivitySupport"
     private const val CONTACT_USER_EXTRA = "Contact_User"
+
+    /** 分组页自己携带的虚拟 talker。刻意不用 Contact_User，避免微信把它当成会话父级。 */
+    private const val GROUP_TALKER_EXTRA = "AeonLab_Group_Talker"
     private const val CHATTING_UI = "com.tencent.mm.ui.chatting.ChattingUI"
     private const val CHAT_USER_EXTRA = "Chat_User"
     private const val NATIVE_GROUP_TAG = "MicroMsg.ConvBoxServiceConversationFmUI"
@@ -103,7 +106,7 @@ object ConversationGroupRuntime {
      * 截断，会留下空白聊天视图、会话行高亮、以及退出后 5 秒内再进分组退化成原生
      * “折叠的群聊 / 暂无群聊”。这里关掉，回到微信原生返回语义，对比验证。
      */
-    private const val INTERCEPT_GROUP_PAGE_BACK = false
+    private const val INTERCEPT_GROUP_PAGE_BACK = true
     private const val VIRTUAL_PREFIX = "wxid_hchat_group_"
     private const val PARENT_PREFIX = "hchat_conv_group:"
     private const val KEY_ORIGINAL_PARENT_REFS = "original_parent_refs"
@@ -770,7 +773,10 @@ object ConversationGroupRuntime {
         runCatching {
             activity.startActivity(
                 Intent().setClassName(activity, NATIVE_GROUP_ACTIVITY).apply {
-                    putExtra(CONTACT_USER_EXTRA, talker)
+                    // 关键：不要用微信的 Contact_User 传虚拟 talker。微信看到它是“会话父级”就会
+                    // 按聊天页渲染（退出时还会切到那个会话），于是出现空白聊天页和会话行高亮。
+                    // 换用自己的 extra，只在 fragment 的 getStringExtra 处补给它自己看。
+                    putExtra(GROUP_TALKER_EXTRA, talker)
                 }
             )
         }.onFailure {
@@ -785,6 +791,7 @@ object ConversationGroupRuntime {
             suspendingParentExtra = true
             pendingVirtualChatExit = true
             editTextProbeCount.set(0)
+            runCatching { activity.intent?.removeExtra(GROUP_TALKER_EXTRA) }
             runCatching { activity.intent?.removeExtra(CONTACT_USER_EXTRA) }
             main.postDelayed({ suspendingParentExtra = false }, 5000)
             main.postDelayed({ pendingVirtualChatExit = false }, 20000)
@@ -982,7 +989,7 @@ object ConversationGroupRuntime {
                 val activity = (KavaReflector.invokeMethod(param.thisObject, "getActivity")
                     ?: KavaReflector.invokeMethod(param.thisObject, "thisActivity")) as? Activity
                     ?: return
-                val talker = activity.intent?.getStringExtra(CONTACT_USER_EXTRA)
+                val talker = activity.intent?.getStringExtra(GROUP_TALKER_EXTRA)
                     ?.takeIf(::isVirtualTalker) ?: return
                 if (suspendingParentExtra && (activity.isFinishing || activity.isDestroyed)) {
                     // 只有“正在关闭的那个页面”才需要切断父会话。之前这里是全局 5 秒开关，
@@ -1010,7 +1017,8 @@ object ConversationGroupRuntime {
         fun isVirtualGroupPage(activity: Any?): Boolean {
             val target = activity as? Activity ?: return false
             if (target.isFinishing) return false
-            return target.intent?.getStringExtra(CONTACT_USER_EXTRA)?.let(::isVirtualTalker) == true
+            return (target.intent?.getStringExtra(GROUP_TALKER_EXTRA)
+                ?: target.intent?.getStringExtra(CONTACT_USER_EXTRA))?.let(::isVirtualTalker) == true
         }
         var backHookInstalled = false
         if (groupActivityClass != null && INTERCEPT_GROUP_PAGE_BACK) {
@@ -1078,6 +1086,42 @@ object ConversationGroupRuntime {
         }
         if (!virtualChatBlocked) {
             HLog.e("$TAG 虚拟分组会话聊天页拦截 Hook 安装失败")
+        }
+        // 根因收口：从分组页退出时，微信会让 LauncherUI“回到父会话”，而父会话是我们塞进去的
+        // 虚拟 talker（wxid_hchat_group_*）。它没有真实会话数据，于是 LauncherUI 挂出一张空白
+        // 聊天页（“对方还不是你的朋友 / N 条新消息”），并把这个会话行标成“当前打开”。
+        // 在入口处直接吞掉对虚拟 talker 的 startChatting，空白页根本不会创建，也就没有
+        // 返回时的闪烁和残留高亮。
+        runCatching {
+            val launcherClass = KavaReflector.loadClass(
+                "com.tencent.mm.ui.LauncherUI",
+                context.hostClassLoader()
+            ) ?: return@runCatching
+            val candidates = listOf(
+                KavaReflector.findMethodRecursive(launcherClass, "startChatting", Intent::class.java),
+                KavaReflector.findMethodRecursive(launcherClass, "startChatting", String::class.java)
+            ).filterNotNull()
+            if (candidates.isEmpty()) {
+                HLog.e("$TAG 未找到 LauncherUI.startChatting，空白聊天页仍可能闪现")
+                return@runCatching
+            }
+            candidates.forEach { method ->
+                hook(method, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val args = param.args ?: return
+                        val talker = args.filterIsInstance<Intent>()
+                            .flatMap { listOf(CHAT_USER_EXTRA, CONTACT_USER_EXTRA).map(it::getStringExtra) }
+                            .firstOrNull()
+                            ?: args.filterIsInstance<String>().firstOrNull()
+                            ?: return
+                        if (!isVirtualTalker(talker)) return
+                        HLog.e("$TAG 拦截 LauncherUI 打开虚拟分组会话: talker=$talker")
+                        param.result = null
+                    }
+                })
+            }
+        }.onFailure {
+            HLog.e("$TAG startChatting 拦截安装失败: ${it.message}")
         }
         // 微信退出“折叠聊天”页时会通过通用入口“回到父会话”。我们的父会话是虚拟分组 talker，
         // 微信因此会进入一个空白聊天页（实测是 LauncherUI 内嵌的聊天视图，不是独立 ChattingUI），
