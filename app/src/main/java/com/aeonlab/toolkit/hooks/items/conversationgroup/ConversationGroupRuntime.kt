@@ -1227,7 +1227,7 @@ object ConversationGroupRuntime {
                 .mapNotNull { (it as? java.lang.ref.WeakReference<*>)?.get() }
                 .filterIsInstance<android.window.OnBackInvokedCallback>()
             val target = callbacks.lastOrNull()
-                ?: return@runCatching "no-callback:" + deque.size
+                ?: return@runCatching "no-callback:" + deque.size()
             target.onBackInvoked()
             "platform:" + target.javaClass.name.substringAfterLast('.')
         }.getOrElse { "platform-fail:" + (it.cause?.message ?: it.message) }
