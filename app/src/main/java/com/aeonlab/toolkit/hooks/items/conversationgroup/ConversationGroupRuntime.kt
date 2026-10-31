@@ -1178,12 +1178,22 @@ object ConversationGroupRuntime {
 
     private fun closeVirtualChattingView(activity: Activity, attempt: Int): String {
         return when (attempt) {
-            1 -> runCatching {
+            1 -> invokePlatformBackCallback(activity)
+            2 -> runCatching {
                 val getter = activity.javaClass.getMethod("getOnBackPressedDispatcher")
                 val dispatcher = getter.invoke(activity)
                     ?: return@runCatching "no-dispatcher"
-                dispatcher.javaClass.getMethod("onBackPressed").invoke(dispatcher)
-                "dispatcher"
+                val method = dispatcher.javaClass.declaredMethods.firstOrNull {
+                    it.parameterCount == 0 && it.name.contains("onBackPressed", ignoreCase = true)
+                } ?: let {
+                    // androidx 方法可能被 R8 改名，退回按“无参 + 返回 void + 在 OnBackPressedDispatcher 上”找
+                    dispatcher.javaClass.declaredMethods.firstOrNull {
+                        it.parameterCount == 0 && it.returnType == Void.TYPE
+                    }
+                } ?: return@runCatching "no-dispatcher-method"
+                method.isAccessible = true
+                method.invoke(dispatcher)
+                "dispatcher:" + method.name
             }.getOrElse { "dispatcher-fail:" + (it.cause?.message ?: it.message) }
             else -> runCatching {
                 activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
@@ -1191,6 +1201,32 @@ object ConversationGroupRuntime {
                 "keyevent"
             }.getOrElse { "keyevent-fail:" + it.message }
         }
+    }
+
+    /**
+     * 直接调用平台 OnBackInvokedDispatcher 上注册的回调。
+     *
+     * 微信 8.0.49 的返回走 Android 13+ 的 OnBackInvokedCallback：系统返回键能关掉内嵌聊天视图，
+     * 而 `Activity.onBackPressed()` / `dispatchKeyEvent()` 都只是触发 LauncherUI 自己的逻辑
+     * （结果是“退到后台”）。这里枚举 dispatcher 上的回调队列（字段名被改成私有，按类型匹配），
+     * 取最后注册的一个（栈顶优先）直接调用。
+     */
+    private fun invokePlatformBackCallback(activity: Activity): String {
+        if (android.os.Build.VERSION.SDK_INT < 33) return "sdk<33"
+        return runCatching {
+            val dispatcher = activity.onBackInvokedDispatcher ?: return@runCatching "no-platform"
+            val deque = dispatcher.javaClass.declaredFields
+                .firstOrNull { java.util.ArrayDeque::class.java.isAssignableFrom(it.type) }
+                ?.apply { isAccessible = true }
+                ?.get(dispatcher) as? java.util.ArrayDeque<*>
+                ?: return@runCatching "no-field"
+            val callbacks = deque.toList()
+                .mapNotNull { (it as? java.lang.ref.WeakReference<*>)?.get() }
+                .filterIsInstance<android.window.OnBackInvokedCallback>()
+            val target = callbacks.lastOrNull() ?: return@runCatching "no-callback"
+            target.onBackInvoked()
+            "platform:" + target.javaClass.name.substringAfterLast('.')
+        }.getOrElse { "platform-fail:" + (it.cause?.message ?: it.message) }
     }
 
     private fun customizeNativeGroupPage(fragment: Any?, context: Context) {
