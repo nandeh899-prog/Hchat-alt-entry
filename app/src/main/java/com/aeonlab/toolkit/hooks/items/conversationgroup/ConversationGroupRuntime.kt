@@ -1125,6 +1125,7 @@ object ConversationGroupRuntime {
                             "$TAG 拦截 LauncherUI 打开虚拟分组会话: talker=$talker " +
                                 "method=${method.name}/${method.parameterTypes.size}"
                         )
+                        clearPendingChatTarget(param.thisObject as? Activity)
                         param.result = null
                     }
                 })
@@ -1152,6 +1153,7 @@ object ConversationGroupRuntime {
                             "$TAG 拦截打开虚拟分组会话聊天的请求: talker=$talker",
                             RuntimeException("blockVirtualGroupChat")
                         )
+                        clearPendingChatTarget(param.thisObject as? Activity)
                         when (method.returnType) {
                             Void.TYPE -> param.result = null
                             Integer.TYPE -> param.result = 0
@@ -1229,6 +1231,31 @@ object ConversationGroupRuntime {
     private val homeClickHookedClasses: MutableSet<Class<*>> =
         java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<Class<*>, Boolean>())
 
+    /**
+     * 微信的 BaseConversationUI 会在空闲时（queueIdle → ChattingUIProxy.onInit）预热内嵌聊天页，
+     * talker 取自宿主 Activity 的 intent（Chat_User / Contact_User）。我们把点击吞掉之后如果
+     * 不清掉它，预热仍会拿着虚拟 talker 建出一张空白聊天页：退出分组页时闪一下，同时把该会话
+     * 行标成“正在打开”（标题栏高亮）。所以吞掉点击的同时把宿主 intent 里的 talker 清掉。
+     */
+    private fun clearPendingChatTarget(activity: Activity?) {
+        val target = activity ?: return
+        runCatching {
+            val intent = target.intent ?: return@runCatching
+            var cleared = false
+            if (intent.getStringExtra(CHAT_USER_EXTRA)?.let(::isVirtualTalker) == true) {
+                intent.removeExtra(CHAT_USER_EXTRA)
+                cleared = true
+            }
+            if (intent.getStringExtra(CONTACT_USER_EXTRA)?.let(::isVirtualTalker) == true) {
+                intent.removeExtra(CONTACT_USER_EXTRA)
+                cleared = true
+            }
+            if (cleared) {
+                HLog.e("$TAG 已清除宿主 intent 中的虚拟 talker，避免预热出空白聊天页")
+            }
+        }
+    }
+
     private fun findConversationList(root: View?): AbsListView? {
         if (root == null) return null
         if (root is AbsListView && (root.adapter?.count ?: 0) > 0) return root
@@ -1274,6 +1301,7 @@ object ConversationGroupRuntime {
                         val host = findActivity(view.context) ?: return
                         param.result = null
                         HLog.e("$TAG 首页点击虚拟分组行（运行时拦截）: talker=$talker")
+                        clearPendingChatTarget(host)
                         main.post {
                             val group = ConversationGroupStore.load(host)
                                 .firstOrNull { virtualTalker(it.id) == talker }
