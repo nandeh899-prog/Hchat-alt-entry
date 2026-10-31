@@ -695,7 +695,14 @@ object ConversationGroupRuntime {
     private fun nativeGroupClickHook(): XC_MethodHook {
         return object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
-                val fragment = nativeGroupFragmentFromListener(param.thisObject) ?: return
+                val fragment = nativeGroupFragmentFromListener(param.thisObject)
+                if (fragment == null) {
+                    // 首页会话列表：点到虚拟分组行时不能交给微信的默认聊天入口，否则它会先给
+                    // 这个不存在的 talker 建一张空白聊天视图（藏在分组页底下，分组页一关闭就
+                    // 露出来），而该视图不在 LauncherUI 的返回栈里，返回键关不掉它。
+                    handleHomeVirtualGroupClick(param)
+                    return
+                }
                 if (!isVirtualGroupFragment(fragment)) return
                 val adapter = param.args?.getOrNull(0) as? AdapterView<*> ?: return
                 val view = param.args?.getOrNull(1) as? View ?: return
@@ -719,6 +726,31 @@ object ConversationGroupRuntime {
                         HLog.e("$TAG 打开分组内会话失败: talker=$talker")
                     }
                 }
+            }
+        }
+    }
+
+    /** 首页会话列表点击到虚拟分组行：直接打开分组页，吞掉微信默认的聊天入口。 */
+    private fun handleHomeVirtualGroupClick(param: XC_MethodHook.MethodHookParam) {
+        val adapter = param.args?.getOrNull(0) as? AdapterView<*> ?: return
+        val view = param.args?.getOrNull(1) as? View ?: return
+        val position = param.args?.getOrNull(2) as? Int ?: return
+        val item = runCatching { adapter.getItemAtPosition(position) }.getOrNull() ?: return
+        val talker = conversationTalkerFromItem(item) ?: return
+        if (!isVirtualTalker(talker)) return
+        val activity = findActivity(view.context) ?: return
+        param.result = null
+        HLog.e(
+            "$TAG 首页点击虚拟分组行，拦截微信默认聊天入口: talker=$talker",
+            RuntimeException("homeVirtualGroupClick")
+        )
+        main.post {
+            val group = ConversationGroupStore.load(activity)
+                .firstOrNull { virtualTalker(it.id) == talker }
+            if (group != null) {
+                showGroup(activity, group.id)
+            } else {
+                HLog.e("$TAG 首页点击未找到对应分组: talker=$talker")
             }
         }
     }
@@ -1114,7 +1146,9 @@ object ConversationGroupRuntime {
     private fun findChattingEditText(view: View?): android.widget.EditText? {
         val target = view ?: return null
         if (target is android.widget.EditText) {
-            return if (target.visibility == View.VISIBLE) target else null
+            // isShown 会沿祖先链检查可见性：仅看自身 visibility 会把“容器被隐藏/尚未挂上”的
+            // 输入框也算进来（实测把父容器设为 GONE 后，子 View 的 visibility 仍是 VISIBLE）。
+            return if (target.visibility == View.VISIBLE && target.isShown) target else null
         }
         if (target is ViewGroup) {
             for (index in 0 until target.childCount) {
@@ -1142,16 +1176,6 @@ object ConversationGroupRuntime {
         return parts.joinToString(" <- ")
     }
 
-    /**
-     * 关掉“父会话”留下的空白聊天视图。
-     *
-     * 实测结论（微信 8.0.49 / LauncherUI 内嵌聊天视图）：
-     * - `activity.onBackPressed()` 与 `dispatchKeyEvent(BACK)` 都无效——微信把返回交给平台的
-     *   OnBackInvokedCallback 处理，LauncherUI 自己的 onBackPressed 只会“退到后台”。
-     * - 系统返回键对这个视图有效（一次返回即回到会话列表），因此优先走 androidx 的
-     *   OnBackPressedDispatcher；失败则直接把游离的聊天视图收起来（WeChat 本身并不认为
-     *   它有聊天页打开，隐藏后状态是一致的）。
-     */
     private fun closeVirtualChattingView(activity: Activity, attempt: Int): String {
         return when (attempt) {
             1 -> runCatching {
@@ -1161,31 +1185,12 @@ object ConversationGroupRuntime {
                 dispatcher.javaClass.getMethod("onBackPressed").invoke(dispatcher)
                 "dispatcher"
             }.getOrElse { "dispatcher-fail:" + (it.cause?.message ?: it.message) }
-            else -> hideVirtualChattingView(activity)
+            else -> runCatching {
+                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
+                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK))
+                "keyevent"
+            }.getOrElse { "keyevent-fail:" + it.message }
         }
-    }
-
-    /** 兜底：把游离的聊天视图（TestTimeForChatting 容器）隐藏，露出下面的会话列表。 */
-    private fun hideVirtualChattingView(activity: Activity): String {
-        return runCatching {
-            val decor = activity.window?.decorView ?: return@runCatching "no-decor"
-            val edit = findChattingEditText(decor) ?: return@runCatching "no-edit"
-            var node: View = edit
-            var victim: View? = null
-            var parent = edit.parent
-            while (parent is View) {
-                if (parent.javaClass.name.endsWith("TestTimeForChatting")) {
-                    victim = parent
-                    break
-                }
-                if (parent === decor) break
-                node = parent
-                parent = parent.parent
-            }
-            val target = victim ?: node
-            target.visibility = View.GONE
-            "hidden:" + target.javaClass.name.substringAfterLast('.')
-        }.getOrElse { "hide-fail:" + it.message }
     }
 
     private fun customizeNativeGroupPage(fragment: Any?, context: Context) {
