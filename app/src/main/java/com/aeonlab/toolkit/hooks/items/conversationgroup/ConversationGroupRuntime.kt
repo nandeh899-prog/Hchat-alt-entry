@@ -937,15 +937,19 @@ object ConversationGroupRuntime {
                 val probe = object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val index = editTextProbeCount.incrementAndGet()
-                        if (index > 12) return
-                        val frames = Throwable().stackTrace
-                            .drop(1).take(26)
+                        if (index > 24) return
+                        val trace = Throwable().stackTrace.drop(1)
+                        val outer = trace.takeLast(20)
                             .joinToString(" | ") {
                                 it.className.substringAfterLast('.') + "." + it.methodName
                             }
+                        val host = runCatching {
+                            val ctx = param.args?.firstOrNull() as? Context
+                            ctx?.let { findActivity(it) }?.javaClass?.simpleName ?: "?"
+                        }.getOrDefault("?")
                         HLog.e(
-                            "$TAG editTextProbe#$index thread=${Thread.currentThread().name} " +
-                                "pending=$pendingVirtualChatExit $frames",
+                            "$TAG editTextProbe#$index host=$host " +
+                                "pending=$pendingVirtualChatExit outer=$outer",
                             RuntimeException("editTextProbe")
                         )
                     }
@@ -1117,7 +1121,10 @@ object ConversationGroupRuntime {
                             ?: args.filterIsInstance<String>().firstOrNull()
                             ?: return
                         if (!isVirtualTalker(talker)) return
-                        HLog.e("$TAG 拦截 LauncherUI 打开虚拟分组会话: talker=$talker")
+                        HLog.e(
+                            "$TAG 拦截 LauncherUI 打开虚拟分组会话: talker=$talker " +
+                                "method=${method.name}/${method.parameterTypes.size}"
+                        )
                         param.result = null
                     }
                 })
