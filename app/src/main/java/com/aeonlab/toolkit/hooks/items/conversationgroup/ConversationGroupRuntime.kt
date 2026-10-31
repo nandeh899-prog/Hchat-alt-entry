@@ -746,10 +746,16 @@ object ConversationGroupRuntime {
             runCatching { activity.intent?.removeExtra(CONTACT_USER_EXTRA) }
             main.postDelayed({ suspendingParentExtra = false }, 5000)
             main.postDelayed({ pendingVirtualChatExit = false }, 20000)
-            // 微信在折叠页销毁后“稍晚”才把 LauncherUI 切到父会话聊天视图（实测是内嵌视图，
-            // 不是独立 ChattingUI），单次延迟检测会错过；这里短轮询，每次命中都下发一次返回键。
+            // 微信在折叠页销毁后会把 LauncherUI 切到“父会话”聊天视图（实测是内嵌视图，容器是
+            // com.tencent.mm.ui.tools.TestTimeForChatting，不是独立 ChattingUI Activity）。我们的
+            // 父会话是虚拟 talker，所以那是一张空白页。
+            // 关键：该内嵌聊天视图不参与 LauncherUI 的返回栈，但返回键对它有效（实测一次返回即
+            // 回到会话列表）。所以这里短轮询，命中后按一次、复查一次，绝不在会话列表上空按
+            // （空按会把微信退到后台，前几版正是这样失效的）。
             var sweepTries = 0
             var backAttempts = 0
+            var hitStreak = 0
+            var chainLogged = false
             val sweepAction = object : Runnable {
                 override fun run() {
                     sweepTries++
@@ -772,28 +778,59 @@ object ConversationGroupRuntime {
                         val hit = hasChattingView(launcher.window?.decorView)
                         if (hit || sweepTries % 3 == 1) {
                             HLog.e(
-                                "$TAG sweep#$sweepTries activity=$name chattingView=$hit",
+                                "$TAG sweep#$sweepTries activity=$name chattingView=$hit streak=$hitStreak back=$backAttempts",
                                 RuntimeException("sweepProbe")
                             )
                         }
                         if (hit) {
-                            if (backAttempts == 0) {
-                                backAttempts = 1
+                            hitStreak++
+                            if (!chainLogged) {
+                                chainLogged = true
                                 HLog.e(
-                                    "$TAG 观测：分组页退出后出现聊天视图 chain=" +
+                                    "$TAG 分组页退出后出现空白聊天视图 chain=" +
                                         describeViewChain(
                                             findChattingEditText(launcher.window?.decorView)
                                         ),
                                     RuntimeException("observedChattingView")
                                 )
                             }
-                        } else if (backAttempts > 0) {
-                            HLog.e(
-                                "$TAG 观测：聊天视图已消失",
-                                RuntimeException("observedChattingGone")
-                            )
-                            pendingVirtualChatExit = false
-                            return
+                            // 这个内嵌聊天视图不在 LauncherUI 的返回栈里，但返回键对它有效
+                            // （实测：空白页按一次返回即回到会话列表）。按一次复查一次，最多 3 次。
+                            if (hitStreak >= 2 && backAttempts < 3 &&
+                                (resumed == null || resumed === launcher)
+                            ) {
+                                backAttempts++
+                                hitStreak = 0
+                                HLog.e(
+                                    "$TAG 下发返回键关闭空白聊天视图 attempt=$backAttempts",
+                                    RuntimeException("pressBackForVirtualChat")
+                                )
+                                if (backAttempts < 3) {
+                                    main.post { runCatching { launcher.onBackPressed() } }
+                                } else {
+                                    // 兜底：直接派发按键事件。
+                                    main.post {
+                                        runCatching {
+                                            launcher.dispatchKeyEvent(
+                                                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
+                                            )
+                                            launcher.dispatchKeyEvent(
+                                                KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            hitStreak = 0
+                            if (chainLogged) {
+                                HLog.e(
+                                    "$TAG 空白聊天视图已关闭，回到会话列表",
+                                    RuntimeException("observedChattingGone")
+                                )
+                                pendingVirtualChatExit = false
+                                return
+                            }
                         }
                     }
                     if (sweepTries < 50) main.postDelayed(this, 300)
@@ -813,17 +850,17 @@ object ConversationGroupRuntime {
                     val activity = param.thisObject as? Activity ?: return
                     launcherViewRef = WeakReference(activity)
                     if (!pendingVirtualChatExit || activity.isFinishing) return
-                    // 刚退出分组页：如果 LauncherUI 恢复时还挂着聊天视图，说明空白页确实存在于 LauncherUI 内。
-                    // 本版只记录（含视图祖先链），不下发返回键。
+                    // 刚退出分组页：如果 LauncherUI 恢复时已经挂着空白聊天视图，直接下发一次返回键。
                     main.postDelayed({
                         if (!pendingVirtualChatExit || activity.isFinishing) return@postDelayed
                         val edit = findChattingEditText(activity.window?.decorView)
                             ?: return@postDelayed
                         HLog.e(
-                            "$TAG 观测：LauncherUI 恢复时存在聊天视图 chain=" +
+                            "$TAG LauncherUI 恢复时存在空白聊天视图，下发返回键 chain=" +
                                 describeViewChain(edit),
                             RuntimeException("resumeChattingView")
                         )
+                        runCatching { activity.onBackPressed() }
                     }, 400)
                 }
             }
