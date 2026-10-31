@@ -1206,8 +1206,9 @@ object ConversationGroupRuntime {
             for (method in methods) {
                 val outcome = runCatching {
                     method.isAccessible = true
-                    val args = method.parameterTypes.map { type ->
-                        when (type) {
+                    val args = arrayOfNulls<Any?>(method.parameterTypes.size)
+                    method.parameterTypes.forEachIndexed { index, type ->
+                        args[index] = when (type) {
                             java.lang.Boolean.TYPE -> false
                             Integer.TYPE -> 0
                             java.lang.Long.TYPE -> 0L
@@ -1215,7 +1216,7 @@ object ConversationGroupRuntime {
                             java.lang.Double.TYPE -> 0.0
                             else -> null
                         }
-                    }.toTypedArray()
+                    }
                     method.invoke(activity, *args)
                 }
                 if (outcome.isSuccess) {
