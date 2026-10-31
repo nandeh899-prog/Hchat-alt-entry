@@ -1179,29 +1179,52 @@ object ConversationGroupRuntime {
 
     private fun closeVirtualChattingView(activity: Activity, attempt: Int): String {
         return when (attempt) {
-            1 -> invokePlatformBackCallback(activity)
-            2 -> runCatching {
-                val getter = activity.javaClass.getMethod("getOnBackPressedDispatcher")
-                val dispatcher = getter.invoke(activity)
-                    ?: return@runCatching "no-dispatcher"
-                val method = dispatcher.javaClass.declaredMethods.firstOrNull {
-                    it.parameterCount == 0 && it.name.contains("onBackPressed", ignoreCase = true)
-                } ?: let {
-                    // androidx 方法可能被 R8 改名，退回按“无参 + 返回 void + 在 OnBackPressedDispatcher 上”找
-                    dispatcher.javaClass.declaredMethods.firstOrNull {
-                        it.parameterCount == 0 && it.returnType == Void.TYPE
-                    }
-                } ?: return@runCatching "no-dispatcher-method"
-                method.isAccessible = true
-                method.invoke(dispatcher)
-                "dispatcher:" + method.name
-            }.getOrElse { "dispatcher-fail:" + (it.cause?.message ?: it.message) }
+            1 -> closeChattingViaLauncher(activity)
+            2 -> invokePlatformBackCallback(activity)
             else -> runCatching {
                 activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
                 activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK))
                 "keyevent"
             }.getOrElse { "keyevent-fail:" + it.message }
         }
+    }
+
+    /**
+     * 调微信自己的 LauncherUI.closeChatting()。
+     *
+     * 实测 LauncherUI 上存在 closeChatting / startChatting / moveTaskToBack / onBackPressed：
+     * 空白聊天视图不受 onBackPressed 管理（它只会退到后台），而 closeChatting 才是微信内部
+     * 关闭内嵌聊天页的入口。签名未知，这里按参数个数从小到大挑一个，参数用默认值填充。
+     */
+    private fun closeChattingViaLauncher(activity: Activity): String {
+        return runCatching {
+            val methods = activity.javaClass.declaredMethods
+                .filter { it.name == "closeChatting" }
+                .sortedBy { it.parameterCount }
+            if (methods.isEmpty()) return@runCatching "no-closeChatting"
+            var error = ""
+            for (method in methods) {
+                val outcome = runCatching {
+                    method.isAccessible = true
+                    val args = method.parameterTypes.map { type ->
+                        when (type) {
+                            java.lang.Boolean.TYPE -> false
+                            Integer.TYPE -> 0
+                            java.lang.Long.TYPE -> 0L
+                            java.lang.Float.TYPE -> 0f
+                            java.lang.Double.TYPE -> 0.0
+                            else -> null
+                        }
+                    }.toTypedArray()
+                    method.invoke(activity, *args)
+                }
+                if (outcome.isSuccess) {
+                    return@runCatching "closeChatting/" + method.parameterTypes.size
+                }
+                error = outcome.exceptionOrNull()?.let { it.cause?.message ?: it.message } ?: "err"
+            }
+            "closeChatting-fail:" + error
+        }.getOrElse { "closeChatting-fail:" + (it.cause?.message ?: it.message) }
     }
 
     /**
@@ -1244,7 +1267,7 @@ object ConversationGroupRuntime {
                     val n = it.name.lowercase()
                     n.contains("chat") || n.contains("conversation") || n.contains("back")
                 }
-                .map { it.name }
+                .map { it.name + "/" + it.parameterTypes.size }
                 .distinct()
             val edit = KavaReflector.loadClass("com.tencent.mm.ui.widget.SwipeBackLayout", loader)
             val swipe = edit?.declaredMethods
