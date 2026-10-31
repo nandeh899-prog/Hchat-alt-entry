@@ -806,7 +806,14 @@ object ConversationGroupRuntime {
                                     RuntimeException("pressBackForVirtualChat")
                                 )
                                 if (backAttempts < 3) {
-                                    main.post { runCatching { launcher.onBackPressed() } }
+                                    val how = closeVirtualChattingView(
+                                        launcher,
+                                        backAttempts
+                                    )
+                                    HLog.e(
+                                        "$TAG 关闭空白聊天视图 attempt=$backAttempts 方式=$how",
+                                        RuntimeException("closeVirtualChattingView")
+                                    )
                                 } else {
                                     // 兜底：直接派发按键事件。
                                     main.post {
@@ -860,7 +867,7 @@ object ConversationGroupRuntime {
                                 describeViewChain(edit),
                             RuntimeException("resumeChattingView")
                         )
-                        runCatching { activity.onBackPressed() }
+                        runCatching { closeVirtualChattingView(activity, 1) }
                     }, 400)
                 }
             }
@@ -1133,6 +1140,52 @@ object ConversationGroupRuntime {
             depth++
         }
         return parts.joinToString(" <- ")
+    }
+
+    /**
+     * 关掉“父会话”留下的空白聊天视图。
+     *
+     * 实测结论（微信 8.0.49 / LauncherUI 内嵌聊天视图）：
+     * - `activity.onBackPressed()` 与 `dispatchKeyEvent(BACK)` 都无效——微信把返回交给平台的
+     *   OnBackInvokedCallback 处理，LauncherUI 自己的 onBackPressed 只会“退到后台”。
+     * - 系统返回键对这个视图有效（一次返回即回到会话列表），因此优先走 androidx 的
+     *   OnBackPressedDispatcher；失败则直接把游离的聊天视图收起来（WeChat 本身并不认为
+     *   它有聊天页打开，隐藏后状态是一致的）。
+     */
+    private fun closeVirtualChattingView(activity: Activity, attempt: Int): String {
+        return when (attempt) {
+            1 -> runCatching {
+                val getter = activity.javaClass.getMethod("getOnBackPressedDispatcher")
+                val dispatcher = getter.invoke(activity)
+                    ?: return@runCatching "no-dispatcher"
+                dispatcher.javaClass.getMethod("onBackPressed").invoke(dispatcher)
+                "dispatcher"
+            }.getOrElse { "dispatcher-fail:" + (it.cause?.message ?: it.message) }
+            else -> hideVirtualChattingView(activity)
+        }
+    }
+
+    /** 兜底：把游离的聊天视图（TestTimeForChatting 容器）隐藏，露出下面的会话列表。 */
+    private fun hideVirtualChattingView(activity: Activity): String {
+        return runCatching {
+            val decor = activity.window?.decorView ?: return@runCatching "no-decor"
+            val edit = findChattingEditText(decor) ?: return@runCatching "no-edit"
+            var node: View = edit
+            var victim: View? = null
+            var parent = edit.parent
+            while (parent is View) {
+                if (parent.javaClass.name.endsWith("TestTimeForChatting")) {
+                    victim = parent
+                    break
+                }
+                if (parent === decor) break
+                node = parent
+                parent = parent.parent
+            }
+            val target = victim ?: node
+            target.visibility = View.GONE
+            "hidden:" + target.javaClass.name.substringAfterLast('.')
+        }.getOrElse { "hide-fail:" + it.message }
     }
 
     private fun customizeNativeGroupPage(fragment: Any?, context: Context) {
