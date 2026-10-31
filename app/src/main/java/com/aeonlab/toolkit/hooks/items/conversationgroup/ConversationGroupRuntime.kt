@@ -770,6 +770,7 @@ object ConversationGroupRuntime {
     }
 
     private fun installNativeGroupPageHooks(context: FeatureContext): Boolean {
+        runCatching { logLauncherChatMethods(context) }
         // 分组页退出前先切断“父会话”：清 intent 并让 getStringExtra 在退出窗口内返回 null。
         fun beginGroupPageExit(activity: Activity) {
             suspendingParentExtra = true
@@ -1216,17 +1217,48 @@ object ConversationGroupRuntime {
         return runCatching {
             val dispatcher = activity.onBackInvokedDispatcher ?: return@runCatching "no-platform"
             val deque = dispatcher.javaClass.declaredFields
-                .firstOrNull { java.util.ArrayDeque::class.java.isAssignableFrom(it.type) }
+                .firstOrNull { java.util.Collection::class.java.isAssignableFrom(it.type) }
                 ?.apply { isAccessible = true }
-                ?.get(dispatcher) as? java.util.ArrayDeque<*>
-                ?: return@runCatching "no-field"
+                ?.get(dispatcher) as? java.util.Collection<*>
+                ?: return@runCatching "no-field:" + dispatcher.javaClass.declaredFields.joinToString(
+                    ","
+                ) { it.name + ":" + it.type.simpleName }
             val callbacks = deque.toList()
                 .mapNotNull { (it as? java.lang.ref.WeakReference<*>)?.get() }
                 .filterIsInstance<android.window.OnBackInvokedCallback>()
-            val target = callbacks.lastOrNull() ?: return@runCatching "no-callback"
+            val target = callbacks.lastOrNull()
+                ?: return@runCatching "no-callback:" + deque.size
             target.onBackInvoked()
             "platform:" + target.javaClass.name.substringAfterLast('.')
         }.getOrElse { "platform-fail:" + (it.cause?.message ?: it.message) }
+    }
+
+    /** 诊断：打印 LauncherUI 上所有和聊天/会话相关的方法签名，用来找“回到会话列表”的入口。 */
+    private fun logLauncherChatMethods(context: FeatureContext) {
+        runCatching {
+            val loader = context.hostClassLoader()
+            val launcher = KavaReflector.loadClass("com.tencent.mm.ui.LauncherUI", loader)
+                ?: return@runCatching
+            val names = launcher.declaredMethods
+                .filter {
+                    val n = it.name.lowercase()
+                    n.contains("chat") || n.contains("conversation") || n.contains("back")
+                }
+                .map { it.name }
+                .distinct()
+            val edit = KavaReflector.loadClass("com.tencent.mm.ui.widget.SwipeBackLayout", loader)
+            val swipe = edit?.declaredMethods
+                ?.filter { m ->
+                    val n = m.name.lowercase()
+                    n.contains("finish") || n.contains("close") || n.contains("back")
+                }
+                ?.map { it.name }
+                ?.distinct()
+            HLog.e(
+                "$TAG 诊断 launcherMethods=" + names.joinToString(",") +
+                    " swipeBackMethods=" + (swipe?.joinToString(",") ?: "n/a")
+            )
+        }
     }
 
     private fun customizeNativeGroupPage(fragment: Any?, context: Context) {
