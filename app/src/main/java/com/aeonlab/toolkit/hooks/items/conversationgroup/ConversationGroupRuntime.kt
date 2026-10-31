@@ -95,6 +95,15 @@ object ConversationGroupRuntime {
     private const val CHAT_USER_EXTRA = "Chat_User"
     private const val NATIVE_GROUP_TAG = "MicroMsg.ConvBoxServiceConversationFmUI"
     private const val NATIVE_GROUP_PLACEHOLDER = "@placeholder_foldgroup"
+
+    /**
+     * 是否由我们自己收口分组页的返回（拦截 onBackPressed / dispatchKeyEvent 后 finish）。
+     *
+     * 原版 Hchat 没有任何退出拦截，分组退出是干净的；我们加上拦截后微信的返回流程被
+     * 截断，会留下空白聊天视图、会话行高亮、以及退出后 5 秒内再进分组退化成原生
+     * “折叠的群聊 / 暂无群聊”。这里关掉，回到微信原生返回语义，对比验证。
+     */
+    private const val INTERCEPT_GROUP_PAGE_BACK = false
     private const val VIRTUAL_PREFIX = "wxid_hchat_group_"
     private const val PARENT_PREFIX = "hchat_conv_group:"
     private const val KEY_ORIGINAL_PARENT_REFS = "original_parent_refs"
@@ -975,8 +984,10 @@ object ConversationGroupRuntime {
                     ?: return
                 val talker = activity.intent?.getStringExtra(CONTACT_USER_EXTRA)
                     ?.takeIf(::isVirtualTalker) ?: return
-                if (suspendingParentExtra) {
-                    // 页面正在关闭：此时微信是在“回到父会话”，必须让它拿不到 talker。
+                if (suspendingParentExtra && (activity.isFinishing || activity.isDestroyed)) {
+                    // 只有“正在关闭的那个页面”才需要切断父会话。之前这里是全局 5 秒开关，
+                    // 结果退出后马上再进分组时，新页面也拿不到 talker，退化成微信原生的
+                    // “折叠的群聊 / 暂无群聊”。
                     param.result = null
                     return
                 }
@@ -1002,7 +1013,7 @@ object ConversationGroupRuntime {
             return target.intent?.getStringExtra(CONTACT_USER_EXTRA)?.let(::isVirtualTalker) == true
         }
         var backHookInstalled = false
-        if (groupActivityClass != null) {
+        if (groupActivityClass != null && INTERCEPT_GROUP_PAGE_BACK) {
             KavaReflector.findMethodRecursive(groupActivityClass, "onBackPressed")?.let { method ->
                 backHookInstalled = hook(method, object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
@@ -1040,7 +1051,7 @@ object ConversationGroupRuntime {
                 }) || backHookInstalled
             }
         }
-        if (!backHookInstalled) {
+        if (INTERCEPT_GROUP_PAGE_BACK && !backHookInstalled) {
             HLog.e("$TAG 微信原生分组页返回收口 Hook 安装失败，返回时可能打开空白聊天页")
         }
         // 兜底：虚拟分组会话（wxid_hchat_group_*）没有真实会话数据，任何入口打开它的聊天页
