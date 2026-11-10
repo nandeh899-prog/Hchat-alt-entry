@@ -1,0 +1,6 @@
+run_id=42922678770
+run_number=1
+ref=fix/5.5.51-535-group-restore
+sha=1dfc9de0e3be730283b659726e5c19ae1dbbbc85
+version_name=5.5.51 version_code=535 suffix=.coexist
+variant=release without R8 (HCAT_MINIFY=false)
