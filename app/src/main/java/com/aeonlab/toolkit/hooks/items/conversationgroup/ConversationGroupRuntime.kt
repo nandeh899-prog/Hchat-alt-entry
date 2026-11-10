@@ -1656,16 +1656,25 @@ object ConversationGroupRuntime {
                 if (!isRuntimeGenerationActive(generation)) return
                 effectiveConversationSnapshot = null
             }
-            ConversationGroupHomeProjection.refresh()
-            val state = loadConversationParents(database, emptySet())
-            val official = state.officialIds(originals)
-            val plan = ConversationGroupParentPolicy.plan(
-                assigned = state.parents.filterKeys { it !in official },
-                current = state.parents,
-                protected = official,
-                originals = originals
-            )
-            applyParentPlan(database, prefs, account, plan)
+            // 关闭分组：恢复真实会话的原始 parentRef。读库失败也不能中断后续清理，
+            // 否则首页会残留分组（历史日志里出现过「读取真实会话父级失败」直接抛出的情况）。
+            runCatching {
+                val state = loadConversationParents(database, emptySet())
+                val official = state.officialIds(originals)
+                val plan = ConversationGroupParentPolicy.plan(
+                    assigned = state.parents.filterKeys { it !in official },
+                    current = state.parents,
+                    protected = official,
+                    originals = originals
+                )
+                applyParentPlan(database, prefs, account, plan)
+            }.onFailure { HLog.e("$TAG 恢复默认会话归属失败: ${it.message}", it) }
+            // 关键：关闭开关时必须删掉虚拟分组会话行（wxid_hchat_group_*），
+            // 否则它们仍作为会话出现在首页，看起来和开启时一样。
+            runCatching { cleanupVirtualRows(database, emptySet()) }
+                .onFailure { HLog.e("$TAG 清理虚拟分组会话失败: ${it.message}", it) }
+            runCatching { ConversationGroupHomeProjection.refresh() }
+                .onFailure { HLog.e("$TAG 刷新首页列表失败: ${it.message}", it) }
             return
         }
         val automaticResolution = if (enabled) {
