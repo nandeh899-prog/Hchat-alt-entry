@@ -175,15 +175,16 @@ jobs:
           git init -q -b "$OUT_BRANCH"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          shopt -s nullglob
-          git add -- build.log step-outcome.txt build-info.txt
-          [ -f build-seconds.txt ] && git add -- build-seconds.txt
-          for f in *.apk mapping.txt; do git add -- "$f"; done
-          if git diff --cached --quiet; then
-            echo "没有可提交的产物"
-          else
-            git commit -q -m "R8 产物 5.5.49 / 533 (run ${{ github.run_number }})"
+          # mapping.txt 可达 140 MB 以上，超过 GitHub 单文件 100 MB 限制，提交前先 gzip
+          if [ -f mapping.txt ] && [ ! -f mapping.txt.gz ]; then
+            gzip -9 -c mapping.txt > mapping.txt.gz
+            rm -f mapping.txt
           fi
+          shopt -s nullglob
+          for f in build.log build-seconds.txt step-outcome.txt build-info.txt *.apk *.gz; do
+            if [ -e "$f" ]; then git add -- "$f"; fi
+          done
+          git commit -q --allow-empty -m "R8 产物 5.5.49 / 533 (run ${{ github.run_number }})"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           git push -q origin "HEAD:refs/heads/${OUT_BRANCH}"
           echo "已推送工作分支：${OUT_BRANCH}"
