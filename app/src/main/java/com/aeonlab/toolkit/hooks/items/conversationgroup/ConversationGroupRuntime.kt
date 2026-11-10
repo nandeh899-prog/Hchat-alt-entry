@@ -2112,6 +2112,43 @@ object ConversationGroupRuntime {
         return actual == expected
     }
 
+    /** 关闭分组后仍挂在模块父级上的真实会话，以及仍被这些会话引用的虚拟分组行。 */
+    private data class VirtualRowReferences(
+        val realTalkers: Set<String>,
+        val virtualTalkers: Set<String>
+    )
+
+    /**
+     * 清理虚拟分组行之前的引用快照。只有 [VirtualRowReferences.virtualTalkers] 里仍被
+     * 真实会话引用的行必须保留：一旦删掉它们，那些会话的 parentRef 就指向不存在的父级，
+     * 微信首页按 parentRef is null 查询时两边都不满足，会话会从列表里消失。
+     */
+    private fun loadVirtualRowReferences(
+        database: com.aeonlab.toolkit.hooks.api.runtime.WeChatDatabaseApi
+    ): VirtualRowReferences {
+        val cursor = database.rawQuery(
+            "SELECT username,parentRef FROM rconversation WHERE parentRef LIKE ? OR parentRef LIKE ?",
+            arrayOf("$VIRTUAL_PREFIX%", "$PARENT_PREFIX%")
+        ) ?: throw IllegalStateException("读取残留分组引用失败")
+        val realTalkers = linkedSetOf<String>()
+        val virtualTalkers = linkedSetOf<String>()
+        try {
+            val username = cursor.getColumnIndexOrThrow("username")
+            while (cursor.moveToNext()) {
+                val talker = cursor.getString(username).orEmpty()
+                if (talker.isBlank()) continue
+                if (isVirtualTalker(talker)) {
+                    virtualTalkers.add(talker)
+                } else {
+                    realTalkers.add(talker)
+                }
+            }
+        } finally {
+            cursor.close()
+        }
+        return VirtualRowReferences(realTalkers, virtualTalkers)
+    }
+
     private fun cleanupVirtualRows(
         database: com.aeonlab.toolkit.hooks.api.runtime.WeChatDatabaseApi,
         desiredTalkers: Set<String>
