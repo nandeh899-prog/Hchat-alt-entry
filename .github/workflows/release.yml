@@ -1,0 +1,194 @@
+name: R8 发布构建 5.5.49 / 533
+
+# 只负责：用 R8 构建 release APK、上传 artifact、并把产物推进一个工作分支。
+# 不创建 Release、不发 Telegram、不改任何既有分支、不使用 force push。
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - release/5.5.45-529
+
+permissions:
+  contents: write
+
+env:
+  HCAT_VERSION_NAME: "5.5.49"
+  HCAT_VERSION_CODE: "533"
+  HCAT_APP_ID_SUFFIX: ".coexist"
+  HCAT_APK_NAME: "Hchat-5.5.49-533-R8.apk"
+
+jobs:
+  build:
+    name: assembleRelease with R8
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: 检出目标分支
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 配置 JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: 配置 Gradle 缓存
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-cleanup: always
+          cache-read-only: false
+          validate-wrappers: false
+
+      - name: 安装 Android SDK 组件（API 37 平台 + build-tools 36.0.0）
+        run: |
+          set -eo pipefail
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SM" ]; then SM="$(command -v sdkmanager || true)"; fi
+          if [ -z "$SM" ] || [ ! -x "$SM" ]; then
+            echo "::error::找不到 sdkmanager"; exit 1
+          fi
+          echo "android sdk   = $SDK"
+          echo "sdkmanager    = $SM"
+          yes | "$SM" --licenses > /dev/null 2>&1 || true
+          "$SM" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+          if [ ! -d "$SDK/platforms/android-37" ] && [ -d "$SDK/platforms/android-37.0" ]; then
+            cp -a "$SDK/platforms/android-37.0" "$SDK/platforms/android-37"
+          fi
+          echo "--- platforms ---"; ls -1 "$SDK/platforms" || true
+          echo "--- build-tools ---"; ls -1 "$SDK/build-tools" || true
+
+      - name: 检查 Secrets 是否为空（只打印长度，不打印值）
+        env:
+          KS: ${{ secrets.HCAT_KEYSTORE_BASE64 }}
+          SP: ${{ secrets.HCAT_STORE_PASSWORD }}
+          KA: ${{ secrets.HCAT_KEY_ALIAS }}
+          KP: ${{ secrets.HCAT_KEY_PASSWORD }}
+        run: |
+          for n in KS SP KA KP; do
+            v="${!n}"
+            if [ -z "$v" ]; then echo "secret $n : EMPTY"; else echo "secret $n : len=${#v}"; fi
+          done
+
+      - name: 还原签名证书
+        env:
+          HCAT_KEYSTORE_BASE64: ${{ secrets.HCAT_KEYSTORE_BASE64 }}
+          HCAT_STORE_PASSWORD: ${{ secrets.HCAT_STORE_PASSWORD }}
+          HCAT_KEY_ALIAS: ${{ secrets.HCAT_KEY_ALIAS }}
+        run: |
+          set -eo pipefail
+          if [ -z "$HCAT_KEYSTORE_BASE64" ]; then echo "::error::HCAT_KEYSTORE_BASE64 为空"; exit 1; fi
+          KS_REL="$(sed -n 's/.*storeFile = file("\([^"]*\)").*/\1/p' app/build.gradle.kts | head -n1)"
+          [ -n "$KS_REL" ] || KS_REL="$(printf 'keystore/\u3002\u3002.jks')"
+          echo "keystore 目标 = app/$KS_REL"
+          mkdir -p "$(dirname "app/$KS_REL")"
+          printf '%s' "$HCAT_KEYSTORE_BASE64" | base64 -d > "app/$KS_REL"
+          echo "keystore 字节数 = $(wc -c < "app/$KS_REL")"
+          if [ -n "$HCAT_STORE_PASSWORD" ] && [ -n "$HCAT_KEY_ALIAS" ]; then
+            if keytool -list -storetype PKCS12 -keystore "app/$KS_REL" \
+                 -storepass "$HCAT_STORE_PASSWORD" -alias "$HCAT_KEY_ALIAS" > /tmp/ks-check.txt 2>&1; then
+              echo "keystore 自检：通过（store password 与别名匹配）"
+            else
+              echo "keystore 自检：失败（store password 或别名不匹配）"
+              head -n 3 /tmp/ks-check.txt | sed 's/[A-Za-z0-9+/=]\{24,\}/<redacted>/g'
+            fi
+          fi
+
+      - name: R8 release 构建
+        id: build
+        continue-on-error: true
+        env:
+          HCAT_STORE_PASSWORD: ${{ secrets.HCAT_STORE_PASSWORD }}
+          HCAT_KEY_ALIAS: ${{ secrets.HCAT_KEY_ALIAS }}
+          HCAT_KEY_PASSWORD: ${{ secrets.HCAT_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          sed -i '/android.aapt2FromMavenOverride/d' gradle.properties
+          START=$(date +%s)
+          set +e
+          ./gradlew :app:assembleRelease --build-cache --no-watch-fs --stacktrace \
+            -x lintVitalReportRelease -x lintVitalRelease -x lint 2>&1 | tee build.log
+          RC=${PIPESTATUS[0]}
+          set -e
+          END=$(date +%s)
+          echo "$((END - START))" > build-seconds.txt
+          echo "gradle 退出码 = $RC"
+          echo "构建耗时 = $((END - START)) 秒"
+          exit "$RC"
+
+      - name: 收集产物与构建日志
+        if: always()
+        run: |
+          set -eo pipefail
+          rm -rf /tmp/out && mkdir -p /tmp/out
+          if [ -f build.log ]; then
+            tail -c 400000 build.log > /tmp/out/build.log
+          else
+            echo "(本轮没有生成 build.log)" > /tmp/out/build.log
+          fi
+          echo "${{ steps.build.outcome }}" > /tmp/out/step-outcome.txt
+          [ -f build-seconds.txt ] && cp -f build-seconds.txt /tmp/out/ || echo "0" > /tmp/out/build-seconds.txt
+          {
+            echo "run_id=${{ github.run_id }}"
+            echo "run_number=${{ github.run_number }}"
+            echo "ref=${{ github.ref_name }}"
+            echo "sha=${{ github.sha }}"
+            echo "version_name=${HCAT_VERSION_NAME} version_code=${HCAT_VERSION_CODE} suffix=${HCAT_APP_ID_SUFFIX}"
+          } > /tmp/out/build-info.txt
+          if [ -f "dist/${HCAT_APK_NAME}" ]; then
+            cp -f "dist/${HCAT_APK_NAME}" "/tmp/out/${HCAT_APK_NAME}"
+          elif [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp -f app/build/outputs/apk/release/app-release.apk "/tmp/out/${HCAT_APK_NAME}"
+          fi
+          if [ -f app/build/outputs/mapping/release/mapping.txt ]; then
+            cp -f app/build/outputs/mapping/release/mapping.txt /tmp/out/mapping.txt
+          fi
+          echo "--- /tmp/out ---"
+          ls -l /tmp/out
+
+      - name: 上传构建产物
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hchat-5.5.49-533-R8
+          path: |
+            /tmp/out/Hchat-5.5.49-533-R8.apk
+            /tmp/out/mapping.txt
+            /tmp/out/build.log
+            /tmp/out/step-outcome.txt
+            /tmp/out/build-info.txt
+          if-no-files-found: warn
+
+      - name: 推送产物到工作分支
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OUT_BRANCH: builds/5.5.49-533-r${{ github.run_number }}
+        run: |
+          set -eo pipefail
+          cd /tmp/out
+          git init -q -b "$OUT_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          shopt -s nullglob
+          git add -- build.log step-outcome.txt build-info.txt
+          [ -f build-seconds.txt ] && git add -- build-seconds.txt
+          for f in *.apk mapping.txt; do git add -- "$f"; done
+          if git diff --cached --quiet; then
+            echo "没有可提交的产物"
+          else
+            git commit -q -m "R8 产物 5.5.49 / 533 (run ${{ github.run_number }})"
+          fi
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push -q origin "HEAD:refs/heads/${OUT_BRANCH}"
+          echo "已推送工作分支：${OUT_BRANCH}"
+
+      - name: 构建失败则整轮标记失败
+        if: steps.build.outcome != 'success'
+        run: |
+          echo "::error::R8 release 构建失败，详细日志见工作分支 builds/5.5.49-533-r${{ github.run_number }} 的 build.log"
+          exit 1
