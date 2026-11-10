@@ -24,6 +24,7 @@ import com.aeonlab.toolkit.hooks.items.fakevoiceduration.FakeVoiceDurationFeatur
 import com.aeonlab.toolkit.hooks.items.floatingshortcut.FloatingShortcutFeature
 import com.aeonlab.toolkit.hooks.items.forwardlimit.RemoveForwardLimitFeature
 import com.aeonlab.toolkit.hooks.items.gameemoji.GameEmojiFeature
+import com.aeonlab.toolkit.hooks.items.groupadmin.GroupAdminFeature
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveMonitorFeature
 import com.aeonlab.toolkit.hooks.items.grouplabel.GroupChatLabelFeature
 import com.aeonlab.toolkit.hooks.items.grouplabel.QuickGroupChatLabelFeature
@@ -172,6 +173,7 @@ object FeatureRegistry {
             .register(GroupChatLabelFeature())
             .register(GroupLeaveMonitorFeature())
             .register(GroupRenameMonitorFeature())
+            .register(GroupAdminFeature())
             .register(RemoveMomentsAdsFeature())
             .register(EditMessageFeature())
             .register(EmojiSaveFeature())

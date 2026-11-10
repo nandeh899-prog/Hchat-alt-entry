@@ -16,8 +16,11 @@ open class XC_MethodHook @JvmOverloads constructor(
 ) {
 
     /**
-     * 与 legacy API 82 保持一致：result / throwable 是 public 字段，
-     * 大量既有代码直接写 param.result = x，不能改成 private + setter。
+     * 与 legacy API 82 语义对齐（关键）：
+     * legacy 的 param.result 是 getResult()/setResult() 的合成属性，代码里的
+     * `param.result = x`（包括写 null）在 before 阶段等价于 setResult(x) →
+     * returnEarly = true，即「覆盖原方法，原方法不再执行」。既有代码大量依赖
+     * `param.result = null` 来吞掉宿主（微信）的原处理，因此这里必须保留同一语义。
      */
     class MethodHookParam {
         @JvmField
@@ -29,19 +32,34 @@ open class XC_MethodHook @JvmOverloads constructor(
         @JvmField
         var args: Array<Any?> = emptyArray()
 
-        @JvmField
-        var result: Any? = null
+        /** 写过 result/throwable 即为「已覆盖原方法」，等价于 legacy 的 returnEarly。 */
+        private var overridden = false
+
+        private var rawResult: Any? = null
+
+        var result: Any?
+            get() = rawResult
+            set(value) {
+                rawResult = value
+                throwable = null
+                overridden = true
+            }
 
         @JvmField
         var throwable: Throwable? = null
 
         private var extras: MutableMap<String, Any?>? = null
 
-        fun getResult(): Any? = result
+        /**
+         * Kotlin 侧仍沿用 legacy 的 getResult()/setResult() 调用形式
+         * （Kotlin 类的属性访问器不能当函数调用，这里用 @JvmName 避免与属性访问器签名冲突）。
+         */
+        @JvmName("getResultCompat")
+        fun getResult(): Any? = rawResult
 
+        @JvmName("setResultCompat")
         fun setResult(value: Any?) {
             result = value
-            throwable = null
         }
 
         fun hasThrowable(): Boolean = throwable != null
@@ -50,6 +68,8 @@ open class XC_MethodHook @JvmOverloads constructor(
 
         fun setThrowable(value: Throwable?) {
             throwable = value
+            rawResult = null
+            overridden = true
         }
 
         fun getObjectExtra(key: String): Any? = extras?.get(key)
@@ -63,16 +83,22 @@ open class XC_MethodHook @JvmOverloads constructor(
             extras?.remove(key)
         }
 
-        /** 与 legacy 判定一致：result 或 throwable 非空即视为已覆盖原方法 */
-        internal fun isOverridden(): Boolean = result != null || throwable != null
+        /**
+         * 与 legacy 一致：只要写过 result/throwable 就视为已覆盖原方法。
+         * 注意不能用「result != null」判定——legacy 里写 null 同样会阻止原方法执行，
+         * 之前这样判定会让所有 `param.result = null` 的拦截静默失效。
+         */
+        internal fun isOverridden(): Boolean = overridden || throwable != null
 
+        /** after 阶段重新开始：先注入原方法结果，但不算「已覆盖」，由 after 回调决定是否改写。 */
         internal fun seedAfterPhase(value: Any?, error: Throwable?) {
-            result = value
+            rawResult = value
             throwable = error
+            overridden = false
         }
 
         internal fun putRawResult(value: Any?) {
-            result = value
+            rawResult = value
         }
     }
 

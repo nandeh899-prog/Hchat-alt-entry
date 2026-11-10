@@ -28,14 +28,6 @@ object PluginMarketClient {
         request(context, HttpMethod.GET, listOf("v1", "module", "update"), null, null).dataObject()
     }
 
-    fun moduleVersionHistory(context: Context): Result<List<JSONObject>> = runCatching {
-        val root = request(context, HttpMethod.GET, listOf("v1", "module", "versions"), null, null).dataObject()
-        val items = root.optJSONArray("items") ?: JSONArray()
-        buildList {
-            for (index in 0 until items.length()) items.optJSONObject(index)?.let(::add)
-        }
-    }
-
     fun health(context: Context): Result<PluginMarketHealth> = runCatching {
         val data = request(context, HttpMethod.GET, listOf("health"), null, null).dataObject()
         PluginMarketHealth(

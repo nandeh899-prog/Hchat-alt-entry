@@ -137,7 +137,7 @@ class ScriptPluginBridge internal constructor(
                 title = title.orEmpty(),
                 message = message.orEmpty(),
                 onResult = { dispatchDialogCallback(callback, it) },
-                onDismiss = { clearDialogCallback(callback) },
+                onDismiss = { },
                 position = VoiceForwardMiuixDialog.DialogPosition.from(position)
             )
         }
@@ -185,7 +185,7 @@ class ScriptPluginBridge internal constructor(
                 maxLength = 4_000,
                 allowEmpty = true,
                 onConfirm = { dispatchDialogCallback(callback, it) },
-                onDismiss = { clearDialogCallback(callback) },
+                onDismiss = { },
                 position = VoiceForwardMiuixDialog.DialogPosition.from(position)
             )
         }
@@ -232,7 +232,7 @@ class ScriptPluginBridge internal constructor(
                 summary = summary.orEmpty(),
                 choices = items.map { it to "" },
                 onSelected = { dispatchDialogCallback(callback, it) },
-                onDismiss = { clearDialogCallback(callback) },
+                onDismiss = { },
                 position = VoiceForwardMiuixDialog.DialogPosition.from(position)
             )
         }
@@ -288,7 +288,7 @@ class ScriptPluginBridge internal constructor(
                 initialSelected = selected,
                 allowEmpty = true,
                 onConfirm = { dispatchDialogCallback(callback, it) },
-                onDismiss = { clearDialogCallback(callback) },
+                onDismiss = { },
                 position = VoiceForwardMiuixDialog.DialogPosition.from(position)
             )
         }

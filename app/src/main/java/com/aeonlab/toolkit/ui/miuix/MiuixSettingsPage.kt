@@ -274,12 +274,16 @@ import com.aeonlab.toolkit.hooks.items.gameemoji.GameEmojiSettings
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveMonitorFeature
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveReplyTemplate
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveReplyTemplateBinding
+import com.aeonlab.toolkit.hooks.items.groupleave.GroupMemberMediaOrder
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveMonitorSettings
 import com.aeonlab.toolkit.hooks.items.grouplabel.GroupChatLabel
 import com.aeonlab.toolkit.hooks.items.grouplabel.GroupChatLabelFeature
 import com.aeonlab.toolkit.hooks.items.grouplabel.GroupChatLabelStore
 import com.aeonlab.toolkit.hooks.items.grouplabel.QuickGroupChatLabelFeature
 import com.aeonlab.toolkit.hooks.items.grouplabel.QuickGroupChatLabelSettings
+import com.aeonlab.toolkit.hooks.items.groupadmin.GroupAdminFeature
+import com.aeonlab.toolkit.hooks.items.groupadmin.GroupAdminMiuixPage
+import com.aeonlab.toolkit.hooks.items.groupadmin.GroupAdminSettings
 import com.aeonlab.toolkit.hooks.items.groupnicknamecolor.GroupNicknameColorSettings
 import com.aeonlab.toolkit.hooks.items.groupnicknamecolor.GroupNicknameColorStore
 import com.aeonlab.toolkit.hooks.items.grouprename.GroupRenameMonitorFeature
@@ -1283,7 +1287,13 @@ object MiuixSettingsPage {
                                     context = activity,
                                     provider = targetPage.provider,
                                     onBack = {
+                                        // 5.5.39 修「设置面板进得去、出不来」：详情栈只剩初始项时 popDetail()
+                                        // 是空转，而面板底部「返回」与系统返回键都走这个回调，于是返回被吞掉、
+                                        // 面板一直留在屏上（真机 18:19 现场）。退无可退时直接关掉面板，
+                                        // 与 handleBack 内部的兜底行为保持一致。
+                                        val depth = detailBackStack.size
                                         popDetail()
+                                        if (detailBackStack.size == depth) closePage()
                                     },
                                     onOpenScriptPluginAgent = {
                                         openDetail(DetailPage.ScriptPluginAgent(targetPage))
@@ -2688,6 +2698,7 @@ private object AeonLabConfigBackup {
         MessageBlockSettings.PREFS_NAME,
         GroupLeaveMonitorSettings.PREFS_NAME,
         GroupRenameMonitorSettings.PREFS_NAME,
+        GroupAdminSettings.PREFS_NAME,
         MultiRecallSettings.PREFS_NAME,
         VoiceForwardSettings.PREFS_NAME,
         FakeScanCameraSettings.PREFS_NAME,
@@ -2918,34 +2929,7 @@ private fun MainSettingsPage(
     }
     val scrollBehavior = MiuixScrollBehavior()
     val scope = rememberCoroutineScope()
-    var gateUpdate by remember { mutableStateOf<ModuleUpdateInfo?>(null) }
-    var showGateUpdate by remember { mutableStateOf(false) }
-    val gatePrefs = remember { AeonLabStorage.preferences(context, MODULE_UPDATE_PREFS) }
-    LaunchedEffect(Unit) {
-        val result = withContext(Dispatchers.IO) {
-            runCatching {
-                val root = PluginMarketClient.moduleUpdate(context).getOrThrow()
-                ModuleUpdateInfo.fromJson(root, PluginMarketSettings.serviceUrl(context))
-            }
-        }
-        result.onSuccess { info ->
-            gateUpdate = info
-            val hasNewerVersion = info.versionCode > BuildConfig.VERSION_CODE
-            gatePrefs.edit().putBoolean("has_update", hasNewerVersion).apply()
-            if (hasNewerVersion && gatePrefs.getInt(MODULE_UPDATE_IGNORED_CODE, -1) != info.versionCode) {
-                showGateUpdate = true
-            }
-        }
-    }
-    gateUpdate?.takeIf { showGateUpdate && it.versionCode > BuildConfig.VERSION_CODE }?.let { update ->
-        ModuleUpdateDialog(
-            context = context,
-            activity = context as? Activity,
-            update = update,
-            prefs = gatePrefs,
-            onDismiss = { showGateUpdate = false }
-        )
-    }
+    // 去上游特征：已移除「进入设置页即向上游服务器查询模块更新并弹窗导流」的逻辑。
     val tabs = MainTab.entries
     val pagerState = rememberPagerState(
         initialPage = selectedTab.ordinal,
@@ -3071,8 +3055,6 @@ private fun MainSettingsPage(
                                 onImported = onConfigImported
                             )
                         }
-                        item { SmallTitle(modifier = Modifier.padding(top = 10.dp), text = "群组") }
-                        item { GroupLinksCard(context) }
                         item { SmallTitle(modifier = Modifier.padding(top = 10.dp), text = "致谢") }
                         item { ThanksCard(context) }
                         item {
@@ -3150,7 +3132,8 @@ private fun practicalFeatureGroups(
                 GroupChatLabelFeature.ID,
                 AtAllNotificationBlockFeature.ID,
                 GroupLeaveMonitorFeature.ID,
-                GroupRenameMonitorFeature.ID
+                GroupRenameMonitorFeature.ID,
+                GroupAdminFeature.ID
             )
         ),
         FeatureGroupEntry(
@@ -3908,6 +3891,10 @@ private fun featureSubSearchTerms(featureId: String): List<String> {
         MomentsAutoLikeFeature.ID -> listOf("朋友圈自动点赞", "自动点赞", "点赞自己的朋友圈", "点赞白名单", "点赞黑名单", "同一人每天点赞数量", "每日点赞上限", "随机延迟", "发布时间限制", "关键词过滤", "链接朋友圈", "音乐朋友圈", "卡片朋友圈", "未知类型朋友圈")
         MomentsAutoCommentFeature.ID -> listOf("朋友圈自动评论", "自动评论", "评论内容", "时间变量", "评论时间", "时间格式", "评论自己的朋友圈", "评论白名单", "评论黑名单", "同一人每天评论数量", "每日评论上限", "评论延迟", "随机延迟", "发布时间限制", "关键词过滤", "评论日志", "链接朋友圈", "音乐朋友圈", "卡片朋友圈", "未知类型朋友圈")
         MomentsAutoForwardFeature.ID -> listOf("朋友圈自动转发", "静默转发", "指定好友", "每日上限", "包含关键词", "排除关键词", "替换关键词", "替换规则", "文案替换", "文案模板", "链接朋友圈", "音乐朋友圈", "卡片朋友圈", "未知类型朋友圈")
+        GroupAdminFeature.ID -> listOf(
+            "群管理助手", "群管理", "群管理员", "群主", "代理群主", "管理员名单", "白名单", "黑名单",
+            "踢人", "移出群", "拉黑", "豁免", "告别语", "纳管", "群成员", "群昵称"
+        )
         MomentsAutoRefreshFeature.ID -> listOf("朋友圈自动刷新", "后台刷新", "原生刷新", "刷新间隔", "刷新时段")
         MomentsContactFilterFeature.ID -> listOf("朋友圈过滤", "好友过滤", "过滤好友", "只看好友", "朋友圈白名单", "朋友圈黑名单", "好友标签", "聊天分组")
         MomentsKeywordBlockFeature.ID -> listOf("朋友圈关键词屏蔽", "朋友圈屏蔽", "关键词过滤", "隐藏朋友圈")
@@ -4458,8 +4445,6 @@ private fun MainNavigationBar(
         )
     }
     val selectedIndex = items.indexOfFirst { it.tab == selectedTab }.coerceAtLeast(0)
-    val updateDot = AeonLabStorage.preferences(context, MODULE_UPDATE_PREFS).getBoolean("has_update", false) &&
-        AeonLabStorage.preferences(context, MODULE_UPDATE_PREFS).getInt(MODULE_UPDATE_IGNORED_CODE, -1) != BuildConfig.VERSION_CODE
     val contentColor = MiuixTheme.colorScheme.onSurface
     Box(
         modifier = Modifier
@@ -4488,14 +4473,6 @@ private fun MainNavigationBar(
                             colorFilter = ColorFilter.tint(contentColor),
                             modifier = Modifier.size(26.dp)
                         )
-                        if (item.tab == MainTab.SETTINGS && updateDot) {
-                            Box(
-                                Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Red)
-                            )
-                        }
                     }
                     Text(
                         text = item.label,
@@ -4702,6 +4679,7 @@ private fun FeatureSettingsPage(
         GroupChatLabelFeature.ID -> GroupChatLabelMiuixPage(context, provider, onBack)
         GroupLeaveMonitorFeature.ID -> GroupLeaveMonitorMiuixPage(context, provider, onBack)
         GroupRenameMonitorFeature.ID -> GroupRenameMonitorMiuixPage(context, provider, onBack)
+        GroupAdminFeature.ID -> GroupAdminMiuixPage(context, provider, onBack)
         MomentsAutoLikeFeature.ID -> MomentsAutoLikeMiuixPage(context, provider, onBack)
         MomentsAutoCommentFeature.ID -> MomentsAutoCommentPage(context, provider, onBack)
         MomentsAutoForwardFeature.ID -> MomentsAutoForwardMiuixPage(context, provider, onBack)
@@ -21818,6 +21796,7 @@ private fun GroupLeaveMonitorMiuixPage(
     var mediaSequence by remember {
         mutableStateOf(sp.getString(GroupLeaveMonitorSettings.KEY_MEDIA_SEQUENCE, GroupLeaveMonitorSettings.DEFAULT_MEDIA_SEQUENCE) ?: GroupLeaveMonitorSettings.DEFAULT_MEDIA_SEQUENCE)
     }
+    var mediaOrderDialog by remember { mutableStateOf(false) }
     var joinImages by remember { mutableStateOf(sp.getString(GroupLeaveMonitorSettings.KEY_JOIN_IMAGE_PATHS, "").orEmpty()) }
     var leftImages by remember { mutableStateOf(sp.getString(GroupLeaveMonitorSettings.KEY_LEFT_IMAGE_PATHS, "").orEmpty()) }
     var joinVoices by remember { mutableStateOf(sp.getString(GroupLeaveMonitorSettings.KEY_JOIN_VOICE_PATHS, "").orEmpty()) }
@@ -22278,31 +22257,41 @@ private fun GroupLeaveMonitorMiuixPage(
                         }
                     )
                     InsetDivider()
-                    InputRow("媒体类型顺序", "英文逗号分隔：image,voice,emoji,video,file,favorite", mediaSequence) { mediaSequence = it }
+                    ActionRow(
+                            title = "媒体类型顺序",
+                            summary = GroupMemberMediaOrder.summary(mediaSequence) + "（点按调整顺序）"
+                        ) { mediaOrderDialog = true }
+                        if (mediaOrderDialog) {
+                            GroupMemberMediaOrderDialog(
+                                current = mediaSequence,
+                                onValueChange = { mediaSequence = it },
+                                onClose = { mediaOrderDialog = false }
+                            )
+                        }
                     InsetDivider()
-                    GroupMemberMediaRow(context, "进群图片", joinImages, RedPacketRuleConfig.REPLY_IMAGE) { joinImages = it }
+                    GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("image", "进群图片", mediaSequence), joinImages, RedPacketRuleConfig.REPLY_IMAGE) { joinImages = it }
                     InsetDivider()
-                    GroupMemberMediaRow(context, "退群图片", leftImages, RedPacketRuleConfig.REPLY_IMAGE) { leftImages = it }
+                    GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("image", "退群图片", mediaSequence), leftImages, RedPacketRuleConfig.REPLY_IMAGE) { leftImages = it }
                     InsetDivider()
-                    GroupMemberMediaRow(context, "进群语音", joinVoices, RedPacketRuleConfig.REPLY_VOICE) { joinVoices = it }
+                    GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("voice", "进群语音", mediaSequence), joinVoices, RedPacketRuleConfig.REPLY_VOICE) { joinVoices = it }
                     InsetDivider()
-                    GroupMemberMediaRow(context, "退群语音", leftVoices, RedPacketRuleConfig.REPLY_VOICE) { leftVoices = it }
+                    GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("voice", "退群语音", mediaSequence), leftVoices, RedPacketRuleConfig.REPLY_VOICE) { leftVoices = it }
                     InsetDivider()
-                    GroupMemberMediaRow(context, "进群表情", joinEmojis, RedPacketRuleConfig.REPLY_EMOJI) { joinEmojis = it }
+                    GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("emoji", "进群表情", mediaSequence), joinEmojis, RedPacketRuleConfig.REPLY_EMOJI) { joinEmojis = it }
                     InsetDivider()
-                    GroupMemberMediaRow(context, "退群表情", leftEmojis, RedPacketRuleConfig.REPLY_EMOJI) { leftEmojis = it }
+                    GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("emoji", "退群表情", mediaSequence), leftEmojis, RedPacketRuleConfig.REPLY_EMOJI) { leftEmojis = it }
                     InsetDivider()
-                    GroupMemberMediaRow(context, "进群视频", joinVideos, RedPacketRuleConfig.REPLY_VIDEO) { joinVideos = it }
+                    GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("video", "进群视频", mediaSequence), joinVideos, RedPacketRuleConfig.REPLY_VIDEO) { joinVideos = it }
                     InsetDivider()
-                    GroupMemberMediaRow(context, "退群视频", leftVideos, RedPacketRuleConfig.REPLY_VIDEO) { leftVideos = it }
+                    GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("video", "退群视频", mediaSequence), leftVideos, RedPacketRuleConfig.REPLY_VIDEO) { leftVideos = it }
                     InsetDivider()
-                    GroupMemberMediaRow(context, "进群文件", joinFiles, RedPacketRuleConfig.REPLY_FILE) { joinFiles = it }
+                    GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("file", "进群文件", mediaSequence), joinFiles, RedPacketRuleConfig.REPLY_FILE) { joinFiles = it }
                     InsetDivider()
-                    GroupMemberMediaRow(context, "退群文件", leftFiles, RedPacketRuleConfig.REPLY_FILE) { leftFiles = it }
+                    GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("file", "退群文件", mediaSequence), leftFiles, RedPacketRuleConfig.REPLY_FILE) { leftFiles = it }
                     InsetDivider()
                     GroupMemberMediaRow(
                         context,
-                        "进群收藏",
+                        GroupMemberMediaOrder.rowTitle("favorite", "进群收藏", mediaSequence),
                         joinFavorites,
                         RedPacketRuleConfig.REPLY_FAVORITE,
                         onValueChange = { joinFavorites = it },
@@ -22311,7 +22300,7 @@ private fun GroupLeaveMonitorMiuixPage(
                     InsetDivider()
                     GroupMemberMediaRow(
                         context,
-                        "退群收藏",
+                        GroupMemberMediaOrder.rowTitle("favorite", "退群收藏", mediaSequence),
                         leftFavorites,
                         RedPacketRuleConfig.REPLY_FAVORITE,
                         onValueChange = { leftFavorites = it },
@@ -22741,6 +22730,7 @@ private fun GroupLeaveTemplateEditorPage(
     var mediaMode by remember(request) { mutableStateOf(request.template.mediaMode) }
     var mediaOrder by remember(request) { mutableStateOf(request.template.mediaOrder) }
     var mediaSequence by remember(request) { mutableStateOf(request.template.mediaSequence) }
+    var mediaOrderDialog by remember(request) { mutableStateOf(false) }
     var joinImages by remember(request) { mutableStateOf(request.template.joinImages) }
     var leftImages by remember(request) { mutableStateOf(request.template.leftImages) }
     var joinVoices by remember(request) { mutableStateOf(request.template.joinVoices) }
@@ -22908,31 +22898,41 @@ private fun GroupLeaveTemplateEditorPage(
                                 onValueChanged = { mediaOrder = it }
                             )
                             InsetDivider()
-                            InputRow("媒体类型顺序", "英文逗号分隔：image,voice,emoji,video,file,favorite", mediaSequence) { mediaSequence = it }
+                            ActionRow(
+                            title = "媒体类型顺序",
+                            summary = GroupMemberMediaOrder.summary(mediaSequence) + "（点按调整顺序）"
+                        ) { mediaOrderDialog = true }
+                        if (mediaOrderDialog) {
+                            GroupMemberMediaOrderDialog(
+                                current = mediaSequence,
+                                onValueChange = { mediaSequence = it },
+                                onClose = { mediaOrderDialog = false }
+                            )
+                        }
                             InsetDivider()
-                            GroupMemberMediaRow(context, "进群图片", joinImages, RedPacketRuleConfig.REPLY_IMAGE) { joinImages = it }
+                            GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("image", "进群图片", mediaSequence), joinImages, RedPacketRuleConfig.REPLY_IMAGE) { joinImages = it }
                             InsetDivider()
-                            GroupMemberMediaRow(context, "退群图片", leftImages, RedPacketRuleConfig.REPLY_IMAGE) { leftImages = it }
+                            GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("image", "退群图片", mediaSequence), leftImages, RedPacketRuleConfig.REPLY_IMAGE) { leftImages = it }
                             InsetDivider()
-                            GroupMemberMediaRow(context, "进群语音", joinVoices, RedPacketRuleConfig.REPLY_VOICE) { joinVoices = it }
+                            GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("voice", "进群语音", mediaSequence), joinVoices, RedPacketRuleConfig.REPLY_VOICE) { joinVoices = it }
                             InsetDivider()
-                            GroupMemberMediaRow(context, "退群语音", leftVoices, RedPacketRuleConfig.REPLY_VOICE) { leftVoices = it }
+                            GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("voice", "退群语音", mediaSequence), leftVoices, RedPacketRuleConfig.REPLY_VOICE) { leftVoices = it }
                             InsetDivider()
-                            GroupMemberMediaRow(context, "进群表情", joinEmojis, RedPacketRuleConfig.REPLY_EMOJI) { joinEmojis = it }
+                            GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("emoji", "进群表情", mediaSequence), joinEmojis, RedPacketRuleConfig.REPLY_EMOJI) { joinEmojis = it }
                             InsetDivider()
-                            GroupMemberMediaRow(context, "退群表情", leftEmojis, RedPacketRuleConfig.REPLY_EMOJI) { leftEmojis = it }
+                            GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("emoji", "退群表情", mediaSequence), leftEmojis, RedPacketRuleConfig.REPLY_EMOJI) { leftEmojis = it }
                             InsetDivider()
-                            GroupMemberMediaRow(context, "进群视频", joinVideos, RedPacketRuleConfig.REPLY_VIDEO) { joinVideos = it }
+                            GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("video", "进群视频", mediaSequence), joinVideos, RedPacketRuleConfig.REPLY_VIDEO) { joinVideos = it }
                             InsetDivider()
-                            GroupMemberMediaRow(context, "退群视频", leftVideos, RedPacketRuleConfig.REPLY_VIDEO) { leftVideos = it }
+                            GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("video", "退群视频", mediaSequence), leftVideos, RedPacketRuleConfig.REPLY_VIDEO) { leftVideos = it }
                             InsetDivider()
-                            GroupMemberMediaRow(context, "进群文件", joinFiles, RedPacketRuleConfig.REPLY_FILE) { joinFiles = it }
+                            GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("file", "进群文件", mediaSequence), joinFiles, RedPacketRuleConfig.REPLY_FILE) { joinFiles = it }
                             InsetDivider()
-                            GroupMemberMediaRow(context, "退群文件", leftFiles, RedPacketRuleConfig.REPLY_FILE) { leftFiles = it }
+                            GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("file", "退群文件", mediaSequence), leftFiles, RedPacketRuleConfig.REPLY_FILE) { leftFiles = it }
                             InsetDivider()
                             GroupMemberMediaRow(
                                 context,
-                                "进群收藏",
+                                GroupMemberMediaOrder.rowTitle("favorite", "进群收藏", mediaSequence),
                                 joinFavorites,
                                 RedPacketRuleConfig.REPLY_FAVORITE,
                                 onValueChange = { joinFavorites = it },
@@ -22941,7 +22941,7 @@ private fun GroupLeaveTemplateEditorPage(
                             InsetDivider()
                             GroupMemberMediaRow(
                                 context,
-                                "退群收藏",
+                                GroupMemberMediaOrder.rowTitle("favorite", "退群收藏", mediaSequence),
                                 leftFavorites,
                                 RedPacketRuleConfig.REPLY_FAVORITE,
                                 onValueChange = { leftFavorites = it },
@@ -23058,6 +23058,7 @@ private fun GroupMemberGroupEditorPage(
     var mediaSequence by rememberSaveable(groupId) {
         mutableStateOf(groupMemberString(sp, GroupLeaveMonitorSettings.KEY_MEDIA_SEQUENCE, groupId, sp.getString(GroupLeaveMonitorSettings.KEY_MEDIA_SEQUENCE, GroupLeaveMonitorSettings.DEFAULT_MEDIA_SEQUENCE) ?: GroupLeaveMonitorSettings.DEFAULT_MEDIA_SEQUENCE))
     }
+    var mediaOrderDialog by rememberSaveable(groupId) { mutableStateOf(false) }
     var joinImages by rememberSaveable(groupId) { mutableStateOf(sp.getString(groupMemberGroupKey(GroupLeaveMonitorSettings.KEY_JOIN_IMAGE_PATHS, groupId), "").orEmpty()) }
     var leftImages by rememberSaveable(groupId) { mutableStateOf(sp.getString(groupMemberGroupKey(GroupLeaveMonitorSettings.KEY_LEFT_IMAGE_PATHS, groupId), "").orEmpty()) }
     var joinVoices by rememberSaveable(groupId) { mutableStateOf(sp.getString(groupMemberGroupKey(GroupLeaveMonitorSettings.KEY_JOIN_VOICE_PATHS, groupId), "").orEmpty()) }
@@ -23298,31 +23299,41 @@ private fun GroupMemberGroupEditorPage(
                             }
                         )
                         InsetDivider()
-                        InputRow("媒体类型顺序", "英文逗号分隔：image,voice,emoji,video,file,favorite", mediaSequence) { mediaSequence = it }
+                        ActionRow(
+                            title = "媒体类型顺序",
+                            summary = GroupMemberMediaOrder.summary(mediaSequence) + "（点按调整顺序）"
+                        ) { mediaOrderDialog = true }
+                        if (mediaOrderDialog) {
+                            GroupMemberMediaOrderDialog(
+                                current = mediaSequence,
+                                onValueChange = { mediaSequence = it },
+                                onClose = { mediaOrderDialog = false }
+                            )
+                        }
                         InsetDivider()
-                        GroupMemberMediaRow(context, "进群图片", joinImages, RedPacketRuleConfig.REPLY_IMAGE) { joinImages = it }
+                        GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("image", "进群图片", mediaSequence), joinImages, RedPacketRuleConfig.REPLY_IMAGE) { joinImages = it }
                         InsetDivider()
-                        GroupMemberMediaRow(context, "退群图片", leftImages, RedPacketRuleConfig.REPLY_IMAGE) { leftImages = it }
+                        GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("image", "退群图片", mediaSequence), leftImages, RedPacketRuleConfig.REPLY_IMAGE) { leftImages = it }
                         InsetDivider()
-                        GroupMemberMediaRow(context, "进群语音", joinVoices, RedPacketRuleConfig.REPLY_VOICE) { joinVoices = it }
+                        GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("voice", "进群语音", mediaSequence), joinVoices, RedPacketRuleConfig.REPLY_VOICE) { joinVoices = it }
                         InsetDivider()
-                        GroupMemberMediaRow(context, "退群语音", leftVoices, RedPacketRuleConfig.REPLY_VOICE) { leftVoices = it }
+                        GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("voice", "退群语音", mediaSequence), leftVoices, RedPacketRuleConfig.REPLY_VOICE) { leftVoices = it }
                         InsetDivider()
-                        GroupMemberMediaRow(context, "进群表情", joinEmojis, RedPacketRuleConfig.REPLY_EMOJI) { joinEmojis = it }
+                        GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("emoji", "进群表情", mediaSequence), joinEmojis, RedPacketRuleConfig.REPLY_EMOJI) { joinEmojis = it }
                         InsetDivider()
-                        GroupMemberMediaRow(context, "退群表情", leftEmojis, RedPacketRuleConfig.REPLY_EMOJI) { leftEmojis = it }
+                        GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("emoji", "退群表情", mediaSequence), leftEmojis, RedPacketRuleConfig.REPLY_EMOJI) { leftEmojis = it }
                         InsetDivider()
-                        GroupMemberMediaRow(context, "进群视频", joinVideos, RedPacketRuleConfig.REPLY_VIDEO) { joinVideos = it }
+                        GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("video", "进群视频", mediaSequence), joinVideos, RedPacketRuleConfig.REPLY_VIDEO) { joinVideos = it }
                         InsetDivider()
-                        GroupMemberMediaRow(context, "退群视频", leftVideos, RedPacketRuleConfig.REPLY_VIDEO) { leftVideos = it }
+                        GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("video", "退群视频", mediaSequence), leftVideos, RedPacketRuleConfig.REPLY_VIDEO) { leftVideos = it }
                         InsetDivider()
-                        GroupMemberMediaRow(context, "进群文件", joinFiles, RedPacketRuleConfig.REPLY_FILE) { joinFiles = it }
+                        GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("file", "进群文件", mediaSequence), joinFiles, RedPacketRuleConfig.REPLY_FILE) { joinFiles = it }
                         InsetDivider()
-                        GroupMemberMediaRow(context, "退群文件", leftFiles, RedPacketRuleConfig.REPLY_FILE) { leftFiles = it }
+                        GroupMemberMediaRow(context, GroupMemberMediaOrder.rowTitle("file", "退群文件", mediaSequence), leftFiles, RedPacketRuleConfig.REPLY_FILE) { leftFiles = it }
                         InsetDivider()
                         GroupMemberMediaRow(
                             context,
-                            "进群收藏",
+                            GroupMemberMediaOrder.rowTitle("favorite", "进群收藏", mediaSequence),
                             joinFavorites,
                             RedPacketRuleConfig.REPLY_FAVORITE,
                             onValueChange = { joinFavorites = it },
@@ -23331,7 +23342,7 @@ private fun GroupMemberGroupEditorPage(
                         InsetDivider()
                         GroupMemberMediaRow(
                             context,
-                            "退群收藏",
+                            GroupMemberMediaOrder.rowTitle("favorite", "退群收藏", mediaSequence),
                             leftFavorites,
                             RedPacketRuleConfig.REPLY_FAVORITE,
                             onValueChange = { leftFavorites = it },
@@ -23652,6 +23663,54 @@ private fun groupMediaOrderChoices(): List<PopupChoice<String>> {
         PopupChoice("不发送媒体", GroupLeaveMonitorSettings.MEDIA_NONE),
         PopupChoice("先提示后媒体", GroupLeaveMonitorSettings.MEDIA_AFTER),
         PopupChoice("先媒体后提示", GroupLeaveMonitorSettings.MEDIA_BEFORE)
+    )
+}
+
+@Composable
+internal fun GroupMemberMediaOrderDialog(
+    current: String,
+    onValueChange: (String) -> Unit,
+    onClose: () -> Unit
+) {
+    var draft by remember(current) { mutableStateOf(GroupMemberMediaOrder.types(current)) }
+    WindowDialog(
+        show = true,
+        title = "媒体类型顺序",
+        onDismissRequest = onClose,
+        content = {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Text(
+                    text = "顺序只决定发送媒体时先发哪一类；媒体与提示的先后由上一项「媒体顺序」控制，具体文件在各类型行里选。各类型行标题前的序号就是它当前的位置，点按某一类把它上移一位。",
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                SettingsCard {
+                    draft.forEachIndexed { index, type ->
+                        if (index > 0) InsetDivider()
+                        ActionRow(
+                            title = "${index + 1}. " + GroupMemberMediaOrder.label(type),
+                            summary = if (index == 0) "已在最前" else "点按上移一位"
+                        ) {
+                            val next = GroupMemberMediaOrder.moveUp(draft, index)
+                            if (next != draft) {
+                                draft = next
+                                onValueChange(GroupMemberMediaOrder.sequence(next))
+                            }
+                        }
+                    }
+                }
+                ActionRow(
+                    title = "恢复默认顺序",
+                    summary = GroupMemberMediaOrder.summary(GroupLeaveMonitorSettings.DEFAULT_MEDIA_SEQUENCE)
+                ) {
+                    val preset = GroupMemberMediaOrder.types(GroupLeaveMonitorSettings.DEFAULT_MEDIA_SEQUENCE)
+                    draft = preset
+                    onValueChange(GroupMemberMediaOrder.sequence(preset))
+                }
+                BottomActionBar(primaryText = "完成", onPrimaryClick = onClose)
+            }
+        }
     )
 }
 
@@ -43734,7 +43793,7 @@ private fun ContactFilterChip(
 }
 
 @Composable
-private fun PickerSectionHeader(
+internal fun PickerSectionHeader(
     text: String
 ) {
     Row(
@@ -43882,7 +43941,7 @@ private fun MessageBlockContactRow(
 }
 
 @Composable
-private fun ContactListCard(
+internal fun ContactListCard(
     option: ContactOption,
     selected: Boolean,
     multiSelect: Boolean,
@@ -44341,201 +44400,29 @@ private fun StatsCard(sp: SharedPreferences) {
     }
 }
 
-private const val MODULE_UPDATE_PREFS = "aeonlab_module_updates"
-private const val MODULE_UPDATE_IGNORED_CODE = "ignored_version_code"
 
 @Composable
 private fun AboutCard(context: Context) {
     val hostVersion = WeChatApis.version()?.current()?.displayVersion()?.takeIf { it.isNotBlank() } ?: "未知"
     val moduleVersion = BuildConfig.VERSION_NAME.takeIf { it.isNotBlank() } ?: "未知"
-    val activity = context as? Activity
-    val scope = rememberCoroutineScope()
-    var updateInfo by remember { mutableStateOf<ModuleUpdateInfo?>(null) }
-    var showUpdateDialog by remember { mutableStateOf(false) }
-    var updateError by remember { mutableStateOf("") }
-    var historyItems by remember { mutableStateOf<List<ModuleVersionHistory>>(emptyList()) }
-    var showHistoryDialog by remember { mutableStateOf(false) }
-    var historyError by remember { mutableStateOf("") }
-    val updatePrefs = remember { AeonLabStorage.preferences(context, MODULE_UPDATE_PREFS) }
-    val checkForUpdate: () -> Unit = {
-        updateError = "正在检查更新…"
-        scope.launch {
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    ModuleUpdateInfo.fromJson(
-                        PluginMarketClient.moduleUpdate(context).getOrThrow(),
-                        PluginMarketSettings.serviceUrl(context)
-                    )
-                }
-            }
-            result.onSuccess { info ->
-                updateInfo = info
-                val hasNewerVersion = info.versionCode > BuildConfig.VERSION_CODE
-                updatePrefs.edit().putBoolean("has_update", hasNewerVersion).apply()
-                if (hasNewerVersion) {
-                    updateError = ""
-                    showUpdateDialog = true
-                } else {
-                    updateError = "已是最新版本"
-                }
-            }.onFailure {
-                updateError = "检查更新失败：${it.message ?: "网络不可用"}"
-            }
-        }
-    }
-    val openHistory: () -> Unit = {
-        historyError = "正在加载历史版本…"
-        scope.launch {
-            val result = withContext(Dispatchers.IO) {
-                PluginMarketClient.moduleVersionHistory(context).map { values ->
-                    values.map { ModuleVersionHistory.fromJson(it, PluginMarketSettings.serviceUrl(context)) }
-                }
-            }
-            result.onSuccess {
-                historyItems = it
-                historyError = if (it.isEmpty()) "暂无历史版本" else ""
-                showHistoryDialog = true
-            }.onFailure {
-                historyError = "加载失败：${it.message ?: "网络不可用"}"
-                showHistoryDialog = true
-            }
-        }
-    }
     SettingsCard {
-        InfoRow(label = "版本", value = moduleVersion, onClick = checkForUpdate)
+        InfoRow(label = "版本", value = moduleVersion)
         InsetDivider()
         InfoRow(label = "宿主", value = hostVersion)
         InsetDivider()
-        InfoRow(label = "作者", value = "。。")
+        // 5.5.33（用户 2026-11-06 要求）：恢复上游原版卡片里的「原作者」行位置（宿主之下、历史版本之上），
+        // 取值为上游真实署名「。。」两个全角句号 U+3002 U+3002，逐字写入（不 trim、不加引号、不转半角）。
+        InfoRow(label = "原作者", value = "。。")
         InsetDivider()
-        InfoRow(label = "历史版本", value = "查看更新说明和下载", onClick = openHistory)
-        if (updateError.isNotBlank()) {
-            Text(updateError, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-        }
-        updateInfo?.takeIf { it.versionCode > BuildConfig.VERSION_CODE }?.let { update ->
-            InsetDivider()
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                Text("发现新版本", color = MiuixTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
-                Text("${update.versionName}（${update.versionCode}）", color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
-            }
-            if (update.releaseNotes.isNotBlank()) {
-                Text(update.releaseNotes, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontSize = 12.sp, modifier = Modifier.padding(16.dp, 0.dp, 16.dp, 10.dp))
-            }
-            ActionRow("下载新版本", "打开系统下载") {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(update.downloadUrl))
-                activity?.startActivity(intent)
-            }
-        }
-    }
-    if (showHistoryDialog) {
-        WindowDialog(
-            show = true,
-            title = "历史版本",
-            onDismissRequest = { showHistoryDialog = false },
-            content = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    if (historyError.isNotBlank()) {
-                        Text(historyError, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontSize = 14.sp)
-                    }
-                    historyItems.forEachIndexed { index, version ->
-                        if (index > 0) InsetDivider(start = 0.dp)
-                        Text("${version.versionName}（${version.versionCode}）", color = MiuixTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp))
-                        Text(version.releaseNotes.ifBlank { "暂无更新说明" }, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
-                        Text(formatFileSize(version.size), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-                        TextButton("下载此版本", onClick = {
-                            activity?.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(version.downloadUrl)))
-                        }, colors = ButtonDefaults.textButtonColorsPrimary())
-                    }
-                }
-            }
-        )
-    }
-    if (showUpdateDialog) {
-        updateInfo?.takeIf { it.versionCode > BuildConfig.VERSION_CODE }?.let { update ->
-            WindowDialog(
-                show = true,
-                title = "发现新版本 ${update.versionName}",
-                onDismissRequest = { showUpdateDialog = false },
-                content = {
-                    Column {
-                        Text(update.releaseNotes.ifBlank { "有新的模块版本可用" }, color = MiuixTheme.colorScheme.onSurface, fontSize = 14.sp)
-                        Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton("忽略此版本", onClick = {
-                                updatePrefs.edit().putInt(MODULE_UPDATE_IGNORED_CODE, update.versionCode).putBoolean("has_update", false).apply()
-                                showUpdateDialog = false
-                            }, modifier = Modifier.weight(1f), colors = ButtonDefaults.textButtonColorsPrimary())
-                            TextButton("下载更新", onClick = {
-                                activity?.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.downloadUrl)))
-                                showUpdateDialog = false
-                            }, modifier = Modifier.weight(1f), colors = ButtonDefaults.textButtonColorsPrimary())
-                        }
-                    }
-                }
-            )
-        }
+        // 5.5.34（用户 2026-11-06 指示）：在删掉「历史版本」行腾出的位置放「本版本」行，
+        // 沿用原行样式与位置（值右对齐）；本行为静态文案、无点击行为，不承载任何入口。
+        InfoRow(label = "本版本", value = "基于上游的自用修改版，非原作者发布")
     }
 }
-@Composable
-private fun ModuleUpdateDialog(
-    context: Context,
-    activity: Activity?,
-    update: ModuleUpdateInfo,
-    prefs: SharedPreferences,
-    onDismiss: () -> Unit
-) {
-    WindowDialog(
-        show = true,
-        title = "发现新版本 ${update.versionName}",
-        onDismissRequest = onDismiss,
-        content = {
-            Column {
-                Text(update.releaseNotes.ifBlank { "有新的模块版本可用" }, color = MiuixTheme.colorScheme.onSurface, fontSize = 14.sp)
-                Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton("忽略此版本", onClick = {
-                        prefs.edit().putInt(MODULE_UPDATE_IGNORED_CODE, update.versionCode).putBoolean("has_update", false).apply()
-                        onDismiss()
-                    }, modifier = Modifier.weight(1f), colors = ButtonDefaults.textButtonColorsPrimary())
-                    TextButton("下载更新", onClick = {
-                        activity?.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.downloadUrl)))
-                        onDismiss()
-                    }, modifier = Modifier.weight(1f), colors = ButtonDefaults.textButtonColorsPrimary())
-                }
-            }
-        }
-    )
-}
-
-private data class ModuleVersionHistory(
-    val versionName: String,
-    val versionCode: Int,
-    val releaseNotes: String,
-    val size: Long,
-    val downloadUrl: String
-) {
-    companion object {
-        fun fromJson(value: JSONObject, baseUrl: String): ModuleVersionHistory = ModuleVersionHistory(
-            value.optString("versionName"),
-            value.optInt("versionCode"),
-            value.optString("releaseNotes"),
-            value.optLong("size"),
-            value.optString("apkUrl").let { if (it.startsWith("http")) it else baseUrl.trimEnd('/') + it }
-        )
-    }
-}
-
 private fun formatFileSize(size: Long): String = when {
     size >= 1024 * 1024 -> String.format("%.1f MiB", size / (1024.0 * 1024.0))
     size >= 1024 -> String.format("%.1f KiB", size / 1024.0)
     else -> "$size B"
-}
-
-private data class ModuleUpdateInfo(val versionName: String, val versionCode: Int, val releaseNotes: String, val downloadUrl: String) {
-    companion object {
-        fun fromJson(value: JSONObject, baseUrl: String): ModuleUpdateInfo = ModuleUpdateInfo(
-            value.optString("versionName"), value.optInt("versionCode"), value.optString("releaseNotes"),
-            value.optString("apkUrl").let { if (it.startsWith("http")) it else baseUrl.trimEnd('/') + it }
-        )
-    }
 }
 
 
@@ -44573,21 +44460,20 @@ private fun ConfigBackupCard(
 }
 
 @Composable
-private fun GroupLinksCard(context: Context) {
-    SettingsCard {
-        InfoRow(label = "Telegram Channel", value = "AeonLab_ci", onClick = {
-            openExternalLink(context, "https://t.me/Hchat_ci")
-        })
-        InsetDivider()
-        InfoRow(label = "Telegram Group", value = "AeonLab_Group", onClick = {
-            openExternalLink(context, "https://t.me/Hchat_Group")
-        })
-    }
-}
-
-@Composable
 private fun ThanksCard(context: Context) {
     SettingsCard {
+        // 5.5.32 上游来源署名（用户 2026-11-06 更正）：作者署名逐字写入「。。」（维护者确认的真实署名，
+        // 两个全角句号，非占位符），账号取自上游仓库元数据 owner.login=ljh520134；上游 README 标题为「# Hchat alt-entry」。
+        // 5.5.32 同时删除该卡片里此前误标为外部来源的一行（群管理功能由本模块自行编写，非外部第三方来源）。
+        // 仅静态文案与既有风格的外链行（GitHub），未恢复上游更新检查/导流弹窗/Telegram 入口，也未新增任何联网上报。
+        InfoRow(label = "上游项目", value = "Hchat alt-entry · 。。 · ljh520134", onClick = {
+            openExternalLink(context, "https://github.com/ljh520134/Hchat-alt-entry")
+        })
+        InsetDivider()
+        InfoRow(label = "上游仓库", value = "github.com/ljh520134/Hchat-alt-entry", onClick = {
+            openExternalLink(context, "https://github.com/ljh520134/Hchat-alt-entry")
+        })
+        InsetDivider()
         InfoRow(label = "KavaRef", value = "HighCapable", onClick = {
             openExternalLink(context, "https://github.com/HighCapable/KavaRef")
         })
@@ -45062,7 +44948,7 @@ private fun queryDisplayName(context: Context, uri: Uri?): String? {
         ?.takeIf { it.isNotBlank() }
 }
 
-private data class ContactOption(
+internal data class ContactOption(
     val id: String,
     val label: String,
     val group: Boolean,

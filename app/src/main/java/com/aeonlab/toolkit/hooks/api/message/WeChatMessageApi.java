@@ -749,10 +749,13 @@ public final class WeChatMessageApi {
                         MESSAGE_TYPE_TEXT,
                         buildAtMsgSource(cleanAtList));
             }
-            log("发送@文本" + (result ? "成功" : "失败") + ": " + talker);
+            log("发送@文本" + (result ? "成功" : "失败") + ": " + talker
+                    + " · at数=" + cleanAtList.size()
+                    + " · 正文长度=" + formattedText.length()
+                    + " · 请求类=" + (request == null ? "null" : request.getClass().getName()));
             return result;
         } catch (Throwable e) {
-            log("发送@文本异常: " + e.getMessage());
+            log("发送@文本异常: " + e.getClass().getName() + ": " + e.getMessage());
             return false;
         }
     }

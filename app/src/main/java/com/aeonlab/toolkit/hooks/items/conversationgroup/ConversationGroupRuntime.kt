@@ -13,16 +13,12 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.ContextMenu
-import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
-import android.widget.AbsListView
 import android.widget.Adapter
 import android.widget.AdapterView
 import android.widget.TextView
 import android.widget.Toast
-import com.aeonlab.toolkit.xposed.compat.CompatRuntime
 import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
 import com.aeonlab.toolkit.dexkit.DexMethodCache
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
@@ -92,22 +88,8 @@ object ConversationGroupRuntime {
         "com.tencent.mm.ui.conversation.ConvBoxServiceConversationUI\$ConvBoxServiceConversationFmUI"
     private const val FRAGMENT_ACTIVITY_SUPPORT = "com.tencent.mm.ui.FragmentActivitySupport"
     private const val CONTACT_USER_EXTRA = "Contact_User"
-
-    /** 分组页自己携带的虚拟 talker。刻意不用 Contact_User，避免微信把它当成会话父级。 */
-    private const val GROUP_TALKER_EXTRA = "AeonLab_Group_Talker"
-    private const val CHATTING_UI = "com.tencent.mm.ui.chatting.ChattingUI"
-    private const val CHAT_USER_EXTRA = "Chat_User"
     private const val NATIVE_GROUP_TAG = "MicroMsg.ConvBoxServiceConversationFmUI"
     private const val NATIVE_GROUP_PLACEHOLDER = "@placeholder_foldgroup"
-
-    /**
-     * 是否由我们自己收口分组页的返回（拦截 onBackPressed / dispatchKeyEvent 后 finish）。
-     *
-     * 原版 Hchat 没有任何退出拦截，分组退出是干净的；我们加上拦截后微信的返回流程被
-     * 截断，会留下空白聊天视图、会话行高亮、以及退出后 5 秒内再进分组退化成原生
-     * “折叠的群聊 / 暂无群聊”。这里关掉，回到微信原生返回语义，对比验证。
-     */
-    private const val INTERCEPT_GROUP_PAGE_BACK = true
     private const val VIRTUAL_PREFIX = "wxid_hchat_group_"
     private const val PARENT_PREFIX = "hchat_conv_group:"
     private const val KEY_ORIGINAL_PARENT_REFS = "original_parent_refs"
@@ -127,33 +109,6 @@ object ConversationGroupRuntime {
     private val syncScheduled = AtomicBoolean(false)
     private val syncRequested = AtomicBoolean(false)
     private val hookedMethods = ConcurrentHashMap.newKeySet<Method>()
-
-    /**
-     * 分组页正在退出。微信借用的“折叠聊天”页在销毁时会“回到父会话”，而这个父会话是我们
-     * 塞进去的虚拟分组 talker，于是 LauncherUI 会切到一个空白聊天视图（对方还不是你的朋友），
-     * 用户要按两次返回。退出期间阻断 Contact_User 的读取并清掉 intent，微信就拿不到父会话。
-     */
-    @Volatile
-    private var suspendingParentExtra = false
-
-    /**
-     * 微信主界面实例。折叠页退出后微信有可能被系统切到后台，此时 currentActivity() 为 null，
-     * 但空白聊天视图仍挂在 LauncherUI 上，所以保留一个弱引用继续检测并退出。
-     */
-    @Volatile
-    private var launcherViewRef: WeakReference<Activity>? = null
-
-    /**
-     * 刚退出分组页、可能残留虚拟会话空白聊天视图。用于在 LauncherUI 重新回到前台时再兜一次，
-     * 避免微信被系统切到后台期间轮询窗口已经过期。
-     */
-    @Volatile
-    private var pendingVirtualChatExit = false
-
-    /** 临时诊断：EditText 构造探针是否已安装，以及本次退出已记录的次数。 */
-    @Volatile
-    private var editTextProbeInstalled = false
-    private val editTextProbeCount = java.util.concurrent.atomic.AtomicInteger(0)
     private val menuBindings = Collections.synchronizedMap(
         WeakHashMap<MenuItem, ConversationMenuTarget>()
     )
@@ -708,14 +663,7 @@ object ConversationGroupRuntime {
     private fun nativeGroupClickHook(): XC_MethodHook {
         return object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
-                val fragment = nativeGroupFragmentFromListener(param.thisObject)
-                if (fragment == null) {
-                    // 首页会话列表：点到虚拟分组行时不能交给微信的默认聊天入口，否则它会先给
-                    // 这个不存在的 talker 建一张空白聊天视图（藏在分组页底下，分组页一关闭就
-                    // 露出来），而该视图不在 LauncherUI 的返回栈里，返回键关不掉它。
-                    handleHomeVirtualGroupClick(param)
-                    return
-                }
+                val fragment = nativeGroupFragmentFromListener(param.thisObject) ?: return
                 if (!isVirtualGroupFragment(fragment)) return
                 val adapter = param.args?.getOrNull(0) as? AdapterView<*> ?: return
                 val view = param.args?.getOrNull(1) as? View ?: return
@@ -743,41 +691,13 @@ object ConversationGroupRuntime {
         }
     }
 
-    /** 首页会话列表点击到虚拟分组行：直接打开分组页，吞掉微信默认的聊天入口。 */
-    private fun handleHomeVirtualGroupClick(param: XC_MethodHook.MethodHookParam) {
-        val adapter = param.args?.getOrNull(0) as? AdapterView<*> ?: return
-        val view = param.args?.getOrNull(1) as? View ?: return
-        val position = param.args?.getOrNull(2) as? Int ?: return
-        val item = runCatching { adapter.getItemAtPosition(position) }.getOrNull() ?: return
-        val talker = conversationTalkerFromItem(item) ?: return
-        if (!isVirtualTalker(talker)) return
-        val activity = findActivity(view.context) ?: return
-        param.result = null
-        HLog.e(
-            "$TAG 首页点击虚拟分组行，拦截微信默认聊天入口: talker=$talker",
-            RuntimeException("homeVirtualGroupClick")
-        )
-        main.post {
-            val group = ConversationGroupStore.load(activity)
-                .firstOrNull { virtualTalker(it.id) == talker }
-            if (group != null) {
-                showGroup(activity, group.id)
-            } else {
-                HLog.e("$TAG 首页点击未找到对应分组: talker=$talker")
-            }
-        }
-    }
-
     private fun showGroup(activity: Activity, groupId: String) {
         val group = ConversationGroupStore.load(activity).firstOrNull { it.id == groupId } ?: return
         val talker = virtualTalker(group.id)
         runCatching {
             activity.startActivity(
                 Intent().setClassName(activity, NATIVE_GROUP_ACTIVITY).apply {
-                    // 关键：不要用微信的 Contact_User 传虚拟 talker。微信看到它是“会话父级”就会
-                    // 按聊天页渲染（退出时还会切到那个会话），于是出现空白聊天页和会话行高亮。
-                    // 换用自己的 extra，只在 fragment 的 getStringExtra 处补给它自己看。
-                    putExtra(GROUP_TALKER_EXTRA, talker)
+                    putExtra(CONTACT_USER_EXTRA, talker)
                 }
             )
         }.onFailure {
@@ -786,190 +706,6 @@ object ConversationGroupRuntime {
     }
 
     private fun installNativeGroupPageHooks(context: FeatureContext): Boolean {
-        runCatching { logLauncherChatMethods(context) }
-        // 分组页退出前先切断“父会话”：清 intent 并让 getStringExtra 在退出窗口内返回 null。
-        fun beginGroupPageExit(activity: Activity) {
-            suspendingParentExtra = true
-            pendingVirtualChatExit = true
-            editTextProbeCount.set(0)
-            runCatching { activity.intent?.removeExtra(GROUP_TALKER_EXTRA) }
-            runCatching { activity.intent?.removeExtra(CONTACT_USER_EXTRA) }
-            main.postDelayed({ suspendingParentExtra = false }, 5000)
-            main.postDelayed({ pendingVirtualChatExit = false }, 20000)
-            // 微信在折叠页销毁后会把 LauncherUI 切到“父会话”聊天视图（实测是内嵌视图，容器是
-            // com.tencent.mm.ui.tools.TestTimeForChatting，不是独立 ChattingUI Activity）。我们的
-            // 父会话是虚拟 talker，所以那是一张空白页。
-            // 关键：该内嵌聊天视图不参与 LauncherUI 的返回栈，但返回键对它有效（实测一次返回即
-            // 回到会话列表）。所以这里短轮询，命中后按一次、复查一次，绝不在会话列表上空按
-            // （空按会把微信退到后台，前几版正是这样失效的）。
-            var sweepTries = 0
-            var backAttempts = 0
-            var hitStreak = 0
-            var chainLogged = false
-            val sweepAction = object : Runnable {
-                override fun run() {
-                    sweepTries++
-                    val resumed = runCatching {
-                        WeChatApis.currentActivity()?.currentActivity()
-                    }.getOrNull()
-                    // 微信可能已经被系统切到后台（此时 currentActivity() 为 null），
-                    // 但空白聊天视图仍挂在 LauncherUI 上，所以取不到前景 Activity 时用弱引用兜底。
-                    val launcher = resumed?.takeIf { it.javaClass.name.endsWith("ui.LauncherUI") }
-                        ?: launcherViewRef?.get()?.takeIf { !it.isFinishing }
-                    val name = launcher?.javaClass?.name ?: resumed?.javaClass?.name ?: "null"
-                    if (launcher == null) {
-                        if (sweepTries % 3 == 1) {
-                            HLog.e(
-                                "$TAG sweep#$sweepTries 跳过: activity=$name",
-                                RuntimeException("sweepProbe")
-                            )
-                        }
-                    } else {
-                        val hit = hasChattingView(launcher.window?.decorView)
-                        if (hit || sweepTries % 3 == 1) {
-                            HLog.e(
-                                "$TAG sweep#$sweepTries activity=$name chattingView=$hit streak=$hitStreak back=$backAttempts",
-                                RuntimeException("sweepProbe")
-                            )
-                        }
-                        if (hit) {
-                            hitStreak++
-                            if (!chainLogged) {
-                                chainLogged = true
-                                HLog.e(
-                                    "$TAG 分组页退出后出现空白聊天视图 chain=" +
-                                        describeViewChain(
-                                            findChattingEditText(launcher.window?.decorView)
-                                        ),
-                                    RuntimeException("observedChattingView")
-                                )
-                            }
-                            // 这个内嵌聊天视图不在 LauncherUI 的返回栈里，但返回键对它有效
-                            // （实测：空白页按一次返回即回到会话列表）。按一次复查一次，最多 3 次。
-                            if (hitStreak >= 2 && backAttempts < 3 &&
-                                (resumed == null || resumed === launcher)
-                            ) {
-                                backAttempts++
-                                hitStreak = 0
-                                HLog.e(
-                                    "$TAG 下发返回键关闭空白聊天视图 attempt=$backAttempts",
-                                    RuntimeException("pressBackForVirtualChat")
-                                )
-                                if (backAttempts < 3) {
-                                    val how = closeVirtualChattingView(
-                                        launcher,
-                                        backAttempts
-                                    )
-                                    HLog.e(
-                                        "$TAG 关闭空白聊天视图 attempt=$backAttempts 方式=$how",
-                                        RuntimeException("closeVirtualChattingView")
-                                    )
-                                } else {
-                                    // 兜底：直接派发按键事件。
-                                    main.post {
-                                        runCatching {
-                                            launcher.dispatchKeyEvent(
-                                                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)
-                                            )
-                                            launcher.dispatchKeyEvent(
-                                                KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            hitStreak = 0
-                            if (chainLogged) {
-                                HLog.e(
-                                    "$TAG 空白聊天视图已关闭，回到会话列表",
-                                    RuntimeException("observedChattingGone")
-                                )
-                                pendingVirtualChatExit = false
-                                return
-                            }
-                        }
-                    }
-                    if (sweepTries < 50) main.postDelayed(this, 300)
-                }
-            }
-            main.postDelayed(sweepAction, 300)
-        }
-        // 记录 LauncherUI 实例：折叠页退出后微信可能被系统切到后台（currentActivity() 为 null），
-        // 但空白聊天视图仍挂在 LauncherUI 上，靠这个弱引用继续检测并退出。
-        runCatching {
-            val launcherClass = KavaReflector.loadClass(
-                "com.tencent.mm.ui.LauncherUI",
-                context.hostClassLoader()
-            ) ?: return@runCatching false
-            val remember = object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    val activity = param.thisObject as? Activity ?: return
-                    launcherViewRef = WeakReference(activity)
-                    // 首页列表点击：在微信之前把虚拟分组行吞掉（不依赖 DexKit 锚点）。
-                    runCatching { installHomeListClickHook(activity) }
-                    if (!pendingVirtualChatExit || activity.isFinishing) return
-                    // 刚退出分组页：如果 LauncherUI 恢复时已经挂着空白聊天视图，直接下发一次返回键。
-                    main.postDelayed({
-                        if (!pendingVirtualChatExit || activity.isFinishing) return@postDelayed
-                        val edit = findChattingEditText(activity.window?.decorView)
-                            ?: return@postDelayed
-                        HLog.e(
-                            "$TAG LauncherUI 恢复时存在空白聊天视图，下发返回键 chain=" +
-                                describeViewChain(edit),
-                            RuntimeException("resumeChattingView")
-                        )
-                        runCatching { closeVirtualChattingView(activity, 1) }
-                    }, 400)
-                }
-            }
-            listOf(
-                KavaReflector.findMethodRecursive(launcherClass, "onCreate", Bundle::class.java),
-                KavaReflector.findMethodRecursive(launcherClass, "onResume"),
-                KavaReflector.findMethodRecursive(launcherClass, "onNewIntent", Intent::class.java)
-            ).filterNotNull().forEach { hook(it, remember) }
-        }
-        // 临时诊断探针：虚拟分组的空白聊天视图里必定有一个 EditText 输入框（首页会话列表没有）。
-        // 只在“刚退出分组页”的窗口期内记录它的构造调用栈，用来定位微信把聊天视图挂上来的真实入口；
-        // 定位到之后改为在该入口精准拦截，不再依赖“返回后再补救”。
-        if (!editTextProbeInstalled) {
-            runCatching {
-                val probe = object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val index = editTextProbeCount.incrementAndGet()
-                        if (index > 24) return
-                        val trace = Throwable().stackTrace.drop(1)
-                        val outer = trace.takeLast(20)
-                            .joinToString(" | ") {
-                                it.className.substringAfterLast('.') + "." + it.methodName
-                            }
-                        val host = runCatching {
-                            val ctx = param.args?.firstOrNull() as? Context
-                            ctx?.let { findActivity(it) }?.javaClass?.simpleName ?: "?"
-                        }.getOrDefault("?")
-                        HLog.e(
-                            "$TAG editTextProbe#$index host=$host " +
-                                "pending=$pendingVirtualChatExit outer=$outer",
-                            RuntimeException("editTextProbe")
-                        )
-                    }
-                }
-                listOf(
-                    KavaReflector.findConstructor(
-                        android.widget.EditText::class.java,
-                        Context::class.java
-                    ),
-                    KavaReflector.findConstructor(
-                        android.widget.EditText::class.java,
-                        Context::class.java,
-                        android.util.AttributeSet::class.java
-                    )
-                ).filterNotNull().forEach { CompatRuntime.hook(it, probe) }
-                editTextProbeInstalled = true
-            }.onFailure {
-                HLog.e("$TAG EditText 探针安装失败: ${it.message}", it)
-            }
-        }
         val fragmentClass = KavaReflector.loadClass(NATIVE_GROUP_FRAGMENT, context.hostClassLoader())
             ?: return false
         val lifecycle = KavaReflector.findDeclaredMethod(
@@ -996,15 +732,8 @@ object ConversationGroupRuntime {
                 val activity = (KavaReflector.invokeMethod(param.thisObject, "getActivity")
                     ?: KavaReflector.invokeMethod(param.thisObject, "thisActivity")) as? Activity
                     ?: return
-                val talker = activity.intent?.getStringExtra(GROUP_TALKER_EXTRA)
+                val talker = activity.intent?.getStringExtra(CONTACT_USER_EXTRA)
                     ?.takeIf(::isVirtualTalker) ?: return
-                if (suspendingParentExtra && (activity.isFinishing || activity.isDestroyed)) {
-                    // 只有“正在关闭的那个页面”才需要切断父会话。之前这里是全局 5 秒开关，
-                    // 结果退出后马上再进分组时，新页面也拿不到 talker，退化成微信原生的
-                    // “折叠的群聊 / 暂无群聊”。
-                    param.result = null
-                    return
-                }
                 param.result = talker
             }
         })
@@ -1013,162 +742,6 @@ object ConversationGroupRuntime {
                 customizeNativeGroupPage(param.thisObject, context.hostContext())
             }
         })
-        // 微信这个“折叠聊天”页原生的返回语义是“回到父会话”。我们借它承载聊天分组时，
-        // 父会话是虚拟 talker（wxid_hchat_group_*），它并不真实存在，于是返回会打开一个
-        // 空白聊天页（“对方还不是你的朋友 / N 条新消息”），用户必须再按一次返回才能退出分组页。
-        // 这里把分组页的返回收口为 finish：嵌套子分组时自然退回上一层分组页。
-        val groupActivityClass = KavaReflector.loadClass(
-            NATIVE_GROUP_ACTIVITY,
-            context.hostClassLoader()
-        )
-        fun isVirtualGroupPage(activity: Any?): Boolean {
-            val target = activity as? Activity ?: return false
-            if (target.isFinishing) return false
-            return (target.intent?.getStringExtra(GROUP_TALKER_EXTRA)
-                ?: target.intent?.getStringExtra(CONTACT_USER_EXTRA))?.let(::isVirtualTalker) == true
-        }
-        var backHookInstalled = false
-        if (groupActivityClass != null && INTERCEPT_GROUP_PAGE_BACK) {
-            KavaReflector.findMethodRecursive(groupActivityClass, "onBackPressed")?.let { method ->
-                backHookInstalled = hook(method, object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val activity = param.thisObject as? Activity ?: return
-                        if (!isVirtualGroupPage(activity)) return
-                        beginGroupPageExit(activity)
-                        param.result = null
-                        runCatching { activity.finish() }.onFailure {
-                            HLog.e("$TAG 关闭微信原生分组页面失败: ${it.message}", it)
-                        }
-                    }
-                }) || backHookInstalled
-            }
-            // 手势/按键返回未必都经过 onBackPressed，dispatchKeyEvent 一并收口。
-            KavaReflector.findMethodRecursive(
-                groupActivityClass,
-                "dispatchKeyEvent",
-                KeyEvent::class.java
-            )?.let { method ->
-                backHookInstalled = hook(method, object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val event = param.args?.firstOrNull { it is KeyEvent } as? KeyEvent
-                            ?: return
-                        if (event.keyCode != KeyEvent.KEYCODE_BACK) return
-                        val activity = param.thisObject as? Activity ?: return
-                        if (!isVirtualGroupPage(activity)) return
-                        if (event.action == KeyEvent.ACTION_UP) {
-                            beginGroupPageExit(activity)
-                            runCatching { activity.finish() }.onFailure {
-                                HLog.e("$TAG 关闭微信原生分组页面失败: ${it.message}", it)
-                            }
-                        }
-                        param.result = true
-                    }
-                }) || backHookInstalled
-            }
-        }
-        if (INTERCEPT_GROUP_PAGE_BACK && !backHookInstalled) {
-            HLog.e("$TAG 微信原生分组页返回收口 Hook 安装失败，返回时可能打开空白聊天页")
-        }
-        // 兜底：虚拟分组会话（wxid_hchat_group_*）没有真实会话数据，任何入口打开它的聊天页
-        // 都只能得到一个“对方还不是你的朋友 / N 条新消息”的空白页，这里直接关掉并记录来源。
-        val chattingUiClass = KavaReflector.loadClass(CHATTING_UI, context.hostClassLoader())
-        val virtualChatBlocked = if (chattingUiClass != null) {
-            KavaReflector.findMethodRecursive(chattingUiClass, "onCreate", Bundle::class.java)
-                ?.let { method ->
-                    hook(method, object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            val activity = param.thisObject as? Activity ?: return
-                            val talker = activity.intent?.getStringExtra(CHAT_USER_EXTRA) ?: return
-                            if (!isVirtualTalker(talker)) return
-                            val callers = Throwable().stackTrace
-                                .drop(1).take(6)
-                                .joinToString(" | ") { it.className.substringAfterLast('.') + "." + it.methodName }
-                            HLog.e("$TAG 拦截虚拟分组会话聊天页: talker=$talker callers=$callers")
-                            runCatching { activity.finish() }
-                        }
-                    })
-                } ?: false
-        } else {
-            false
-        }
-        if (!virtualChatBlocked) {
-            HLog.e("$TAG 虚拟分组会话聊天页拦截 Hook 安装失败")
-        }
-        // 根因收口：从分组页退出时，微信会让 LauncherUI“回到父会话”，而父会话是我们塞进去的
-        // 虚拟 talker（wxid_hchat_group_*）。它没有真实会话数据，于是 LauncherUI 挂出一张空白
-        // 聊天页（“对方还不是你的朋友 / N 条新消息”），并把这个会话行标成“当前打开”。
-        // 在入口处直接吞掉对虚拟 talker 的 startChatting，空白页根本不会创建，也就没有
-        // 返回时的闪烁和残留高亮。
-        runCatching {
-            val launcherClass = KavaReflector.loadClass(
-                "com.tencent.mm.ui.LauncherUI",
-                context.hostClassLoader()
-            ) ?: return@runCatching
-            val candidates = launcherClass.declaredMethods
-                .filter { it.name == "startChatting" }
-                .onEach { runCatching { KavaReflector.accessible(it) } }
-            if (candidates.isEmpty()) {
-                HLog.e("$TAG 未找到 LauncherUI.startChatting，空白聊天页仍可能闪现")
-                return@runCatching
-            }
-            candidates.forEach { method ->
-                hook(method, object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val args = param.args ?: return
-                        val talker = args.filterIsInstance<Intent>()
-                            .flatMap { listOf(CHAT_USER_EXTRA, CONTACT_USER_EXTRA).map(it::getStringExtra) }
-                            .firstOrNull()
-                            ?: args.filterIsInstance<String>().firstOrNull()
-                            ?: return
-                        if (!isVirtualTalker(talker)) return
-                        HLog.e(
-                            "$TAG 拦截 LauncherUI 打开虚拟分组会话: talker=$talker " +
-                                "method=${method.name}/${method.parameterTypes.size}"
-                        )
-                        clearPendingChatTarget(param.thisObject as? Activity)
-                        param.result = null
-                    }
-                })
-            }
-        }.onFailure {
-            HLog.e("$TAG startChatting 拦截安装失败: ${it.message}")
-        }
-        // 微信退出“折叠聊天”页时会通过通用入口“回到父会话”。我们的父会话是虚拟分组 talker，
-        // 微信因此会进入一个空白聊天页（实测是 LauncherUI 内嵌的聊天视图，不是独立 ChattingUI），
-        // 于是用户要按两次返回。这里在“打开聊天”的通用入口上把虚拟 talker 拦掉。
-        val virtualChatStartBlocked = runCatching {
-            val dexFinder = context.dexFinder()
-            dexFinder.resolveChatPageApi()
-            val method = dexFinder.chatPageStartMethod
-            if (method == null) {
-                false
-            } else {
-                KavaReflector.accessible(method)
-                hook(method, object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val talker = param.args?.firstOrNull { it is String } as? String
-                            ?: return
-                        if (!isVirtualTalker(talker)) return
-                        HLog.e(
-                            "$TAG 拦截打开虚拟分组会话聊天的请求: talker=$talker",
-                            RuntimeException("blockVirtualGroupChat")
-                        )
-                        clearPendingChatTarget(param.thisObject as? Activity)
-                        when (method.returnType) {
-                            Void.TYPE -> param.result = null
-                            Integer.TYPE -> param.result = 0
-                            java.lang.Long.TYPE -> param.result = 0L
-                            java.lang.Boolean.TYPE -> param.result = false
-                            else -> param.result = null
-                        }
-                    }
-                })
-            }
-        }.getOrDefault(false)
-        if (!virtualChatStartBlocked) {
-            HLog.e("$TAG 虚拟分组会话聊天入口拦截 Hook 安装失败")
-        }
-
         val lifecycleContextInstalled = listOf("onPause", "onResume").all { name ->
             val method = KavaReflector.findDeclaredMethod(fragmentClass, name) ?: return@all false
             hook(method, object : XC_MethodHook() {
@@ -1185,10 +758,6 @@ object ConversationGroupRuntime {
                             syncAsync(context.hostContext())
                             updateNativeGroupUnread(param.thisObject)
                             updateNativeGroupTitle(param.thisObject, context.hostContext())
-                            hideChattingLayer(
-                                (KavaReflector.invokeMethod(param.thisObject, "getActivity")
-                                    ?: KavaReflector.invokeMethod(param.thisObject, "thisActivity")) as? Activity
-                            )
                         }
                     } finally {
                         nativeGroupPageParent.remove()
@@ -1200,251 +769,6 @@ object ConversationGroupRuntime {
             HLog.e("$TAG 微信原生分组页面 Hook 安装不完整: fragment=$NATIVE_GROUP_FRAGMENT")
         }
         return parentExtraInstalled && lifecycleInstalled && lifecycleContextInstalled
-    }
-
-    /**
-     * 判断当前视图里是否已经有聊天页。
-     *
-     * 注意：不能按类名里是否有 “Chatting” 来判断——微信首页的 LauncherUI 视图树里本来就挂着
-     * `com.tencent.mm.ui.tools.TestTimeForChatting`（框架自带的计时辅助 View），按类名判断会恒为真。
-     * 实测首页整棵 LauncherUI 视图树没有任何 EditText，而聊天页必定有一个输入框，因此只认 EditText。
-     */
-    private fun hasChattingView(view: View?): Boolean {
-        return findChattingEditText(view) != null
-    }
-
-    /** 找到聊天页的输入框（首页会话列表没有 EditText，这是唯一可靠的判据）。 */
-    private fun findViewBySimpleClass(view: View?, simpleName: String): View? {
-        val target = view ?: return null
-        if (target.javaClass.simpleName == simpleName) return target
-        if (target is ViewGroup) {
-            for (index in 0 until target.childCount) {
-                findViewBySimpleClass(target.getChildAt(index), simpleName)?.let { return it }
-            }
-        }
-        return null
-    }
-
-    /**
-     * 隐藏分组页里预建的父会话聊天层。
-     *
-     * 微信的“折叠的群聊”页（ConvBoxServiceConversationUI）继承自 BaseConversationUI，打开时会在
-     * 空闲阶段（queueIdle → ChattingUIProxy.onInit）把父会话的聊天容器 ChattingUILayout 一起建好。
-     * 我们的父会话是虚拟 talker，这个容器就是用户看到的“空白聊天页 / 对方还不是你的朋友”。
-     * 它平时被分组列表盖住，只有在退出分组页的那一帧会露出来。直接 GONE 掉，退出时就不会闪。
-     */
-    private fun hideChattingLayer(activity: Activity?): Boolean {
-        val target = activity ?: return false
-        val decor = target.window?.decorView ?: return false
-        val layer = findViewBySimpleClass(decor, "ChattingUILayout") ?: return false
-        if (layer.visibility == View.GONE) return true
-        return runCatching {
-            layer.visibility = View.GONE
-            HLog.e("$TAG 已隐藏分组页内预建的空白聊天层: ${target.javaClass.simpleName}")
-            true
-        }.getOrDefault(false)
-    }
-
-    private fun findChattingEditText(view: View?): android.widget.EditText? {
-        val target = view ?: return null
-        if (target is android.widget.EditText) {
-            // isShown 会沿祖先链检查可见性：仅看自身 visibility 会把“容器被隐藏/尚未挂上”的
-            // 输入框也算进来（实测把父容器设为 GONE 后，子 View 的 visibility 仍是 VISIBLE）。
-            return if (target.visibility == View.VISIBLE && target.isShown) target else null
-        }
-        if (target is ViewGroup) {
-            for (index in 0 until target.childCount) {
-                val found = findChattingEditText(target.getChildAt(index))
-                if (found != null) return found
-            }
-        }
-        return null
-    }
-
-    /** 诊断用：打印一个 View 的祖先链（类名 + 资源 id），用来确定聊天页的容器类。 */
-    /** 已经在运行时 hook 过的点击监听类，避免每次 onResume 重复 hook。 */
-    private val homeClickHookedClasses: MutableSet<Class<*>> =
-        java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<Class<*>, Boolean>())
-
-    /**
-     * 微信的 BaseConversationUI 会在空闲时（queueIdle → ChattingUIProxy.onInit）预热内嵌聊天页，
-     * talker 取自宿主 Activity 的 intent（Chat_User / Contact_User）。我们把点击吞掉之后如果
-     * 不清掉它，预热仍会拿着虚拟 talker 建出一张空白聊天页：退出分组页时闪一下，同时把该会话
-     * 行标成“正在打开”（标题栏高亮）。所以吞掉点击的同时把宿主 intent 里的 talker 清掉。
-     */
-    private fun clearPendingChatTarget(activity: Activity?) {
-        val target = activity ?: return
-        runCatching {
-            val intent = target.intent ?: return@runCatching
-            var cleared = false
-            if (intent.getStringExtra(CHAT_USER_EXTRA)?.let(::isVirtualTalker) == true) {
-                intent.removeExtra(CHAT_USER_EXTRA)
-                cleared = true
-            }
-            if (intent.getStringExtra(CONTACT_USER_EXTRA)?.let(::isVirtualTalker) == true) {
-                intent.removeExtra(CONTACT_USER_EXTRA)
-                cleared = true
-            }
-            if (cleared) {
-                HLog.e("$TAG 已清除宿主 intent 中的虚拟 talker，避免预热出空白聊天页")
-            }
-        }
-    }
-
-    private fun findConversationList(root: View?): AbsListView? {
-        if (root == null) return null
-        if (root is AbsListView && (root.adapter?.count ?: 0) > 0) return root
-        if (root is ViewGroup) {
-            for (i in 0 until root.childCount) {
-                findConversationList(root.getChildAt(i))?.let { return it }
-            }
-        }
-        return null
-    }
-
-    /**
-     * 首页会话列表点击的“运行时”拦截。
-     *
-     * 原来靠 DexKit 字符串锚点定位微信的 ConversationClickListener，一旦锚点失配就装不上，
-     * 于是点虚拟分组行会先走微信的“打开聊天”，在 LauncherUI 里预建出内嵌聊天视图——退出分组页
-     * 时就会闪一张空白聊天页，并把那一行标成“正在打开”（标题栏高亮）。
-     *
-     * 这里不依赖任何字符串：直接从 ListView 取已注册的 OnItemClickListener，hook 它自己的
-     * onItemClick，先于微信把虚拟分组行吞掉。
-     */
-    private fun installHomeListClickHook(activity: Activity) {
-        val list = findConversationList(activity.window?.decorView) ?: return
-        val listener = runCatching { list.onItemClickListener }.getOrNull() ?: return
-        val hookClass = listener.javaClass
-        if (!homeClickHookedClasses.add(hookClass)) return
-        var target: Class<*>? = hookClass
-        while (target != null && target != Any::class.java) {
-            val method = target.declaredMethods.firstOrNull {
-                it.name == "onItemClick" && it.parameterTypes.size == 4
-            }
-            if (method != null) {
-                runCatching { KavaReflector.accessible(method) }
-                hook(method, object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val adapter = param.args?.getOrNull(0) as? AdapterView<*> ?: return
-                        val view = param.args?.getOrNull(1) as? View ?: return
-                        val position = param.args?.getOrNull(2) as? Int ?: return
-                        val item = runCatching { adapter.getItemAtPosition(position) }.getOrNull()
-                            ?: return
-                        val talker = conversationTalkerFromItem(item) ?: return
-                        if (!isVirtualTalker(talker)) return
-                        val host = findActivity(view.context) ?: return
-                        param.result = null
-                        HLog.e("$TAG 首页点击虚拟分组行（运行时拦截）: talker=$talker")
-                        clearPendingChatTarget(host)
-                        main.post {
-                            val group = ConversationGroupStore.load(host)
-                                .firstOrNull { virtualTalker(it.id) == talker }
-                            if (group != null) {
-                                showGroup(host, group.id)
-                            } else {
-                                HLog.e("$TAG 首页点击未找到对应分组: talker=$talker")
-                            }
-                        }
-                    }
-                })
-                HLog.e("$TAG 首页列表点击拦截已安装: ${hookClass.name}")
-                return
-            }
-            target = target.superclass
-        }
-        HLog.e("$TAG 首页列表点击拦截安装失败: ${hookClass.name} 没有 onItemClick")
-    }
-
-    private fun describeViewChain(view: View?): String {
-        val parts = ArrayList<String>()
-        var current: View? = view
-        var depth = 0
-        while (current != null && depth < 14) {
-            val name = current.javaClass.name
-            val id = current.id
-            parts.add(
-                if (id == View.NO_ID) name else name + "@0x" + Integer.toHexString(id)
-            )
-            current = current.parent as? View
-            depth++
-        }
-        return parts.joinToString(" <- ")
-    }
-
-    private fun closeVirtualChattingView(activity: Activity, attempt: Int): String {
-        // 只走微信自己的 LauncherUI.closeChatting()。
-        // 实测：onBackPressed / dispatchKeyEvent 只会让微信“退到后台”（LauncherUI 的默认返回），
-        // 平台 OnBackInvokedDispatcher 上没有注册回调（no-callback:0），androidx dispatcher 的
-        // 无参方法调用同样会退后台。这些方式一旦失败就会把微信踢到后台，比不动更糟，故全部移除。
-        return closeChattingViaLauncher(activity)
-    }
-
-    /**
-     * 调微信自己的 LauncherUI.closeChatting()。
-     *
-     * 实测 LauncherUI 上存在 closeChatting / startChatting / moveTaskToBack / onBackPressed：
-     * 空白聊天视图不受 onBackPressed 管理（它只会退到后台），而 closeChatting 才是微信内部
-     * 关闭内嵌聊天页的入口。签名未知，这里按参数个数从小到大挑一个，参数用默认值填充。
-     */
-    private fun closeChattingViaLauncher(activity: Activity): String {
-        return runCatching {
-            val methods = activity.javaClass.declaredMethods
-                .filter { it.name == "closeChatting" }
-                .sortedBy { it.parameterCount }
-            if (methods.isEmpty()) return@runCatching "no-closeChatting"
-            var error = ""
-            for (method in methods) {
-                val outcome = runCatching {
-                    method.isAccessible = true
-                    val args = arrayOfNulls<Any?>(method.parameterTypes.size)
-                    method.parameterTypes.forEachIndexed { index, type ->
-                        args[index] = when (type) {
-                            java.lang.Boolean.TYPE -> false
-                            Integer.TYPE -> 0
-                            java.lang.Long.TYPE -> 0L
-                            java.lang.Float.TYPE -> 0f
-                            java.lang.Double.TYPE -> 0.0
-                            else -> null
-                        }
-                    }
-                    method.invoke(activity, *args)
-                }
-                if (outcome.isSuccess) {
-                    return@runCatching "closeChatting/" + method.parameterTypes.size
-                }
-                error = outcome.exceptionOrNull()?.let { it.cause?.message ?: it.message } ?: "err"
-            }
-            "closeChatting-fail:" + error
-        }.getOrElse { "closeChatting-fail:" + (it.cause?.message ?: it.message) }
-    }
-
-    /** 诊断：打印 LauncherUI 上所有和聊天/会话相关的方法签名，用来找“回到会话列表”的入口。 */
-    private fun logLauncherChatMethods(context: FeatureContext) {
-        runCatching {
-            val loader = context.hostClassLoader()
-            val launcher = KavaReflector.loadClass("com.tencent.mm.ui.LauncherUI", loader)
-                ?: return@runCatching
-            val names = launcher.declaredMethods
-                .filter {
-                    val n = it.name.lowercase()
-                    n.contains("chat") || n.contains("conversation") || n.contains("back")
-                }
-                .map { it.name + "/" + it.parameterTypes.size }
-                .distinct()
-            val edit = KavaReflector.loadClass("com.tencent.mm.ui.widget.SwipeBackLayout", loader)
-            val swipe = edit?.declaredMethods
-                ?.filter { m ->
-                    val n = m.name.lowercase()
-                    n.contains("finish") || n.contains("close") || n.contains("back")
-                }
-                ?.map { it.name }
-                ?.distinct()
-            HLog.e(
-                "$TAG 诊断 launcherMethods=" + names.joinToString(",") +
-                    " swipeBackMethods=" + (swipe?.joinToString(",") ?: "n/a")
-            )
-        }
     }
 
     private fun customizeNativeGroupPage(fragment: Any?, context: Context) {
@@ -1467,10 +791,6 @@ object ConversationGroupRuntime {
         }
         setNativeGroupTitle(target, talker, group.name, adapter)
         installNativeGroupPageMenu(target, context, group.id)
-        hideChattingLayer(
-            (KavaReflector.invokeMethod(target, "getActivity")
-                ?: KavaReflector.invokeMethod(target, "thisActivity")) as? Activity
-        )
     }
 
     private fun installNativeGroupPageMenu(fragment: Any, context: Context, groupId: String) {
