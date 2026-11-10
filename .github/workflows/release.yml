@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - release/5.5.45-529
+      - r8-5.5.49-533
 
 permissions:
   contents: write
