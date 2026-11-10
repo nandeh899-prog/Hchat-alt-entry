@@ -1656,23 +1656,50 @@ object ConversationGroupRuntime {
                 if (!isRuntimeGenerationActive(generation)) return
                 effectiveConversationSnapshot = null
             }
-            // 关闭分组：恢复真实会话的原始 parentRef。读库失败也不能中断后续清理，
-            // 否则首页会残留分组（历史日志里出现过「读取真实会话父级失败」直接抛出的情况）。
+            // 关闭分组：把真实会话的 parentRef 还原成原始归属。
+            // assigned 必须传空表：ConversationGroupParentPolicy.plan() 里 assigned[talker] 是
+            // 「期望父级」、current[talker] 是「当前父级」。上一版传了当前父级快照，两者恒等，
+            // parent != desired 与 desired == null 全为假，updates[talker] = original 那条
+            // 还原分支一次都没进；紧接着 cleanupVirtualRows 又把虚拟行删掉，真实会话的
+            // parentRef 指向一个已经不存在的父级，微信首页按 parentRef is null 查询时
+            // 既不满足分组也不满足根级，这些会话就从列表里彻底消失。
             runCatching {
                 val state = loadConversationParents(database, emptySet())
                 val official = state.officialIds(originals)
                 val plan = ConversationGroupParentPolicy.plan(
-                    assigned = state.parents.filterKeys { it !in official },
+                    assigned = emptyMap(),
                     current = state.parents,
                     protected = official,
                     originals = originals
                 )
-                applyParentPlan(database, prefs, account, plan)
+                val restored = applyParentPlan(database, prefs, account, plan)
+                // 缺可信原始父级的会话没有还原目标，一律回落首页根级（parentRef 写 NULL）。
+                // 微信首页判定用 parentRef is null，根级写空串同样查不到，必须走 NULL 分支。
+                val fallback = plan.unresolved - restored
+                fallback.chunked(200).forEach { chunk ->
+                    if (!updateParentRefs(database, chunk, "")) {
+                        HLog.e("$TAG 回落首页根级失败: count=${chunk.size} 示例=${chunk.take(5)}")
+                    }
+                }
             }.onFailure { HLog.e("$TAG 恢复默认会话归属失败: ${it.message}", it) }
-            // 关键：关闭开关时必须删掉虚拟分组会话行（wxid_hchat_group_*），
-            // 否则它们仍作为会话出现在首页，看起来和开启时一样。
-            runCatching { cleanupVirtualRows(database, emptySet()) }
-                .onFailure { HLog.e("$TAG 清理虚拟分组会话失败: ${it.message}", it) }
+            // 关键：只有确认没有任何真实会话还引用虚拟分组行时，才允许删除它们。
+            // 顺序是「先还原、再查引用、最后清理」；读库失败时直接跳过清理，
+            // 宁可保留分组行，也不能让会话指向一个不存在的父级而后从首页消失。
+            val virtualReferences = runCatching { loadVirtualRowReferences(database) }
+                .onFailure { HLog.e("$TAG 读取残留分组引用失败: ${it.message}", it) }
+                .getOrNull()
+            if (virtualReferences == null) {
+                HLog.e("$TAG 读取残留分组引用失败，跳过虚拟行清理以免会话丢失")
+            } else {
+                if (virtualReferences.realTalkers.isNotEmpty()) {
+                    HLog.e(
+                        "$TAG 仍有 ${virtualReferences.realTalkers.size} 个会话未还原父级: " +
+                            virtualReferences.realTalkers.take(10)
+                    )
+                }
+                runCatching { cleanupVirtualRows(database, virtualReferences.virtualTalkers) }
+                    .onFailure { HLog.e("$TAG 清理虚拟分组会话失败: ${it.message}", it) }
+            }
             runCatching { ConversationGroupHomeProjection.refresh() }
                 .onFailure { HLog.e("$TAG 刷新首页列表失败: ${it.message}", it) }
             return
@@ -2129,13 +2156,29 @@ object ConversationGroupRuntime {
                 KavaReflector.invokeOrThrow(method, receiver, usernames, parentRef, true, true)
             }
             val placeholders = List(talkers.size) { "?" }.joinToString(",")
-            val args = (talkers + parentRef).toTypedArray()
-            val matched = database.queryFirstString(
-                "SELECT COUNT(*) AS matched FROM rconversation " +
-                    "WHERE username IN ($placeholders) AND IFNULL(parentRef,'')=?",
-                args,
-                "matched"
-            ).toIntOrNull() ?: 0
+            // 根级必须写成 SQL NULL：微信首页判定用 parentRef is null，
+            // 写成空串同样查不到，会话会继续藏在列表外。
+            val matched = if (parentRef.isEmpty()) {
+                database.update(
+                    "rconversation",
+                    ContentValues().apply { putNull("parentRef") },
+                    "username IN ($placeholders)",
+                    talkers.toTypedArray()
+                )
+                database.queryFirstString(
+                    "SELECT COUNT(*) AS matched FROM rconversation " +
+                        "WHERE username IN ($placeholders) AND parentRef IS NULL",
+                    talkers.toTypedArray(),
+                    "matched"
+                ).toIntOrNull() ?: 0
+            } else {
+                database.queryFirstString(
+                    "SELECT COUNT(*) AS matched FROM rconversation " +
+                        "WHERE username IN ($placeholders) AND IFNULL(parentRef,'')=?",
+                    (talkers + parentRef).toTypedArray(),
+                    "matched"
+                ).toIntOrNull() ?: 0
+            }
             if (matched != talkers.size) {
                 throw IllegalStateException("数据库仅更新 $matched/${talkers.size} 条会话")
             }
