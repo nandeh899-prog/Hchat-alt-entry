@@ -9,6 +9,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - fix/5.5.52-536-theme
       - fix/5.5.53-537-theme
 
 permissions:
