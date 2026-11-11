@@ -51,6 +51,10 @@ object ThemeSettings {
 
     val BACKGROUND_KEYS = listOf(KEY_BG_SPLASH, KEY_BG_HOME, KEY_BG_CONTACTS, KEY_BG_DISCOVER, KEY_BG_ME)
 
+    /** 主题包里的背景「叠色」与「模糊半径」，按槽位存成 JSON（微X 主题的 c / b 两个字段）。 */
+    const val KEY_BG_OVERLAY = "theme_background_overlay"
+    const val KEY_BG_BLUR = "theme_background_blur"
+
     fun preferences(context: Context): SharedPreferences =
         AeonLabStorage.preferences(context, PREFS_NAME)
 
@@ -81,7 +85,9 @@ object ThemeSettings {
             backgroundHome = sp.getString(KEY_BG_HOME, "").orEmpty(),
             backgroundContacts = sp.getString(KEY_BG_CONTACTS, "").orEmpty(),
             backgroundDiscover = sp.getString(KEY_BG_DISCOVER, "").orEmpty(),
-            backgroundMe = sp.getString(KEY_BG_ME, "").orEmpty()
+            backgroundMe = sp.getString(KEY_BG_ME, "").orEmpty(),
+            backgroundOverlay = readStringMap(sp, KEY_BG_OVERLAY),
+            backgroundBlur = readIntMap(sp, KEY_BG_BLUR)
         )
     }
 
@@ -108,25 +114,71 @@ object ThemeSettings {
             .putString(KEY_BG_CONTACTS, snapshot.backgroundContacts)
             .putString(KEY_BG_DISCOVER, snapshot.backgroundDiscover)
             .putString(KEY_BG_ME, snapshot.backgroundMe)
+            .putString(KEY_BG_OVERLAY, encodeStringMap(snapshot.backgroundOverlay))
+            .putString(KEY_BG_BLUR, encodeIntMap(snapshot.backgroundBlur))
         TAB_ICON_KEYS.forEachIndexed { index, key ->
             editor.putString(key, snapshot.tabIcons.getOrElse(index) { "" })
         }
         editor.apply()
     }
 
-    /** 解析 #RGB / #RRGGBB / #AARRGGBB，失败返回 null（不静默改成默认色）。 */
+    /**
+     * 解析颜色。除 #RGB / #RRGGBB / #AARRGGBB 外，还要吃下主题包里常见的
+     * 裸十六进制写法（6 位 RGB 如 "9DAABC"、"EEEEEE"，8 位 ARGB 如 "002C2C2C"）。
+     * 解析失败返回 null，不静默改成默认色。
+     */
     fun parseColor(value: String?): Int? {
         val text = value?.trim().orEmpty()
-        if (text.isEmpty()) return null
-        return runCatching { Color.parseColor(text) }.getOrNull()
+        if (text.isEmpty() || text.equals("null", ignoreCase = true)) return null
+        val prefixed = if (text.startsWith("#")) text else "#$text"
+        return runCatching { Color.parseColor(prefixed) }.getOrNull()
     }
 
     fun hasColor(value: String?): Boolean = parseColor(value) != null
 
     fun normalizeColor(value: String?): String {
         val text = value?.trim().orEmpty()
-        if (text.isEmpty()) return ""
-        return if (parseColor(text) == null) "" else text.uppercase()
+        if (text.isEmpty() || text.equals("null", ignoreCase = true)) return ""
+        val prefixed = if (text.startsWith("#")) text else "#$text"
+        return if (parseColor(prefixed) == null) "" else prefixed.uppercase()
+    }
+
+    private fun readStringMap(sp: SharedPreferences, key: String): Map<String, String> {
+        val raw = runCatching { sp.getString(key, "") }.getOrNull().orEmpty()
+        if (raw.isBlank()) return emptyMap()
+        val obj = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: return emptyMap()
+        val result = LinkedHashMap<String, String>()
+        obj.keys().forEach { name ->
+            val value = obj.optString(name, "")
+            if (value.isNotBlank()) result[name] = value
+        }
+        return result
+    }
+
+    private fun readIntMap(sp: SharedPreferences, key: String): Map<String, Int> {
+        val raw = runCatching { sp.getString(key, "") }.getOrNull().orEmpty()
+        if (raw.isBlank()) return emptyMap()
+        val obj = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: return emptyMap()
+        val result = LinkedHashMap<String, Int>()
+        obj.keys().forEach { name ->
+            val value = obj.optInt(name, 0)
+            if (value > 0) result[name] = value
+        }
+        return result
+    }
+
+    private fun encodeStringMap(map: Map<String, String>): String {
+        if (map.isEmpty()) return ""
+        val obj = org.json.JSONObject()
+        map.forEach { (key, value) -> if (value.isNotBlank()) obj.put(key, value) }
+        return obj.toString()
+    }
+
+    private fun encodeIntMap(map: Map<String, Int>): String {
+        if (map.isEmpty()) return ""
+        val obj = org.json.JSONObject()
+        map.forEach { (key, value) -> if (value > 0) obj.put(key, value) }
+        return obj.toString()
     }
 }
 
@@ -152,7 +204,9 @@ data class ThemeSnapshot(
     val backgroundHome: String = "",
     val backgroundContacts: String = "",
     val backgroundDiscover: String = "",
-    val backgroundMe: String = ""
+    val backgroundMe: String = "",
+    val backgroundOverlay: Map<String, String> = emptyMap(),
+    val backgroundBlur: Map<String, Int> = emptyMap()
 ) {
     fun backgroundPaths(): List<String> = listOf(
         backgroundSplash,

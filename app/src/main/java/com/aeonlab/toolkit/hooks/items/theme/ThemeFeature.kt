@@ -4,6 +4,9 @@ import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.LayerDrawable
 import android.os.Handler
 import android.os.Looper
 import android.view.View
@@ -203,6 +206,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
             HLog.e("$TAG 没找到首页 ViewPager，页面背景图本轮未生效")
             return
         }
+        val slots = listOf(
+            ThemeImageStore.SLOT_HOME,
+            ThemeImageStore.SLOT_CONTACTS,
+            ThemeImageStore.SLOT_DISCOVER,
+            ThemeImageStore.SLOT_ME
+        )
         val resources = activity.resources
         for (index in 0 until minOf(pager.childCount, paths.size)) {
             val path = paths[index]
@@ -213,12 +222,28 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 continue
             }
             val page = pager.getChildAt(index) ?: continue
-            applyPageBitmap(page, bitmap, resources)
+            val overlay = ThemeSettings.parseColor(snapshot.backgroundOverlay[slots[index]])
+            applyPageBitmap(page, bitmap, resources, overlay)
         }
     }
 
-    private fun applyPageBitmap(page: View, bitmap: Bitmap, resources: android.content.res.Resources) {
-        val drawable = BitmapDrawable(resources, bitmap)
+    private fun applyPageBitmap(
+        page: View,
+        bitmap: Bitmap,
+        resources: android.content.res.Resources,
+        overlayColor: Int? = null
+    ) {
+        // 主题包里的 c 字段是背景上的叠色（#AARRGGBB），叠上去才和原主题观感一致
+        val drawable: Drawable = if (overlayColor != null && Color.alpha(overlayColor) > 0) {
+            LayerDrawable(
+                arrayOf<Drawable>(
+                    BitmapDrawable(resources, bitmap),
+                    ColorDrawable(overlayColor)
+                )
+            )
+        } else {
+            BitmapDrawable(resources, bitmap)
+        }
         page.setBackgroundDrawable(drawable)
         val lists = ArrayList<View>()
         collectListViews(page, lists, 0)

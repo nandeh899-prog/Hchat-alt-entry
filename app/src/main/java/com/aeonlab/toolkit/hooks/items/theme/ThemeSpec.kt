@@ -11,6 +11,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.io.File
+import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 
 /**
@@ -64,6 +66,7 @@ object ThemeSpec {
         )
         root.put("items", itemsToJson(snapshot))
         root.put("mdwechat", mdwechatBlock(snapshot))
+        root.put("weixin", weixinBlock(snapshot))
         return root.toString(2)
     }
 
@@ -111,8 +114,37 @@ object ThemeSpec {
         return ImportOutcome.Success(snapshot.copy(enabled = true), describeApplied(snapshot), warnings)
     }
 
-    /** 兼容导入手机里现成的主题包（zip / 改名成 .txt 的 zip）：找 JSON 配置 + 按文件名认图片。 */
+    /**
+     * 兼容导入手机里现成的主题包（zip / 改名成 .txt 的 zip）。
+     *
+     * 两种真实存在的布局：
+     * 1. 微X（WeXposed）主题包：zip 根目录 settings.json + images/ + icons/，本模块按字段映射导入；
+     * 2. 其它包：扫 JSON 配置 + 按文件名认图片。
+     */
     fun importArchive(context: Context, bytes: ByteArray, sourceName: String = ""): ImportOutcome {
+        if (bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()) {
+            val zipFile = materializeZip(context, bytes)
+            if (zipFile != null) {
+                try {
+                    val hasWeixinSettings = runCatching {
+                        ZipFile(zipFile).use { zf ->
+                            zf.entries().asSequence().any {
+                                !it.isDirectory && it.name.substringAfterLast('/').equals("settings.json", ignoreCase = true)
+                            }
+                        }
+                    }.getOrDefault(false)
+                    if (hasWeixinSettings) {
+                        return importWeixinPack(context, zipFile, sourceName)
+                    }
+                } finally {
+                    zipFile.delete()
+                }
+            }
+        }
+        return importArchiveScan(context, bytes, sourceName)
+    }
+
+    private fun importArchiveScan(context: Context, bytes: ByteArray, sourceName: String = ""): ImportOutcome {
         if (bytes.size < 4 || bytes[0] != 0x50.toByte() || bytes[1] != 0x4B.toByte()) {
             val text = runCatching { String(bytes, Charsets.UTF_8) }.getOrDefault("")
             if (text.trimStart().startsWith("{")) return importJson(context, text, sourceName)
@@ -299,6 +331,16 @@ object ThemeSpec {
                     put("contacts", imageToJson(snapshot.backgroundContacts) ?: "")
                     put("discover", imageToJson(snapshot.backgroundDiscover) ?: "")
                     put("me", imageToJson(snapshot.backgroundMe) ?: "")
+                    if (snapshot.backgroundOverlay.isNotEmpty()) {
+                        put("overlay", JSONObject().apply {
+                            snapshot.backgroundOverlay.forEach { (slot, color) -> put(slot, color) }
+                        })
+                    }
+                    if (snapshot.backgroundBlur.isNotEmpty()) {
+                        put("blur", JSONObject().apply {
+                            snapshot.backgroundBlur.forEach { (slot, radius) -> put(slot, radius) }
+                        })
+                    }
                 }
         )
         return items
@@ -346,7 +388,9 @@ object ThemeSpec {
             backgroundHome = imageFromJson(context, background?.opt("home"), ThemeImageStore.SLOT_HOME, warnings),
             backgroundContacts = imageFromJson(context, background?.opt("contacts"), ThemeImageStore.SLOT_CONTACTS, warnings),
             backgroundDiscover = imageFromJson(context, background?.opt("discover"), ThemeImageStore.SLOT_DISCOVER, warnings),
-            backgroundMe = imageFromJson(context, background?.opt("me"), ThemeImageStore.SLOT_ME, warnings)
+            backgroundMe = imageFromJson(context, background?.opt("me"), ThemeImageStore.SLOT_ME, warnings),
+            backgroundOverlay = readColorMap(background?.optJSONObject("overlay")),
+            backgroundBlur = readIntMap(background?.optJSONObject("blur"))
         )
     }
 
@@ -430,6 +474,228 @@ object ThemeSpec {
         format.timeZone = TimeZone.getDefault()
         return format.format(Date())
     }
+
+    private fun weixinBlock(snapshot: ThemeSnapshot): JSONObject {
+        val block = JSONObject()
+        val actionBarColor = ThemeSettings.parseColor(snapshot.actionBarBackgroundColor)
+        if (actionBarColor != null) {
+            block.put("ActionBarColor", String.format(Locale.ROOT, "%08X", actionBarColor))
+            block.put("ChangeActionBarColor", true)
+        }
+        val tabColor = ThemeSettings.parseColor(snapshot.tabBackgroundColor)
+        if (tabColor != null) {
+            block.put("BottomTabColor", String.format(Locale.ROOT, "%08X", tabColor))
+            block.put("ChangeBottomTabColor", true)
+        }
+        block.put("UseRoundAvatar", snapshot.roundAvatar)
+        block.put("HideActionBar", snapshot.actionBarHide)
+        block.put("HideBottomTab", snapshot.tabHideNative)
+        return block
+    }
+
+    private fun readColorMap(source: JSONObject?): Map<String, String> {
+        if (source == null) return emptyMap()
+        val result = LinkedHashMap<String, String>()
+        source.keys().forEach { name ->
+            val color = ThemeSettings.normalizeColor(source.optString(name, ""))
+            if (color.isNotEmpty()) result[name] = color
+        }
+        return result
+    }
+
+    private fun readIntMap(source: JSONObject?): Map<String, Int> {
+        if (source == null) return emptyMap()
+        val result = LinkedHashMap<String, Int>()
+        source.keys().forEach { name ->
+            val value = source.optInt(name, 0)
+            if (value > 0) result[name] = value
+        }
+        return result
+    }
+
+    private fun materializeZip(context: Context, bytes: ByteArray): File? {
+        return runCatching {
+            val file = File.createTempFile("theme-", ".zip", context.cacheDir)
+            file.writeBytes(bytes)
+            file
+        }.getOrNull()
+    }
+
+    private fun findImageEntry(zipFile: ZipFile, name: String): java.util.zip.ZipEntry? {
+        if (name.isBlank()) return null
+        val direct = zipFile.getEntry("images/$name") ?: zipFile.getEntry(name)
+        if (direct != null) return direct
+        val lower = name.lowercase(Locale.ROOT)
+        return zipFile.entries().asSequence().firstOrNull { entry ->
+            !entry.isDirectory && (entry.name.lowercase(Locale.ROOT).endsWith("/$lower") ||
+                entry.name.lowercase(Locale.ROOT) == lower)
+        }
+    }
+
+    /**
+     * 微X（WeXposed）主题包：settings.json 是唯一配置文件，图片在 images/、图标在 icons/。
+     * 本模块只认与自身主题项对应的字段，其余（抽屉、悬浮按钮、聊天气泡、时间/昵称颜色、自绘底栏）
+     * 逐项统计后写进导入提示，不静默丢弃。
+     */
+    private fun importWeixinPack(context: Context, zipFile: File, sourceName: String): ImportOutcome {
+        val settingsName = runCatching {
+            ZipFile(zipFile).use { zf ->
+                zf.entries().asSequence().firstOrNull {
+                    !it.isDirectory && it.name.substringAfterLast('/').equals("settings.json", ignoreCase = true)
+                }?.name
+            }
+        }.getOrNull() ?: return ImportOutcome.Failure("主题包里没有 settings.json")
+        val text = runCatching {
+            ZipFile(zipFile).use { zf ->
+                zf.getInputStream(zf.getEntry(settingsName)).use { it.readBytes().toString(Charsets.UTF_8) }
+            }
+        }.getOrNull() ?: return ImportOutcome.Failure("读取 settings.json 失败")
+        val root = runCatching { JSONObject(text) }.getOrNull()
+            ?: return ImportOutcome.Failure("settings.json 不是合法 JSON，无法导入")
+
+        val warnings = ArrayList<String>()
+        val applied = ArrayList<String>()
+        var snapshot = ThemeSettings.snapshot(context).copy(enabled = true)
+        val overlay = LinkedHashMap(snapshot.backgroundOverlay)
+        val blur = LinkedHashMap(snapshot.backgroundBlur)
+        if (snapshot.name.isBlank() && sourceName.isNotBlank()) {
+            snapshot = snapshot.copy(name = sourceName.substringBeforeLast('.'))
+        }
+
+        fun takeBackground(key: String, enableKey: String, slot: String, label: String) {
+            if (!root.optBoolean(enableKey, true)) return
+            val array = root.optJSONArray(key) ?: return
+            if (array.length() == 0) return
+            val item = array.optJSONObject(0) ?: return
+            if (!item.optBoolean("e", true)) return
+            val overlayColor = ThemeSettings.normalizeColor(item.optString("c", ""))
+            if (overlayColor.isNotEmpty()) overlay[slot] = overlayColor
+            val blurRadius = item.optInt("b", 0)
+            if (blurRadius > 0) blur[slot] = blurRadius
+            val file = item.optString("p", "").trim()
+            if (file.isEmpty()) return
+            val entry = findImageEntry(zipFile, file)
+            if (entry == null) {
+                warnings.add("$label 图片 $file 在压缩包里找不到")
+                return
+            }
+            val data = runCatching {
+                ZipFile(zipFile).use { zf -> zf.getInputStream(zf.getEntry(entry.name)).use { it.readBytes() } }
+            }.getOrNull()
+            if (data == null) {
+                warnings.add("$label 图片 $file 读取失败")
+                return
+            }
+            val saved = ThemeImageStore.saveFromBytes(context, slot, data)
+            if (saved == null) {
+                warnings.add("$label 图片 $file 解码失败")
+                return
+            }
+            snapshot = when (slot) {
+                ThemeImageStore.SLOT_SPLASH -> snapshot.copy(backgroundSplash = saved)
+                ThemeImageStore.SLOT_HOME -> snapshot.copy(backgroundHome = saved)
+                ThemeImageStore.SLOT_CONTACTS -> snapshot.copy(backgroundContacts = saved)
+                ThemeImageStore.SLOT_DISCOVER -> snapshot.copy(backgroundDiscover = saved)
+                else -> snapshot.copy(backgroundMe = saved)
+            }
+            applied.add(label)
+        }
+
+        takeBackground("MainFragmentBackground", "MainFragmentBackgroundEnable", ThemeImageStore.SLOT_HOME, "主页背景")
+        takeBackground("ContactFragmentBackground", "ContactFragmentBackgroundEnable", ThemeImageStore.SLOT_CONTACTS, "通讯录背景")
+        takeBackground("DiscoverFragmentBackground", "DiscoverFragmentBackgroundEnable", ThemeImageStore.SLOT_DISCOVER, "发现页背景")
+        takeBackground("MeFragmentBackground", "MeFragmentBackgroundEnable", ThemeImageStore.SLOT_ME, "我的页背景")
+        takeBackground("SplashImage", "SplashImageEnable", ThemeImageStore.SLOT_SPLASH, "启动图")
+
+        if (root.optBoolean("UseRoundAvatar", false)) {
+            snapshot = snapshot.copy(roundAvatar = true)
+            applied.add("圆形头像（UseRoundAvatar）")
+        }
+        if (root.optBoolean("HideActionBar", false)) {
+            snapshot = snapshot.copy(actionBarHide = true)
+            applied.add("隐藏 ActionBar（HideActionBar）")
+        }
+        if (root.optBoolean("ChangeActionBarColor", false)) {
+            val color = ThemeSettings.normalizeColor(root.optString("ActionBarColor", ""))
+            if (color.isNotEmpty()) {
+                snapshot = snapshot.copy(actionBarBackgroundColor = color)
+                applied.add("标题栏主色（ActionBarColor）")
+            }
+        }
+        if (root.optBoolean("HideBottomTab", false)) {
+            snapshot = snapshot.copy(tabHideNative = true)
+            applied.add("隐藏底栏（HideBottomTab）")
+        }
+        if (root.optBoolean("ChangeBottomTabColor", false)) {
+            val color = ThemeSettings.normalizeColor(root.optString("BottomTabColor", ""))
+            if (color.isNotEmpty()) {
+                snapshot = snapshot.copy(tabBackgroundColor = color)
+                applied.add("底栏底色（BottomTabColor）")
+            }
+        }
+
+        val skipped = countUnsupportedWeixinKeys(root)
+        if (skipped > 0) {
+            warnings.add("有 $skipped 个主题包字段本模块还没有对应功能（抽屉 "${
+                countKeysWithPrefix(root, "Drawer")
+            }" 项、悬浮按钮 "${countKeysWithPrefix(root, "FloatingAction")}" 项、聊天气泡与聊天文字 ${
+                countChatKeys(root)
+            } 项、列表项配色 "${countKeysWithPrefix(root, "FragmentItemView")}" 项、自绘底栏 "${
+                countKeysWithPrefix(root, "TabLayout")
+            }" 项），已跳过")
+        }
+        if (blur.isNotEmpty()) {
+            warnings.add("主题包里有背景模糊半径（b 字段），本模块暂不实现模糊，只保留叠色")
+        }
+
+        val finalSnapshot = snapshot.copy(
+            enabled = true,
+            backgroundOverlay = overlay,
+            backgroundBlur = blur
+        )
+        ThemeSettings.write(context, finalSnapshot)
+        ThemeSync.applyRoundAvatar(context, finalSnapshot.roundAvatar)
+        if (applied.isEmpty()) {
+            return ImportOutcome.Failure(
+                "主题包里的字段本模块都还没有对应功能（只有抽屉/悬浮按钮/气泡等），没有可落地的主题项"
+            )
+        }
+        applied.add(0, "主题开关")
+        return ImportOutcome.Success(finalSnapshot, applied, warnings)
+    }
+
+    private fun countKeysWithPrefix(root: JSONObject, prefix: String): Int =
+        root.keys().asSequence().count { it.startsWith(prefix, ignoreCase = true) }
+
+    private fun countChatKeys(root: JSONObject): Int =
+        root.keys().asSequence().count {
+            it.startsWith("LeftChat", true) || it.startsWith("RightChat", true) ||
+                it.startsWith("ChatText", true) || it.startsWith("ChangeChat", true) ||
+                it.startsWith("ChatFragment", true)
+        }
+
+    private fun countUnsupportedWeixinKeys(root: JSONObject): Int =
+        root.keys().asSequence().count { key ->
+            key.startsWith("Drawer", true) ||
+                key.startsWith("FloatingAction", true) ||
+                key.startsWith("FragmentItemView", true) ||
+                key.startsWith("TabLayout", true) ||
+                key.startsWith("RecentChat", true) ||
+                key.startsWith("LeftChat", true) ||
+                key.startsWith("RightChat", true) ||
+                key.startsWith("ChatText", true) ||
+                key.startsWith("ChangeChat", true) ||
+                key.startsWith("ChatFragment", true) ||
+                key == "ChatTimeTVDetailedPattern" ||
+                key == "setChatTimeTVCentered" ||
+                key == "showChatTimeTVDetailed" ||
+                key == "HidePullDownAppBrand" ||
+                key == "HideBottomTabLabel" ||
+                key == "BottomTabIconColorEnable" ||
+                key == "HideActionBarPlusMenu" ||
+                key == "HideActionBarSearchMenu" ||
+                key == "DisableOnDarkMode"
+        }
 
     private val TAB_SLOT_NAMES = listOf("wechat", "contacts", "discover", "me")
     private const val MAX_ARCHIVE_BYTES = 160L * 1024L * 1024L
