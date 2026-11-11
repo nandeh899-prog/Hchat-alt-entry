@@ -183,9 +183,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 " 圆形头像=${snapshot.roundAvatar} 页面背景=${snapshot.backgroundEnabled}"
         )
         dumpDecor(decor)
+        applyWindowBackground(activity, decor, snapshot)
         applyActionBar(activity, decor, snapshot)
         applyBottomTab(decor, snapshot)
         applyPageBackgrounds(activity, decor, snapshot, log = true)
+        applyTypeface(activity, decor)
         maybeShowSplash(activity, decor, snapshot)
         installEnforcement(activity, decor)
     }
@@ -205,7 +207,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
         } else if (hiddenViews.remove(bar)) {
             bar.visibility = View.VISIBLE
         }
-        ThemeSettings.parseColor(snapshot.actionBarBackgroundColor)?.let(bar::setBackgroundColor)
+        val barColor = ThemeSettings.parseColor(snapshot.actionBarBackgroundColor)
+        if (barColor == null) {
+            // 5.5.60 起标题栏按真机截图置透明，让背景图从状态栏一直连到列表
+            if (!replacedBackgrounds.containsKey(bar)) replacedBackgrounds[bar] = bar.background
+            bar.setBackgroundColor(Color.TRANSPARENT)
+            HLog.i("$TAG 标题栏已置透明（主题未指定标题栏色）")
+        } else {
+            bar.setBackgroundColor(barColor)
+        }
         val titleColor = ThemeSettings.parseColor(snapshot.actionBarTitleColor)
         val subtitleColor = ThemeSettings.parseColor(snapshot.actionBarSubtitleColor) ?: titleColor
         if (titleColor == null && subtitleColor == null) return
@@ -233,12 +243,20 @@ private class ThemeRuntime(private val context: FeatureContext) {
             "$TAG 底栏容器命中: ${tab.javaClass.name}#${idName(tab)} 子项=${tab.childCount}" +
                 " 尺寸=${tab.width}x${tab.height} 可见=${tab.isShown} 隐藏=${snapshot.tabHideNative}"
         )
+        // 5.5.60 起按微X 真机截图：底栏保留（即使主题包写着隐藏），换成主题图标
         if (snapshot.tabHideNative) {
-            hideView(tab)
-            return
+            HLog.i("$TAG 主题包要求隐藏底栏，但本轮按微X 观感保留底栏并套用图标")
         }
         showView(tab)
+        if (snapshot.tabBackgroundColor.isBlank()) {
+            if (!replacedBackgrounds.containsKey(tab)) replacedBackgrounds[tab] = tab.background
+            tab.setBackgroundColor(Color.TRANSPARENT)
+        }
         applyTabColorsAndIcons(tab, snapshot)
+        val missing = snapshot.tabIcons.count { it.isBlank() }
+        if (missing > 0) {
+            HLog.i("$TAG 底栏图标缺 ${missing}/4 个（需要 icons/tab_icon1~4.png），缺的保持微信默认")
+        }
     }
 
     private fun applyTabColorsAndIcons(tab: ViewGroup, snapshot: ThemeSnapshot) {
@@ -330,7 +348,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         " 叠色=${ThemeSettings.parseColor(snapshot.backgroundOverlay[slots[index]])?.let { "#" + Integer.toHexString(it) } ?: "-"}"
                 )
             }
-            applyPageBitmap(page, image, resources, overlay, log, path)
+            applyPageBitmap(page, image, resources, overlay, log, path, index == 0)
         }
     }
 
@@ -340,7 +358,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         resources: android.content.res.Resources,
         overlayColor: Int?,
         log: Boolean,
-        path: String
+        path: String,
+        isHome: Boolean
     ) {
         // 主题包里的 c 字段是背景上的叠色（#AARRGGBB），叠上去才和原主题观感一致
         val drawable: Drawable = if (overlayColor != null && Color.alpha(overlayColor) > 0) {
@@ -360,10 +379,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 铺在页面上的图被逐层盖住。这里做「内容分层」：
         //   整页容器（≥92% 宽高）→ 完全透明，让背景沉到最底层；
         //   整行/整卡（≥60% 宽）→ 换成按背景明暗算出的半透明遮罩，保证文字可读。
-        applyContentScrim(page, bitmap, overlayColor, log)
+        applyContentScrim(page, bitmap, overlayColor, isHome, log)
     }
 
-    private data class ScrimSpec(val bitmap: Bitmap, val overlayColor: Int?, val path: String)
+    private data class ScrimSpec(val bitmap: Bitmap, val overlayColor: Int?, val path: String, val isHome: Boolean)
 
     /**
      * 内容分层 v4（5.5.58 起，对齐微X 主题观感）：
@@ -375,13 +394,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *   右侧 A–Z 索引条（窄、高、贴右）→ 背景去掉，字母直接压在背景图上。
      * 5.5.56 的四层 27% 白叠加（约 71%）已废弃。
      */
-    private fun applyContentScrim(page: View, bitmap: Bitmap, overlayColor: Int?, log: Boolean) {
+    private fun applyContentScrim(page: View, bitmap: Bitmap, overlayColor: Int?, isHome: Boolean, log: Boolean) {
         val pageWidth = page.width.coerceAtLeast(page.measuredWidth)
         val pageHeight = page.height.coerceAtLeast(page.measuredHeight)
         if (pageWidth <= 0 || pageHeight <= 0) return
         val stats = sampleImage(bitmap)
         val luma = stats[3]
-        val scrim = scrimColorFor(luma, overlayColor)
+        val scrim = scrimColorFor(luma, overlayColor, isHome)
         val density = page.resources.displayMetrics.density
         val gapPx = (ROW_GAP_DP * density).toInt()
         val counters = intArrayOf(0, 0, 0, 0)
@@ -490,10 +509,60 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 行遮罩浓度：主题包自带叠色（c 字段）且不透明时直接用它；否则取白，
      * 按背景亮度在 55%~72% 之间取——行要能看清文字，同时背景仍要透上来。
      */
-    private fun scrimColorFor(luma: Float, overlayColor: Int?): Int {
+    private fun scrimColorFor(luma: Float, overlayColor: Int?, isHome: Boolean): Int {
         if (overlayColor != null && Color.alpha(overlayColor) > 0) return overlayColor
-        val alpha = (0.70f - 0.15f * luma).coerceIn(0.55f, 0.72f)
-        return Color.argb((alpha * 255).toInt(), 255, 255, 255)
+        // 5.5.60 起按微X 真机截图取值：行几乎全透（12/255），只留细分隔线；
+        // 首页文字密，保留极淡一层（31/255），其它三页更透（13/255）。
+        val alpha = if (isHome) HOME_ROW_ALPHA else CONTENT_ROW_ALPHA
+        return Color.argb(alpha, 255, 255, 255)
+    }
+
+    /**
+     * 状态栏区域与标题栏：真机截图里背景图一直铺到状态栏，标题栏是透明的。
+     * 做法是把首页那张图挂到 decorView 上，再把状态栏/导航栏置透明；
+     * 页面自己的背景仍然盖在上面（同图同尺寸，看不出接缝）。
+     */
+    @Suppress("DEPRECATION")
+    private fun applyWindowBackground(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
+        if (!snapshot.backgroundEnabled) return
+        runCatching {
+            val window = activity.window ?: return@runCatching
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.TRANSPARENT
+        }.onFailure { HLog.e("$TAG 状态栏透明化失败: ${it.message}", it) }
+        val path = snapshot.backgroundHome
+        if (path.isBlank()) {
+            HLog.i("$TAG 状态栏区域：首页背景图未设置，状态栏区域保持系统默认")
+            return
+        }
+        val image = bitmap(path) ?: return
+        val drawable: Drawable = BitmapDrawable(activity.resources, image)
+        if (decor.background !== drawable) {
+            if (!replacedBackgrounds.containsKey(decor)) replacedBackgrounds[decor] = decor.background
+            decor.setBackgroundDrawable(drawable)
+        }
+        HLog.i("$TAG 状态栏区域已铺背景图: 解码=${image.width}x${image.height} 标题栏透明=${snapshot.actionBarBackgroundColor.isBlank()}")
+    }
+
+    /** 书法字体：主题包目录里放 font.ttf / font.otf 才会生效，没放就明确报缺。 */
+    private fun applyTypeface(activity: Activity, decor: ViewGroup) {
+        val dir = ThemeImageStore.directory(context.hostContext())
+        val candidates = listOf("font.ttf", "font.otf", "typeface.ttf", "typeface.otf")
+        val file = candidates.map { java.io.File(dir, it) }.firstOrNull { it.isFile && it.length() > 0 }
+        if (file == null) {
+            HLog.i("$TAG 书法字体：主题包目录 ${dir.absolutePath} 下没有 font.ttf/font.otf，本轮未应用字体（需要字体文件）")
+            return
+        }
+        val typeface = runCatching { android.graphics.Typeface.createFromFile(file) }.getOrNull()
+        if (typeface == null) {
+            HLog.e("$TAG 书法字体读取失败: ${file.absolutePath}")
+            return
+        }
+        val labels = ArrayList<TextView>()
+        collectTextViews(decor, labels)
+        labels.forEach { runCatching { it.typeface = typeface } }
+        HLog.i("$TAG 书法字体已应用: ${file.name} 覆盖 ${labels.size} 个文本")
     }
 
     /** 采样背景图：返回 [r, g, b, 亮度]，0~1。 */
@@ -602,16 +671,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
         lastEnforceAt = now
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) return
-        if (snapshot.tabEnabled && snapshot.tabHideNative) {
+        if (snapshot.tabEnabled) {
             var tab = lastTab?.get()
             if (tab != null && !tab.isAttachedToWindow) tab = null
             if (tab == null) tab = findBottomTab(decor, logCandidates = false)
             if (tab != null) {
                 lastTab = WeakReference(tab)
-                if (tab.visibility != View.GONE) {
-                    HLog.i("$TAG 底栏被微信恢复显示，重新隐藏: ${tab.javaClass.name}#${idName(tab)}")
-                    hideView(tab)
-                }
+                // 5.5.60 起底栏保留：只确保可见，不再隐藏
+                if (tab.visibility != View.VISIBLE) showView(tab)
             }
         }
         if (snapshot.backgroundEnabled) {
@@ -630,7 +697,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (now - lastScrimAt >= SCRIM_INTERVAL_MS) {
                 lastScrimAt = now
                 pageScrim.entries.toList().forEach { (page, spec) ->
-                    runCatching { applyContentScrim(page, spec.bitmap, spec.overlayColor, log = false) }
+                    runCatching { applyContentScrim(page, spec.bitmap, spec.overlayColor, spec.isHome, log = false) }
                         .onFailure { HLog.e("$TAG 内容分层重扫失败: ${it.message}", it) }
                 }
             }
@@ -991,5 +1058,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val ENFORCE_INTERVAL_MS = 400L
         const val SCRIM_INTERVAL_MS = 1200L
         const val ROW_GAP_DP = 6f
+        const val HOME_ROW_ALPHA = 31
+        const val CONTENT_ROW_ALPHA = 13
     }
 }
