@@ -374,7 +374,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         page.setBackgroundDrawable(drawable)
         pageDrawables[page] = drawable
-        pageScrim[page] = ScrimSpec(bitmap, overlayColor, path)
+        pageScrim[page] = ScrimSpec(bitmap, overlayColor, path, isHome)
         // 5.5.54 的实测：背景只从列表之外露出来——列表项、分组头、发现页卡片各自带着不透明白底，
         // 铺在页面上的图被逐层盖住。这里做「内容分层」：
         //   整页容器（≥92% 宽高）→ 完全透明，让背景沉到最底层；
