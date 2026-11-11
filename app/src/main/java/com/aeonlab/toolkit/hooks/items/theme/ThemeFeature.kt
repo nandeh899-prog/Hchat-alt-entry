@@ -543,6 +543,57 @@ private class ThemeRuntime(private val context: FeatureContext) {
             decor.setBackgroundDrawable(drawable)
         }
         HLog.i("$TAG 状态栏区域已铺背景图: 解码=${image.width}x${image.height} 标题栏透明=${snapshot.actionBarBackgroundColor.isBlank()}")
+        applyImmersiveStatusBar(activity, decor, image)
+    }
+
+    /**
+     * 全沉浸状态栏 + 标题卡片全透明（5.5.61 起）：
+     * 1) 窗口加 LAYOUT_FULLSCREEN/LAYOUT_STABLE，状态栏与导航栏都置透明，背景图从屏幕最顶端开始；
+     * 2) 按背景图平均亮度决定状态栏图标深浅：亮图用深色图标（LIGHT_STATUS_BAR），暗图用浅色图标；
+     * 3) 把标题区那一串 View 的底色全部清空——View#statusBarBackground（状态栏那条底色）、
+     *    FitSystemWindowLayoutView / ActionBarOverlayLayout#crd / ContentFrameLayout#content /
+     *    ActionBarContainer#ei，任何一处留色都会在标题位置露出一块灰白。
+     */
+    @Suppress("DEPRECATION")
+    private fun applyImmersiveStatusBar(activity: Activity, decor: ViewGroup, image: Bitmap) {
+        val stats = sampleImage(image)
+        val luma = stats[3]
+        val darkIcons = luma >= 0.55f
+        runCatching {
+            var flags = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            if (darkIcons) flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            decor.systemUiVisibility = flags
+            activity.window?.let {
+                it.statusBarColor = Color.TRANSPARENT
+                it.navigationBarColor = Color.TRANSPARENT
+            }
+        }.onFailure { HLog.e("$TAG 全沉浸状态栏设置失败: ${it.message}", it) }
+
+        val targets = ArrayList<View>()
+        listOf("statusBarBackground", "action_bar", "action_bar_container", "content").forEach { name ->
+            val id = runCatching { activity.resources.getIdentifier(name, "id", HOST_PACKAGE) }.getOrDefault(0)
+            if (id != 0) runCatching { decor.findViewById<View>(id) }.getOrNull()?.let { targets.add(it) }
+        }
+        listOf("ActionBarOverlayLayout", "ContentFrameLayout", "ActionBarContainer", "FitSystemWindowLayoutView").forEach { className ->
+            findViewByClassName(decor, className)?.let { targets.add(it) }
+        }
+        var cleared = 0
+        val names = ArrayList<String>()
+        targets.distinct().forEach { view ->
+            val background = view.background ?: return@forEach
+            if (background is ColorDrawable && Color.alpha(background.color) == 0) return@forEach
+            if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
+            view.setBackgroundColor(Color.TRANSPARENT)
+            cleared++
+            names.add("${view.javaClass.simpleName}#${idName(view)}")
+        }
+        HLog.i(
+            "$TAG 标题卡片区域已全透明: 清空 $cleared 处底色 [${names.joinToString("/")}]" +
+                " 状态栏全沉浸: 图标=${if (darkIcons) "深色" else "浅色"}" +
+                " 背景亮度=${String.format(java.util.Locale.US, "%.2f", luma)}"
+        )
     }
 
     /** 书法字体：主题包目录里放 font.ttf / font.otf 才会生效，没放就明确报缺。 */
