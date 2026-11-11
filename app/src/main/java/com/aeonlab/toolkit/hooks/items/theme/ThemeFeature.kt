@@ -79,6 +79,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedMap(WeakHashMap<View, Drawable>())
     private val pageScrim: MutableMap<View, ScrimSpec> =
         Collections.synchronizedMap(WeakHashMap<View, ScrimSpec>())
+    private val originalAlphas: MutableMap<View, Int> =
+        Collections.synchronizedMap(WeakHashMap<View, Int>())
     private val enforcedDecors: MutableSet<ViewGroup> =
         Collections.newSetFromMap(WeakHashMap<ViewGroup, Boolean>())
     private val bitmapCache = object : LinkedHashMap<String, Bitmap>(4, 0.75f, true) {
@@ -106,6 +108,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     @Volatile
     private var lastScrimAt = 0L
+
+    @Volatile
+    private var lastRepaintLogAt = 0L
 
     @Synchronized
     fun installWeChatHooks(): Boolean {
@@ -314,7 +319,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 )
             }
             val overlay = ThemeSettings.parseColor(snapshot.backgroundOverlay[slots[index]])
-            applyPageBitmap(page, image, resources, overlay, log)
+            if (log) {
+                HLog.i(
+                    "$TAG 页面 ${index + 1} 背景来源: 图片 $path 解码=${image.width}x${image.height}" +
+                        " 叠色=${ThemeSettings.parseColor(snapshot.backgroundOverlay[slots[index]])?.let { "#" + Integer.toHexString(it) } ?: "-"}"
+                )
+            }
+            applyPageBitmap(page, image, resources, overlay, log, path)
         }
     }
 
@@ -323,7 +334,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         bitmap: Bitmap,
         resources: android.content.res.Resources,
         overlayColor: Int?,
-        log: Boolean
+        log: Boolean,
+        path: String
     ) {
         // 主题包里的 c 字段是背景上的叠色（#AARRGGBB），叠上去才和原主题观感一致
         val drawable: Drawable = if (overlayColor != null && Color.alpha(overlayColor) > 0) {
@@ -338,7 +350,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         page.setBackgroundDrawable(drawable)
         pageDrawables[page] = drawable
-        pageScrim[page] = ScrimSpec(bitmap, overlayColor)
+        pageScrim[page] = ScrimSpec(bitmap, overlayColor, path)
         // 5.5.54 的实测：背景只从列表之外露出来——列表项、分组头、发现页卡片各自带着不透明白底，
         // 铺在页面上的图被逐层盖住。这里做「内容分层」：
         //   整页容器（≥92% 宽高）→ 完全透明，让背景沉到最底层；
@@ -346,54 +358,66 @@ private class ThemeRuntime(private val context: FeatureContext) {
         applyContentScrim(page, bitmap, overlayColor, log)
     }
 
-    private data class ScrimSpec(val bitmap: Bitmap, val overlayColor: Int?)
+    private data class ScrimSpec(val bitmap: Bitmap, val overlayColor: Int?, val path: String)
 
-    /** 整页容器置透明、整行/整卡换半透明遮罩；遮罩浓度按背景图平均亮度算，亮图淡、暗图浓。 */
+    /**
+     * 内容分层（5.5.56 起改成改 alpha，不再换纯色）：
+     * 直接把内容容器 background/foreground 的 alpha 调低——圆角、描边、分割线都还在，
+     * 只是不再是不透明死白。整页容器（≥92% 宽高）alpha 直接归零，让背景图沉到最底层。
+     */
     private fun applyContentScrim(page: View, bitmap: Bitmap, overlayColor: Int?, log: Boolean) {
         val pageWidth = page.width.coerceAtLeast(page.measuredWidth)
         val pageHeight = page.height.coerceAtLeast(page.measuredHeight)
         if (pageWidth <= 0 || pageHeight <= 0) return
         val luma = averageLuma(bitmap)
-        val scrim = scrimColorFor(luma, overlayColor)
+        val target = scrimAlphaFor(luma, overlayColor)
         val views = ArrayList<View>()
         collectAllViews(page, views, 0)
         var containers = 0
-        var rows = 0
+        var semi = 0
+        val sample = ArrayList<String>()
         views.forEach { view ->
             if (view === page || pageDrawables.containsKey(view)) return@forEach
-            if (view is ImageView) return@forEach
-            val background = view.background ?: return@forEach
-            if (background is ColorDrawable && Color.alpha(background.color) == 0) return@forEach
             val width = view.width.coerceAtLeast(view.measuredWidth)
             val height = view.height.coerceAtLeast(view.measuredHeight)
             if (width <= 0 || height <= 0) return@forEach
             val fullPage = width >= pageWidth * 0.92f && height >= pageHeight * 0.92f
-            val target = when {
-                fullPage -> Color.TRANSPARENT
-                width >= pageWidth * 0.6f -> scrim
-                else -> return@forEach
+            if (view !is ImageView && width >= pageWidth * 0.30f) {
+                val background = view.background
+                if (background != null && background.alpha != 0) {
+                    if (!originalAlphas.containsKey(view)) originalAlphas[view] = background.alpha
+                    background.alpha = if (fullPage) 0 else target
+                    if (fullPage) containers++ else semi++
+                    if (sample.size < 30) {
+                        sample.add(
+                            "${view.javaClass.simpleName}#${idName(view)} ${width}x${height}" +
+                                " bg=${background.javaClass.simpleName}${if (fullPage) "→透明" else "→半透明"}"
+                        )
+                    }
+                }
             }
-            if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
-            view.setBackgroundColor(target)
-            if (fullPage) containers++ else rows++
+            // 5.5.55 之前只改 background：微信的卡片白底有的挂在 foreground 上，这里一起收
+            val foreground = runCatching { view.foreground }.getOrNull()
+            if (foreground != null && foreground.alpha != 0 && width >= pageWidth * 0.30f) {
+                runCatching { foreground.alpha = if (fullPage) 0 else target }
+            }
         }
         if (log) {
             HLog.i(
                 "$TAG 页面 ${page.javaClass.simpleName} 内容分层：整页容器置透明 ${containers} 个，" +
-                    "整行/整卡换半透明遮罩 ${rows} 个，遮罩=#${Integer.toHexString(scrim)}" +
-                    " 背景平均亮度=${String.format(java.util.Locale.US, "%.2f", luma)}"
+                    "整行/整卡调半透明 ${semi} 个，遮罩 alpha=${target}/255" +
+                    " 背景平均亮度=${String.format(java.util.Locale.US, "%.2f", luma)}" +
+                    " 背景图=${bitmap.width}x${bitmap.height}"
             )
+            sample.forEach { HLog.i("$TAG   分层: $it") }
         }
     }
 
-    /**
-     * 遮罩浓度：主题包自带叠色（c 字段）时优先用它；否则按背景图平均亮度取白，
-     * 亮图 20% 左右、暗图 60% 左右——暗图下深色文字会糊，只能靠白色遮罩把底提亮。
-     */
-    private fun scrimColorFor(luma: Float, overlayColor: Int?): Int {
-        if (overlayColor != null && Color.alpha(overlayColor) > 0) return overlayColor
-        val alpha = (0.62f - 0.45f * luma).coerceIn(0.20f, 0.62f)
-        return Color.argb((alpha * 255).toInt(), 255, 255, 255)
+    /** 遮罩浓度：主题包自带叠色（c 字段）时优先用它的 alpha；否则亮图淡、暗图浓。 */
+    private fun scrimAlphaFor(luma: Float, overlayColor: Int?): Int {
+        if (overlayColor != null && Color.alpha(overlayColor) > 0) return Color.alpha(overlayColor)
+        val alpha = (0.55f - 0.35f * luma).coerceIn(0.15f, 0.55f)
+        return (alpha * 255).toInt()
     }
 
     private fun averageLuma(bitmap: Bitmap): Float = runCatching {
@@ -507,6 +531,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 if (page.background !== drawable) {
                     runCatching { page.setBackgroundDrawable(drawable) }
                         .onFailure { HLog.e("$TAG 页面背景被覆盖后重铺失败: ${it.message}", it) }
+                    if (now - lastRepaintLogAt >= 3000L) {
+                        lastRepaintLogAt = now
+                        HLog.i(
+                            "$TAG 页面背景被宿主换掉（当前=${page.background?.javaClass?.simpleName ?: "null"}），已重铺成背景图"
+                        )
+                    }
                 }
             }
             if (now - lastScrimAt >= SCRIM_INTERVAL_MS) {
@@ -543,6 +573,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         pageDrawables.clear()
         pageScrim.clear()
+        originalAlphas.forEach { (view, alpha) ->
+            runCatching { view.background?.alpha = alpha }
+        }
+        originalAlphas.clear()
         lastTab = null
     }
 
