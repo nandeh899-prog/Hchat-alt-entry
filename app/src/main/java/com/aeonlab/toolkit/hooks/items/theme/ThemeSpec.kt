@@ -636,13 +636,16 @@ object ThemeSpec {
 
         val skipped = countUnsupportedWeixinKeys(root)
         if (skipped > 0) {
-            warnings.add("有 $skipped 个主题包字段本模块还没有对应功能（抽屉 "${
-                countKeysWithPrefix(root, "Drawer")
-            }" 项、悬浮按钮 "${countKeysWithPrefix(root, "FloatingAction")}" 项、聊天气泡与聊天文字 ${
-                countChatKeys(root)
-            } 项、列表项配色 "${countKeysWithPrefix(root, "FragmentItemView")}" 项、自绘底栏 "${
-                countKeysWithPrefix(root, "TabLayout")
-            }" 项），已跳过")
+            val drawerKeys = countKeysWithPrefix(root, "Drawer")
+            val fabKeys = countKeysWithPrefix(root, "FloatingAction")
+            val chatKeys = countChatKeys(root)
+            val itemViewKeys = countKeysWithPrefix(root, "FragmentItemView")
+            val tabLayoutKeys = countKeysWithPrefix(root, "TabLayout")
+            warnings.add(
+                "有 $skipped 个主题包字段本模块还没有对应功能（抽屉 $drawerKeys 项、" +
+                    "悬浮按钮 $fabKeys 项、聊天气泡与聊天文字 $chatKeys 项、" +
+                    "列表项配色 $itemViewKeys 项、自绘底栏 $tabLayoutKeys 项），已跳过"
+            )
         }
         if (blur.isNotEmpty()) {
             warnings.add("主题包里有背景模糊半径（b 字段），本模块暂不实现模糊，只保留叠色")
