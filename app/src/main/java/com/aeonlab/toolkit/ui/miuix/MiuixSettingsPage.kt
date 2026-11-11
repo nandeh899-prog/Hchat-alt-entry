@@ -414,6 +414,8 @@ import com.aeonlab.toolkit.hooks.items.realtail.RealNameTailFeature
 import com.aeonlab.toolkit.hooks.items.realtail.RealNameTailSettings
 import com.aeonlab.toolkit.hooks.items.realtail.RealNameTailStore
 import com.aeonlab.toolkit.hooks.items.roundavatar.RoundAvatarFeature
+import com.aeonlab.toolkit.hooks.items.theme.ThemeFeature
+import com.aeonlab.toolkit.hooks.items.theme.ThemeSettings
 import com.aeonlab.toolkit.hooks.items.roundavatar.RoundAvatarSettings
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginFeature
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginManager
@@ -2694,6 +2696,7 @@ private object AeonLabConfigBackup {
         HideChatMenuSettings.PREFS_NAME,
         QuickContactEditSettings.PREFS_NAME,
         RoundAvatarSettings.PREFS_NAME,
+        ThemeSettings.PREFS_NAME,
         CustomFriendAvatarSettings.PREFS_NAME,
         MessageBlockSettings.PREFS_NAME,
         GroupLeaveMonitorSettings.PREFS_NAME,
@@ -3159,6 +3162,7 @@ private fun practicalFeatureGroups(
         FeatureGroupEntry(
             title = "美化",
             providers = practicalProviders.filterByIds(
+                ThemeFeature.ID,
                 MessageBubbleFeature.ID,
                 MessageTextColorFeature.ID,
                 HomeTextColorFeature.ID,
@@ -3921,6 +3925,10 @@ private fun featureSubSearchTerms(featureId: String): List<String> {
             "悬浮底栏", "底部导航", "微信首页", "液态玻璃", "模糊半径", "隐藏标签", "显示角标", "振动反馈", "振动强度"
         )
         RoundAvatarFeature.ID -> listOf("圆角头像", "圆形头像", "头像圆角", "头像弧度", "朋友圈头像", "公众号头像", "通知头像")
+        ThemeFeature.ID -> listOf(
+            "美化主题", "主题", "主题包", "导出主题", "导入主题", "底栏主题", "圆形头像", "隐藏 ActionBar",
+            "标题颜色", "页面背景", "启动图", "MDWechat"
+        )
         SettingsFeature.ID -> listOf(
             "设置入口",
             "微信设置入口",
@@ -4674,6 +4682,7 @@ private fun FeatureSettingsPage(
         CustomBottomBarFeature.ID -> CustomBottomBarMiuixPage(context, provider, onBack)
         FloatingBottomBarSettings.FEATURE_ID -> FloatingBottomBarMiuixPage(context, provider, onBack)
         RoundAvatarFeature.ID -> RoundAvatarMiuixPage(context, provider, onBack)
+        ThemeFeature.ID -> ThemeMiuixPage(context, provider, onBack)
         CustomFriendAvatarFeature.ID -> CustomFriendAvatarMiuixPage(context, provider, onBack)
         MessageBlockFeature.ID -> MessageBlockMiuixPage(context, provider, onBack)
         GroupChatLabelFeature.ID -> GroupChatLabelMiuixPage(context, provider, onBack)

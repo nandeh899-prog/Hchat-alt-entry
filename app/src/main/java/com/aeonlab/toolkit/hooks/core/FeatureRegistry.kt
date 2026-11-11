@@ -74,6 +74,7 @@ import com.aeonlab.toolkit.hooks.items.quickread.QuickMarkReadFeature
 import com.aeonlab.toolkit.hooks.items.quickterminate.QuickTerminateFeature
 import com.aeonlab.toolkit.hooks.items.realtail.RealNameTailFeature
 import com.aeonlab.toolkit.hooks.items.roundavatar.RoundAvatarFeature
+import com.aeonlab.toolkit.hooks.items.theme.ThemeFeature
 
 import com.aeonlab.toolkit.hooks.items.script.ScriptPluginFeature
 import com.aeonlab.toolkit.hooks.items.scheduledtask.ScheduledTaskFeature
@@ -104,6 +105,7 @@ object FeatureRegistry {
             .register(FloatingShortcutFeature())
             .register(CustomBottomBarFeature())
             .register(RoundAvatarFeature())
+            .register(ThemeFeature())
             .register(CustomFriendAvatarFeature())
             .register(RealNameTailFeature())
             .register(MemberTitleFeature())
