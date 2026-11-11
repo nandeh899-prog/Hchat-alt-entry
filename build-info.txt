@@ -1,0 +1,6 @@
+run_id=42979081019
+run_number=13
+ref=fix/5.5.55-539-theme
+sha=b46d35af33b965ef760926dd729ddcbeb5e8b795
+version_name=5.5.55 version_code=539 suffix=.coexist
+variant=release without R8 (HCAT_MINIFY=false)
