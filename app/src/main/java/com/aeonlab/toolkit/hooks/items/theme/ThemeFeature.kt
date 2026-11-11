@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.LayerDrawable
 import android.os.Handler
 import android.os.Looper
@@ -361,13 +362,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private data class ScrimSpec(val bitmap: Bitmap, val overlayColor: Int?, val path: String)
 
     /**
-     * 内容分层（5.5.57 起「每块内容只压一层」）：
-     * 5.5.56 把页面里所有白底都压到 27%，但微信的列表是「列表容器 → RecyclerView → 行 → 行内白块」
-     * 四层嵌套，四层各 27% 白叠起来约 71%，背景图就被洗成一片均匀的灰紫——
-     * 5.5.56 日志里首页那一页正是这种嵌套最深的结构（ConversationListView→WxRecyclerView#mg→
-     * ConversationFolderItemView#cj1→NinePatchDrawable 行内块）。
-     * 现在改成：整页容器（≥92% 宽高）alpha 归零；往下**第一层**实心容器压一次遮罩；
-     * 它内部的所有白底一律归零，不再重复叠加。1~4 像素的分割线保持原样。
+     * 内容分层 v4（5.5.58 起，对齐微X 主题观感）：
+     *   列表容器 / 页面根（高 ≥ 55% 页高）→ 完全透明，背景图从标题栏下沿一直铺到屏幕底部；
+     *   列表行（宽 ≥ 30% 页宽、高 ≤ 55% 页高）→ 换成**通栏纯色**半透明白（不带圆角、不带卡片），
+     *     并用 InsetDrawable 在行底留 6dp 空隙，让行与行之间露出背景；
+     *   行内嵌套白块（已经被上层行罩住）→ 归零，绝不叠加；
+     *   ≤ 4 像素的分割线 / 描边 → 原样保留；
+     *   右侧 A–Z 索引条（窄、高、贴右）→ 背景去掉，字母直接压在背景图上。
+     * 5.5.56 的四层 27% 白叠加（约 71%）已废弃。
      */
     private fun applyContentScrim(page: View, bitmap: Bitmap, overlayColor: Int?, log: Boolean) {
         val pageWidth = page.width.coerceAtLeast(page.measuredWidth)
@@ -375,14 +377,17 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (pageWidth <= 0 || pageHeight <= 0) return
         val stats = sampleImage(bitmap)
         val luma = stats[3]
-        val target = scrimAlphaFor(luma, overlayColor)
-        val counters = intArrayOf(0, 0)
+        val scrim = scrimColorFor(luma, overlayColor)
+        val density = page.resources.displayMetrics.density
+        val gapPx = (ROW_GAP_DP * density).toInt()
+        val counters = intArrayOf(0, 0, 0)
         val sample = ArrayList<String>()
-        scrimTree(page, page, pageWidth, pageHeight, target, false, counters, sample, log)
+        scrimTree(page, page, pageWidth, pageHeight, scrim, gapPx, false, counters, sample, log)
         if (log) {
             HLog.i(
-                "$TAG 页面 ${page.javaClass.simpleName} 内容分层：整页容器归零 ${counters[0]} 个，" +
-                    "压一层遮罩 ${counters[1]} 个，遮罩 alpha=${target}/255" +
+                "$TAG 页面 ${page.javaClass.simpleName} 内容分层：容器置透明 ${counters[0]} 个，" +
+                    "通栏行压半透明 ${counters[1]} 个，索引条去底 ${counters[2]} 个，" +
+                    "行缝=${ROW_GAP_DP}dp 遮罩=#${Integer.toHexString(scrim)}" +
                     " 背景平均色=#${String.format(java.util.Locale.US, "%02X%02X%02X", (stats[0] * 255).toInt(), (stats[1] * 255).toInt(), (stats[2] * 255).toInt())}" +
                     " 亮度=${String.format(java.util.Locale.US, "%.2f", luma)} 背景图=${bitmap.width}x${bitmap.height}"
             )
@@ -395,57 +400,74 @@ private class ThemeRuntime(private val context: FeatureContext) {
         page: View,
         pageWidth: Int,
         pageHeight: Int,
-        alpha: Int,
+        scrim: Int,
+        gapPx: Int,
         underScrim: Boolean,
         counters: IntArray,
         sample: MutableList<String>,
         log: Boolean
     ) {
         var scrimmed = underScrim
-        if (view !== page && !pageDrawables.containsKey(view) && view !is ImageView) {
+        if (view !== page && !pageDrawables.containsKey(view)) {
             val width = view.width.coerceAtLeast(view.measuredWidth)
             val height = view.height.coerceAtLeast(view.measuredHeight)
-            // 1~4 像素的分割线/描边保持原样，别把线也抹掉
-            if (width > 4 && height > 4 && width >= pageWidth * 0.30f) {
+            if (width > 4 && height > 4) {
                 val background = view.background
-                if (background != null && background.alpha != 0) {
-                    val fullPage = width >= pageWidth * 0.92f && height >= pageHeight * 0.92f
-                    val target = if (fullPage || scrimmed) 0 else alpha
-                    if (!originalAlphas.containsKey(view)) originalAlphas[view] = background.alpha
-                    background.alpha = target
-                    if (target == 0) {
-                        counters[0]++
-                    } else {
-                        counters[1]++
-                        scrimmed = true
+                val narrow = width <= pageWidth * 0.18f
+                val tall = height >= pageHeight * 0.30f
+                when {
+                    // 右侧 A–Z 索引条：窄且高，去掉它自带的半透明衬底，字母直接压在背景上
+                    narrow && tall -> {
+                        if (background != null && background.alpha != 0) {
+                            if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
+                            view.background = ColorDrawable(Color.TRANSPARENT)
+                            counters[2]++
+                            if (log && sample.size < 24) {
+                                sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→索引条去底")
+                            }
+                        }
                     }
-                    if (log && sample.size < 24) {
-                        sample.add(
-                            "${view.javaClass.simpleName}#${idName(view)} ${width}x${height}" +
-                                " bg=${background.javaClass.simpleName}${if (target == 0) "→归零" else "→压一层"}"
-                        )
+                    view is ImageView -> Unit
+                    width < pageWidth * 0.30f -> Unit
+                    background != null && background.alpha != 0 -> {
+                        if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
+                        val container = height >= pageHeight * 0.55f
+                        if (container || scrimmed) {
+                            view.background = ColorDrawable(Color.TRANSPARENT)
+                            counters[0]++
+                            if (log && sample.size < 24) {
+                                sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→置透明")
+                            }
+                        } else {
+                            // 通栏行：纯色（无圆角）＋ 行底留缝，让背景从行间透出来
+                            view.background = InsetDrawable(ColorDrawable(scrim), 0, 0, 0, gapPx)
+                            counters[1]++
+                            scrimmed = true
+                            if (log && sample.size < 24) {
+                                sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→通栏行${ROW_GAP_DP}dp缝")
+                            }
+                        }
                     }
-                }
-                val foreground = runCatching { view.foreground }.getOrNull()
-                if (foreground != null && foreground.alpha != 0) {
-                    runCatching { foreground.alpha = if (scrimmed) 0 else alpha }
                 }
             }
         }
         if (view is ViewGroup) {
             for (index in 0 until view.childCount) {
                 view.getChildAt(index)?.let {
-                    scrimTree(it, page, pageWidth, pageHeight, alpha, scrimmed, counters, sample, log)
+                    scrimTree(it, page, pageWidth, pageHeight, scrim, gapPx, scrimmed, counters, sample, log)
                 }
             }
         }
     }
 
-    /** 遮罩浓度：主题包自带叠色（c 字段）时优先用它的 alpha；否则亮图淡、暗图浓。 */
-    private fun scrimAlphaFor(luma: Float, overlayColor: Int?): Int {
-        if (overlayColor != null && Color.alpha(overlayColor) > 0) return Color.alpha(overlayColor)
-        val alpha = (0.55f - 0.35f * luma).coerceIn(0.15f, 0.55f)
-        return (alpha * 255).toInt()
+    /**
+     * 行遮罩浓度：主题包自带叠色（c 字段）且不透明时直接用它；否则取白，
+     * 按背景亮度在 55%~72% 之间取——行要能看清文字，同时背景仍要透上来。
+     */
+    private fun scrimColorFor(luma: Float, overlayColor: Int?): Int {
+        if (overlayColor != null && Color.alpha(overlayColor) > 0) return overlayColor
+        val alpha = (0.70f - 0.15f * luma).coerceIn(0.55f, 0.72f)
+        return Color.argb((alpha * 255).toInt(), 255, 255, 255)
     }
 
     /** 采样背景图：返回 [r, g, b, 亮度]，0~1。 */
@@ -938,5 +960,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val DUMP_MAX_LINES = 70
         const val ENFORCE_INTERVAL_MS = 400L
         const val SCRIM_INTERVAL_MS = 1200L
+        const val ROW_GAP_DP = 6f
     }
 }
