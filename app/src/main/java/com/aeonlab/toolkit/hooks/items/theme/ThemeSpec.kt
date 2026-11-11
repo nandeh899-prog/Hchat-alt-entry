@@ -611,6 +611,22 @@ object ThemeSpec {
         takeBackground("MeFragmentBackground", "MeFragmentBackgroundEnable", ThemeImageStore.SLOT_ME, "我的页背景")
         takeBackground("SplashImage", "SplashImageEnable", ThemeImageStore.SLOT_SPLASH, "启动图")
 
+        // 部分主题把底栏图标放在 icons/tab_icon<0..3>.png（有的带 .bak 后缀）
+        for (index in 0 until 4) {
+            val candidates = listOf("tab_icon$index.png", "tab_icon$index.bak.png", "tab_icon$index.jpg")
+            val iconEntry = candidates.asSequence().mapNotNull { findImageEntry(zf, it) }.firstOrNull() ?: continue
+            val iconData = runCatching {
+                zf.getInputStream(zf.getEntry(iconEntry.name)).use { it.readBytes() }
+            }.getOrNull() ?: continue
+            val savedIcon = ThemeImageStore.saveFromBytes(context, ThemeImageStore.slotForTabIcon(index), iconData)
+                ?: continue
+            val icons = snapshot.tabIcons.toMutableList()
+            while (icons.size < 4) icons.add("")
+            icons[index] = savedIcon
+            snapshot = snapshot.copy(tabIcons = icons)
+            applied.add("底栏图标 ${index + 1}")
+        }
+
         if (root.optBoolean("UseRoundAvatar", false)) {
             snapshot = snapshot.copy(roundAvatar = true)
             applied.add("圆形头像（UseRoundAvatar）")
