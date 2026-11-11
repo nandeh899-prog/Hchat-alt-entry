@@ -9,8 +9,10 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.ImageView
 import android.widget.TextView
 import com.aeonlab.toolkit.event.Events
@@ -21,6 +23,7 @@ import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
 import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import java.lang.ref.WeakReference
 import java.util.Collections
 import java.util.WeakHashMap
 
@@ -60,13 +63,26 @@ class ThemeFeature : BaseFeature() {
  * 主题生效逻辑。
  *
  * 全部走「拿到 LauncherUI 后遍历 decorView」这一条路：
- * 微信各版本文案/类名会变，所以每个落点都有多个兜底（类名 → id 名 → 结构特征），
+ * 微信各版本文案/类名会变，所以每个落点都有多个兜底（类名 → 标签文字 → 结构特征），
+ * 并且一律等视图量过尺寸（宽高 > 0）再判定——onResume 时视图还没布局，按 0 宽高做结构
+ * 判断会全部落空，这也是 5.5.52/537 之前「命中了一个不可见的同名容器」的直接原因。
  * 找不到就写一条带具体落点的日志，绝不静默跳过。
  */
 private class ThemeRuntime(private val context: FeatureContext) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val hiddenViews: MutableSet<View> = Collections.newSetFromMap(WeakHashMap<View, Boolean>())
-    private val transparentViews: MutableSet<View> = Collections.newSetFromMap(WeakHashMap<View, Boolean>())
+    private val originalHeights: MutableMap<View, Int> =
+        Collections.synchronizedMap(WeakHashMap<View, Int>())
+    private val replacedBackgrounds: MutableMap<View, Drawable?> =
+        Collections.synchronizedMap(WeakHashMap<View, Drawable?>())
+    private val pageDrawables: MutableMap<View, Drawable> =
+        Collections.synchronizedMap(WeakHashMap<View, Drawable>())
+    private val enforcedDecors: MutableSet<ViewGroup> =
+        Collections.newSetFromMap(WeakHashMap<ViewGroup, Boolean>())
+    private val bitmapCache = object : LinkedHashMap<String, Bitmap>(4, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Bitmap>): Boolean =
+            size > 6
+    }
 
     @Volatile
     private var installed = false
@@ -74,11 +90,17 @@ private class ThemeRuntime(private val context: FeatureContext) {
     @Volatile
     private var splashShown = false
 
+    @Volatile
+    private var lastTab: WeakReference<ViewGroup>? = null
+
     /** 见过的 LauncherUI；用来在没有当前页面信息时兜底重刷。 */
     private val launchers: MutableSet<Activity> = Collections.newSetFromMap(WeakHashMap<Activity, Boolean>())
 
     @Volatile
     private var lastDumpAt = 0L
+
+    @Volatile
+    private var lastEnforceAt = 0L
 
     @Synchronized
     fun installWeChatHooks(): Boolean {
@@ -116,12 +138,25 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun applyTheme(activity: Activity) {
-        val snapshot = ThemeSettings.snapshot(context.hostContext())
         val decor = activity.window?.decorView as? ViewGroup
         if (decor == null) {
             HLog.e("$TAG ${activity.javaClass.simpleName} 拿不到 decorView，本轮跳过")
             return
         }
+        if (decor.width <= 0 || decor.height <= 0) {
+            // onResume 阶段视图还没量过，宽高为 0 时结构判定（贴底、扁条、子项数）全部落空，
+            // 必须等这一帧布局完成再应用，否则会退化成「命中任意同名容器」。
+            decor.post {
+                runCatching { applyThemeNow(activity, decor) }
+                    .onFailure { HLog.e("$TAG 布局后应用主题异常: ${it.message}", it) }
+            }
+            return
+        }
+        applyThemeNow(activity, decor)
+    }
+
+    private fun applyThemeNow(activity: Activity, decor: ViewGroup) {
+        val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) {
             HLog.i("$TAG 主题未启用（读到的 enabled=false），恢复已改视图；配置=${prefsPath()}")
             restoreTouchedViews()
@@ -134,9 +169,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         )
         dumpDecor(decor)
         applyActionBar(activity, decor, snapshot)
-        applyBottomTab(activity, decor, snapshot)
-        applyPageBackgrounds(activity, decor, snapshot)
+        applyBottomTab(decor, snapshot)
+        applyPageBackgrounds(activity, decor, snapshot, log = true)
         maybeShowSplash(activity, decor, snapshot)
+        installEnforcement(activity, decor)
     }
 
     private fun applyActionBar(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
@@ -170,34 +206,39 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
     }
 
-    private fun applyBottomTab(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
+    private fun applyBottomTab(decor: ViewGroup, snapshot: ThemeSnapshot) {
         if (!snapshot.tabEnabled) return
-        val tab = findBottomTab(decor)
+        val tab = findBottomTab(decor, logCandidates = true)
         if (tab == null) {
-            HLog.e("$TAG 没找到底栏（$BOTTOM_TAB_CLASS、BottomTab、TabView 类名全未命中），底栏主题项本轮未生效；视图树见上一条快照")
+            HLog.e("$TAG 没找到底栏容器（类名 $BOTTOM_TAB_CLASS_NAMES 与「微信/通讯录/发现/我」标签祖先全未命中），底栏主题项本轮未生效；视图树见上一条快照")
             return
         }
-        HLog.i("$TAG 底栏容器命中: ${tab.javaClass.name}#${idName(tab)} 子项=${tab.childCount} 隐藏=${snapshot.tabHideNative}")
+        lastTab = WeakReference(tab)
+        HLog.i(
+            "$TAG 底栏容器命中: ${tab.javaClass.name}#${idName(tab)} 子项=${tab.childCount}" +
+                " 尺寸=${tab.width}x${tab.height} 可见=${tab.isShown} 隐藏=${snapshot.tabHideNative}"
+        )
         if (snapshot.tabHideNative) {
-            if (tab.visibility != View.GONE) {
-                tab.visibility = View.GONE
-                hiddenViews.add(tab)
-            }
+            hideView(tab)
             return
         }
-        if (hiddenViews.remove(tab)) tab.visibility = View.VISIBLE
+        showView(tab)
+        applyTabColorsAndIcons(tab, snapshot)
+    }
+
+    private fun applyTabColorsAndIcons(tab: ViewGroup, snapshot: ThemeSnapshot) {
         ThemeSettings.parseColor(snapshot.tabBackgroundColor)?.let(tab::setBackgroundColor)
         val normalColor = ThemeSettings.parseColor(snapshot.tabTextColor)
         val selectedColor = ThemeSettings.parseColor(snapshot.tabSelectedTextColor) ?: normalColor
-        if (normalColor == null && snapshot.tabIcons.all { it.isBlank() }) return
-        val selectedIndex = currentTabIndex(tab)
-        val itemCount = tab.childCount
-        if (itemCount == 0) {
-            HLog.e("$TAG 底栏没有子项，底栏主题项本轮未生效")
+        val hasIcons = snapshot.tabIcons.any { it.isNotBlank() }
+        if (normalColor == null && !hasIcons) return
+        if (tab.childCount == 0) {
+            HLog.e("$TAG 底栏没有子项，底栏文字与图标未生效")
             return
         }
-        for (index in 0 until itemCount) {
-            val item = tab.getChildAt(index)
+        val selectedIndex = currentTabIndex(tab)
+        for (index in 0 until tab.childCount) {
+            val item = tab.getChildAt(index) ?: continue
             val label = findFirstView(item, TextView::class.java) as? TextView
             if (label != null && normalColor != null) {
                 label.setTextColor(if (index == selectedIndex && selectedColor != null) selectedColor else normalColor)
@@ -205,9 +246,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val icon = findFirstView(item, ImageView::class.java) as? ImageView
             val path = snapshot.tabIcons.getOrElse(index) { "" }
             if (icon != null && path.isNotBlank()) {
-                val bitmap = ThemeImageStore.loadBitmap(path)
-                if (bitmap != null) {
-                    icon.setImageBitmap(bitmap)
+                val image = bitmap(path)
+                if (image != null) {
+                    icon.setImageBitmap(image)
                 } else {
                     HLog.e("$TAG 底栏第 ${index + 1} 个图标读取失败: $path")
                 }
@@ -215,7 +256,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
     }
 
-    private fun applyPageBackgrounds(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
+    private fun applyPageBackgrounds(
+        activity: Activity,
+        decor: ViewGroup,
+        snapshot: ThemeSnapshot,
+        log: Boolean
+    ) {
         if (!snapshot.backgroundEnabled) return
         val paths = listOf(
             snapshot.backgroundHome,
@@ -223,11 +269,22 @@ private class ThemeRuntime(private val context: FeatureContext) {
             snapshot.backgroundDiscover,
             snapshot.backgroundMe
         )
-        if (paths.all { it.isBlank() }) return
-        val pager = findViewPager(decor)
-        if (pager == null) {
-            HLog.e("$TAG 没找到首页 ViewPager，页面背景图本轮未生效")
+        if (paths.all { it.isBlank() }) {
+            if (log) HLog.i("$TAG 页面背景开关已开，但四个页面一张图都没设置，本轮跳过")
             return
+        }
+        val pager = findHomePager(decor, log)
+        if (pager == null) {
+            if (log) {
+                HLog.e("$TAG 没找到首页 ViewPager（MMViewPager / ViewPager 均未命中），页面背景图本轮未生效；视图树见上一条快照")
+            }
+            return
+        }
+        if (log) {
+            HLog.i(
+                "$TAG 页面背景容器: ${pager.javaClass.name}#${idName(pager)}" +
+                    " 子项=${pager.childCount} 尺寸=${pager.width}x${pager.height} 可见=${pager.isShown}"
+            )
         }
         val slots = listOf(
             ThemeImageStore.SLOT_HOME,
@@ -239,14 +296,20 @@ private class ThemeRuntime(private val context: FeatureContext) {
         for (index in 0 until minOf(pager.childCount, paths.size)) {
             val path = paths[index]
             if (path.isBlank()) continue
-            val bitmap = ThemeImageStore.loadBitmap(path)
-            if (bitmap == null) {
+            val page = pager.getChildAt(index) ?: continue
+            val image = bitmap(path)
+            if (image == null) {
                 HLog.e("$TAG 第 ${index + 1} 个页面背景读取失败: $path")
                 continue
             }
-            val page = pager.getChildAt(index) ?: continue
+            if (log) {
+                HLog.i(
+                    "$TAG 页面 ${index + 1} 目标: ${page.javaClass.name}#${idName(page)}" +
+                        " 子项=${childCountOf(page)} 尺寸=${page.width}x${page.height}"
+                )
+            }
             val overlay = ThemeSettings.parseColor(snapshot.backgroundOverlay[slots[index]])
-            applyPageBitmap(page, bitmap, resources, overlay)
+            applyPageBitmap(page, image, resources, overlay, log)
         }
     }
 
@@ -254,7 +317,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         page: View,
         bitmap: Bitmap,
         resources: android.content.res.Resources,
-        overlayColor: Int? = null
+        overlayColor: Int?,
+        log: Boolean
     ) {
         // 主题包里的 c 字段是背景上的叠色（#AARRGGBB），叠上去才和原主题观感一致
         val drawable: Drawable = if (overlayColor != null && Color.alpha(overlayColor) > 0) {
@@ -268,27 +332,43 @@ private class ThemeRuntime(private val context: FeatureContext) {
             BitmapDrawable(resources, bitmap)
         }
         page.setBackgroundDrawable(drawable)
-        val lists = ArrayList<View>()
-        collectListViews(page, lists, 0)
-        if (lists.isEmpty()) {
-            HLog.e("$TAG 页面 ${page.javaClass.simpleName} 里没找到列表，背景图可能被列表自身底色盖住")
-            return
+        pageDrawables[page] = drawable
+        // 微信每个页面的根容器（Fragment 根、列表、下拉空白区）都自带不透明白底，
+        // 只给 pager 子页铺图会被整块盖住——这是 5.5.53 里「日志没报错但看不到图」的原因。
+        val cleared = clearOpaquePageCovers(page)
+        if (log) {
+            HLog.i("$TAG 页面 ${page.javaClass.simpleName} 已铺背景图，清理整页不透明遮罩 ${cleared} 个")
         }
-        lists.forEach { list ->
-            val current = runCatching { list.background }.getOrNull()
-            if (current != null) {
-                list.setBackgroundColor(Color.TRANSPARENT)
-                transparentViews.add(list)
-            }
+    }
+
+    private fun clearOpaquePageCovers(page: View): Int {
+        val pageWidth = page.width.coerceAtLeast(page.measuredWidth)
+        val pageHeight = page.height.coerceAtLeast(page.measuredHeight)
+        if (pageWidth <= 0 || pageHeight <= 0) return 0
+        val views = ArrayList<View>()
+        collectAllViews(page, views, 0)
+        val minWidth = pageWidth * 0.9f
+        val minHeight = pageHeight * 0.7f
+        var cleared = 0
+        views.forEach { view ->
+            if (view === page) return@forEach
+            val width = view.width.coerceAtLeast(view.measuredWidth)
+            val height = view.height.coerceAtLeast(view.measuredHeight)
+            if (width < minWidth || height < minHeight) return@forEach
+            val background = view.background ?: return@forEach
+            if (background is ColorDrawable && Color.alpha(background.color) == 0) return@forEach
+            if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
+            view.setBackgroundColor(Color.TRANSPARENT)
+            cleared++
         }
+        return cleared
     }
 
     private fun maybeShowSplash(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
         if (splashShown) return
         val path = snapshot.backgroundSplash
         if (path.isBlank()) return
-        val bitmap = ThemeImageStore.loadBitmap(path)
-        if (bitmap == null) {
+        val image = bitmap(path) ?: run {
             HLog.e("$TAG 启动图读取失败: $path")
             return
         }
@@ -296,7 +376,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             val overlay = ImageView(activity)
             overlay.scaleType = ImageView.ScaleType.CENTER_CROP
-            overlay.setImageBitmap(bitmap)
+            overlay.setImageBitmap(image)
             overlay.isClickable = false
             decor.addView(
                 overlay,
@@ -313,15 +393,98 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
     }
 
+    private fun hideView(view: View) {
+        if (view.visibility != View.GONE) view.visibility = View.GONE
+        if (!hiddenViews.add(view)) return
+        val params = view.layoutParams
+        if (params != null && params.height != 0) {
+            originalHeights[view] = params.height
+            params.height = 0
+            view.layoutParams = params
+            HLog.i("$TAG 已隐藏并收高: ${view.javaClass.name}#${idName(view)}")
+        }
+    }
+
+    private fun showView(view: View) {
+        if (!hiddenViews.remove(view)) return
+        if (view.visibility != View.VISIBLE) view.visibility = View.VISIBLE
+        val original = originalHeights.remove(view)
+        val params = view.layoutParams
+        if (original != null && params != null && params.height != original) {
+            params.height = original
+            view.layoutParams = params
+        }
+    }
+
+    /**
+     * 微信在切页/重建 Fragment 时会把底栏重新显示、把页面背景换回白底。
+     * 这里挂一条 preDraw 兜底（限频 400ms，只在状态被改回来时才写日志），
+     * 否则「设置里开着、界面上没变化」会一直复现。
+     */
+    private fun installEnforcement(activity: Activity, decor: ViewGroup) {
+        if (!enforcedDecors.add(decor)) return
+        decor.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                runCatching { enforce(activity, decor) }
+                    .onFailure { HLog.e("$TAG 兜底重刷异常: ${it.message}", it) }
+                return true
+            }
+        })
+    }
+
+    private fun enforce(activity: Activity, decor: ViewGroup) {
+        if (!decor.isAttachedToWindow) return
+        val now = SystemClock.uptimeMillis()
+        if (now - lastEnforceAt < ENFORCE_INTERVAL_MS) return
+        lastEnforceAt = now
+        val snapshot = ThemeSettings.snapshot(context.hostContext())
+        if (!snapshot.enabled) return
+        if (snapshot.tabEnabled && snapshot.tabHideNative) {
+            var tab = lastTab?.get()
+            if (tab != null && !tab.isAttachedToWindow) tab = null
+            if (tab == null) tab = findBottomTab(decor, logCandidates = false)
+            if (tab != null) {
+                lastTab = WeakReference(tab)
+                if (tab.visibility != View.GONE) {
+                    HLog.i("$TAG 底栏被微信恢复显示，重新隐藏: ${tab.javaClass.name}#${idName(tab)}")
+                    hideView(tab)
+                }
+            }
+        }
+        if (snapshot.backgroundEnabled) {
+            pageDrawables.entries.toList().forEach { (page, drawable) ->
+                if (page.background !== drawable) {
+                    runCatching { page.setBackgroundDrawable(drawable) }
+                        .onFailure { HLog.e("$TAG 页面背景被覆盖后重铺失败: ${it.message}", it) }
+                }
+            }
+        }
+    }
+
     private fun restoreTouchedViews() {
         hiddenViews.toList().forEach { view ->
             runCatching { view.visibility = View.VISIBLE }
+            val original = originalHeights.remove(view)
+            if (original != null) {
+                runCatching {
+                    val params = view.layoutParams
+                    if (params != null) {
+                        params.height = original
+                        view.layoutParams = params
+                    }
+                }
+            }
         }
         hiddenViews.clear()
-        transparentViews.toList().forEach { view ->
-            runCatching { view.setBackgroundColor(Color.TRANSPARENT) }
+        replacedBackgrounds.entries.toList().forEach { (view, background) ->
+            runCatching { view.background = background }
         }
-        transparentViews.clear()
+        replacedBackgrounds.clear()
+        pageDrawables.keys.toList().forEach { page ->
+            runCatching { page.background = null }
+        }
+        pageDrawables.clear()
+        lastTab = null
     }
 
     private fun findActionBar(activity: Activity, root: ViewGroup): View? {
@@ -339,43 +502,142 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return null
     }
 
-    private fun findBottomTab(root: ViewGroup): ViewGroup? {
-        for (className in BOTTOM_TAB_CLASS_NAMES) {
-            val found = findViewByClassName(root, className) as? ViewGroup
-            if (found != null) return found
-        }
-        // 类名兜不住时按结构认：贴底、扁条、2~6 个子项且每项都是图标+文字
-        val groups = ArrayList<ViewGroup>()
-        collectViewGroups(root, groups, 0)
-        val rootHeight = root.height
-        if (rootHeight <= 0) return null
-        val structural = groups
-            .filter { it.height > 0 && it.height <= rootHeight / 4 }
-            .filter { it.top > rootHeight * 6 / 10 }
-            .filter { group ->
-                group.childCount in 2..6 &&
-                    (0 until group.childCount).all { hasIconAndLabel(group.getChildAt(it)) }
+    /**
+     * 底栏定位：同时收集「类名命中」与「四个页签标签的最近公共祖先」两类候选，
+     * 每个候选都打一行尺寸/可见性，再挑真正可见的那一个。
+     *
+     * 5.5.53 的做法是取深度优先的第一个同名 View，而微信 8.0.49 里同时存在一个
+     * 只有 1 个子项、不可见的 LauncherUIBottomTabView（`#huj`），于是每次都改在它身上：
+     * 日志显示「命中、隐藏=true」，屏幕上四个 Tab 一动不动。
+     */
+    private fun findBottomTab(decor: ViewGroup, logCandidates: Boolean): ViewGroup? {
+        val hits = LinkedHashMap<ViewGroup, String>()
+        collectByClassNames(decor, BOTTOM_TAB_CLASS_NAMES, hits, 0)
+        collectLabelBarCandidates(decor, hits)
+        if (hits.isEmpty()) return null
+        if (logCandidates) {
+            hits.forEach { (view, source) ->
+                HLog.i(
+                    "$TAG 底栏候选[$source] ${view.javaClass.name}#${idName(view)}" +
+                        " 子项=${view.childCount} 尺寸=${view.width}x${view.height}" +
+                        " 可见=${view.isShown} attached=${view.isAttachedToWindow} top=${screenTop(view)}"
+                )
             }
-            .maxByOrNull { it.top }
-        if (structural != null) {
-            HLog.i("$TAG 底栏按结构命中: ${structural.javaClass.name}#${idName(structural)}")
         }
-        return structural
+        val visible = hits.keys.filter { it.isShown && it.width > 0 && it.height > 0 }
+        val pool = if (visible.isNotEmpty()) visible else hits.keys.toList()
+        return pool.maxByOrNull { it.width.toLong() * it.height.toLong() }
     }
 
-    private fun hasIconAndLabel(view: View?): Boolean {
-        if (view == null) return false
-        return findFirstView(view, ImageView::class.java) != null &&
-            findFirstView(view, TextView::class.java) != null
+    private fun collectByClassNames(
+        root: View,
+        names: List<String>,
+        out: MutableMap<ViewGroup, String>,
+        depth: Int
+    ) {
+        if (depth > MAX_DEPTH) return
+        val className = root.javaClass.name
+        for (name in names) {
+            if (className == name || className.endsWith(".$name") || className.contains(name)) {
+                val group = root as? ViewGroup
+                if (group != null && !out.containsKey(group)) out[group] = "类名:$name"
+                break
+            }
+        }
+        if (root is ViewGroup) {
+            for (index in 0 until root.childCount) {
+                root.getChildAt(index)?.let { collectByClassNames(it, names, out, depth + 1) }
+            }
+        }
     }
 
-    private fun findViewPager(root: ViewGroup): ViewGroup? {
+    /** 按「微信/通讯录/发现/我」四个页签文字的最近公共祖先认底栏，类名换了也认得出。 */
+    private fun collectLabelBarCandidates(root: ViewGroup, out: MutableMap<ViewGroup, String>) {
+        val texts = ArrayList<TextView>()
+        collectTextViews(root, texts)
+        val matched = texts.filter { view ->
+            view.isShown && view.text?.toString()?.trim()?.let { it.isNotEmpty() && it in BOTTOM_TAB_LABELS } == true
+        }
+        if (matched.size < 3) return
+        var candidate = lowestCommonAncestor(matched) ?: return
+        val limit = decorThird(root)
+        while (candidate !== root && (candidate.height <= 0 || candidate.height > limit)) {
+            candidate = candidate.parent as? ViewGroup ?: return
+        }
+        if (candidate !== root && !out.containsKey(candidate)) {
+            out[candidate] = "标签:${matched.size}个页签文字"
+        }
+    }
+
+    private fun decorThird(root: ViewGroup): Int {
+        val height = root.height.coerceAtLeast(root.measuredHeight)
+        return if (height <= 0) Int.MAX_VALUE else height / 3
+    }
+
+    private fun lowestCommonAncestor(views: List<View>): ViewGroup? {
+        if (views.isEmpty()) return null
+        val ancestors = HashSet<View>()
+        var node: View? = views[0]
+        while (node != null) {
+            ancestors.add(node)
+            node = node.parent as? View
+        }
+        var result: View = views[0]
+        for (index in 1 until views.size) {
+            var current: View? = views[index]
+            while (current != null && !ancestors.contains(current)) {
+                current = current.parent as? View
+            }
+            if (current == null) return null
+            if (depthOf(current) > depthOf(result)) result = current
+        }
+        return result as? ViewGroup
+    }
+
+    private fun depthOf(view: View): Int {
+        var depth = 0
+        var current: View? = view.parent as? View
+        while (current != null) {
+            depth++
+            current = current.parent as? View
+        }
+        return depth
+    }
+
+    private fun childCountOf(view: View): Int = (view as? ViewGroup)?.childCount ?: 0
+
+    private fun screenTop(view: View): Int = runCatching {
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        location[1]
+    }.getOrDefault(-1)
+
+    /**
+     * 首页 pager 定位：只认 ViewPager 家族（微信自己的 `com.tencent.mm.ui.base.MMViewPager`
+     * 与 androidx ViewPager），不再用「任意 4 个子项的 FrameLayout」兜底——
+     * 5.5.53 里这条兜底命中的是 ActionBar 下面那个包住整个内容区的 FrameLayout（6 个子项），
+     * 背景铺在它上面等于铺在最底层，日志还不会报错。
+     */
+    private fun findHomePager(decor: ViewGroup, log: Boolean): ViewGroup? {
         val candidates = ArrayList<ViewGroup>()
-        collectViewGroups(root, candidates, 0)
-        return candidates
-            .filter { it.javaClass.name.contains("ViewPager") }
-            .maxByOrNull { it.childCount }
-            ?: candidates.firstOrNull { it.childCount >= 4 && it.javaClass.name.contains("Frame") }
+        collectViewGroups(decor, candidates, 0)
+        val pagers = candidates.filter { group ->
+            val name = group.javaClass.name
+            name.endsWith(".MMViewPager") || name.endsWith("MMViewPager") || name.contains("ViewPager")
+        }
+        if (pagers.isEmpty()) return null
+        if (log) {
+            pagers.forEach { pager ->
+                HLog.i(
+                    "$TAG ViewPager 候选: ${pager.javaClass.name}#${idName(pager)}" +
+                        " 子项=${pager.childCount} 尺寸=${pager.width}x${pager.height} 可见=${pager.isShown}"
+                )
+            }
+        }
+        val fourPages = pagers.filter { it.childCount >= 4 && it.isShown }
+        return fourPages.maxByOrNull { it.childCount }
+            ?: pagers.filter { it.isShown }.maxByOrNull { it.childCount }
+            ?: pagers.maxByOrNull { it.childCount }
     }
 
     /** 设置写入后立刻重刷（设置页与 Hook 同在微信进程，写完就能拿到新值）。 */
@@ -439,18 +701,28 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (view.id == 0) "-" else view.resources.getResourceEntryName(view.id)
     }.getOrDefault("-")
 
-    /** 命中不了目标时靠这条快照定位：类名 + id 名 + 可见性，限 40 行、10 秒一次。 */
+    private fun bitmap(path: String): Bitmap? {
+        bitmapCache[path]?.let { if (!it.isRecycled) return it }
+        val loaded = ThemeImageStore.loadBitmap(path) ?: return null
+        bitmapCache[path] = loaded
+        return loaded
+    }
+
+    /** 命中不了目标时靠这条快照定位：类名 + id 名 + 宽高 + 可见性，限 70 行、10 秒一次。 */
     private fun dumpDecor(decor: ViewGroup) {
         val now = System.currentTimeMillis()
         if (now - lastDumpAt < 10_000L) return
         lastDumpAt = now
         val lines = ArrayList<String>()
         fun walk(view: View, depth: Int) {
-            if (lines.size >= 40 || depth > 6) return
+            if (lines.size >= DUMP_MAX_LINES || depth > DUMP_MAX_DEPTH) return
             val hidden = if (view.visibility != View.VISIBLE) "(invisible)" else ""
-            lines.add("  ".repeat(depth) + view.javaClass.simpleName + "#" + idName(view) + hidden)
+            lines.add(
+                "  ".repeat(depth) + view.javaClass.simpleName + "#" + idName(view) + hidden +
+                    " " + view.width + "x" + view.height
+            )
             if (view is ViewGroup) {
-                for (index in 0 until minOf(view.childCount, 8)) {
+                for (index in 0 until minOf(view.childCount, 10)) {
                     walk(view.getChildAt(index) ?: continue, depth + 1)
                 }
             }
@@ -503,13 +775,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
     }
 
-    private fun collectListViews(root: View, out: MutableList<View>, depth: Int) {
+    private fun collectAllViews(root: View, out: MutableList<View>, depth: Int) {
         if (depth > MAX_DEPTH) return
-        val name = root.javaClass.name
-        if (name.contains("RecyclerView") || name.contains("ListView")) out.add(root)
+        out.add(root)
         if (root is ViewGroup) {
             for (index in 0 until root.childCount) {
-                root.getChildAt(index)?.let { collectListViews(it, out, depth + 1) }
+                root.getChildAt(index)?.let { collectAllViews(it, out, depth + 1) }
             }
         }
     }
@@ -524,11 +795,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val HOST_PACKAGE = "com.tencent.mm"
         const val LAUNCHER_UI_CLASS = "com.tencent.mm.ui.LauncherUI"
         const val BOTTOM_TAB_CLASS = "com.tencent.mm.ui.LauncherUIBottomTabView"
-        const val BOTTOM_TAB_SIMPLE_NAME = "LauncherUIBottomTabView"
         val ACTION_BAR_ID_NAMES = listOf("action_bar", "action_bar_container", "title_bar", "title_bar_container")
         val ACTION_BAR_CLASS_NAMES = listOf("ActionBarContainer", "ActionBarLayout", "MMWindowActionBar", "TitleBarView")
-        val BOTTOM_TAB_CLASS_NAMES = listOf("LauncherUIBottomTabView", "BottomTabView", "HomeBottomTab", "MMTabView")
+        val BOTTOM_TAB_CLASS_NAMES = listOf("LauncherUIBottomTabView", "MMTabView", "BottomTabView", "HomeBottomTab")
+        val BOTTOM_TAB_LABELS = setOf("微信", "通讯录", "发现", "我")
         const val SPLASH_DURATION_MS = 1200L
         const val MAX_DEPTH = 32
+        const val DUMP_MAX_DEPTH = 8
+        const val DUMP_MAX_LINES = 70
+        const val ENFORCE_INTERVAL_MS = 400L
     }
 }
