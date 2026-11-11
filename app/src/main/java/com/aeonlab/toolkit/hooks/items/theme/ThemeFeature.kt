@@ -361,55 +361,83 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private data class ScrimSpec(val bitmap: Bitmap, val overlayColor: Int?, val path: String)
 
     /**
-     * 内容分层（5.5.56 起改成改 alpha，不再换纯色）：
-     * 直接把内容容器 background/foreground 的 alpha 调低——圆角、描边、分割线都还在，
-     * 只是不再是不透明死白。整页容器（≥92% 宽高）alpha 直接归零，让背景图沉到最底层。
+     * 内容分层（5.5.57 起「每块内容只压一层」）：
+     * 5.5.56 把页面里所有白底都压到 27%，但微信的列表是「列表容器 → RecyclerView → 行 → 行内白块」
+     * 四层嵌套，四层各 27% 白叠起来约 71%，背景图就被洗成一片均匀的灰紫——
+     * 5.5.56 日志里首页那一页正是这种嵌套最深的结构（ConversationListView→WxRecyclerView#mg→
+     * ConversationFolderItemView#cj1→NinePatchDrawable 行内块）。
+     * 现在改成：整页容器（≥92% 宽高）alpha 归零；往下**第一层**实心容器压一次遮罩；
+     * 它内部的所有白底一律归零，不再重复叠加。1~4 像素的分割线保持原样。
      */
     private fun applyContentScrim(page: View, bitmap: Bitmap, overlayColor: Int?, log: Boolean) {
         val pageWidth = page.width.coerceAtLeast(page.measuredWidth)
         val pageHeight = page.height.coerceAtLeast(page.measuredHeight)
         if (pageWidth <= 0 || pageHeight <= 0) return
-        val luma = averageLuma(bitmap)
+        val stats = sampleImage(bitmap)
+        val luma = stats[3]
         val target = scrimAlphaFor(luma, overlayColor)
-        val views = ArrayList<View>()
-        collectAllViews(page, views, 0)
-        var containers = 0
-        var semi = 0
+        val counters = intArrayOf(0, 0)
         val sample = ArrayList<String>()
-        views.forEach { view ->
-            if (view === page || pageDrawables.containsKey(view)) return@forEach
+        scrimTree(page, page, pageWidth, pageHeight, target, false, counters, sample, log)
+        if (log) {
+            HLog.i(
+                "$TAG 页面 ${page.javaClass.simpleName} 内容分层：整页容器归零 ${counters[0]} 个，" +
+                    "压一层遮罩 ${counters[1]} 个，遮罩 alpha=${target}/255" +
+                    " 背景平均色=#${String.format(java.util.Locale.US, "%02X%02X%02X", (stats[0] * 255).toInt(), (stats[1] * 255).toInt(), (stats[2] * 255).toInt())}" +
+                    " 亮度=${String.format(java.util.Locale.US, "%.2f", luma)} 背景图=${bitmap.width}x${bitmap.height}"
+            )
+            sample.forEach { HLog.i("$TAG   分层: $it") }
+        }
+    }
+
+    private fun scrimTree(
+        view: View,
+        page: View,
+        pageWidth: Int,
+        pageHeight: Int,
+        alpha: Int,
+        underScrim: Boolean,
+        counters: IntArray,
+        sample: MutableList<String>,
+        log: Boolean
+    ) {
+        var scrimmed = underScrim
+        if (view !== page && !pageDrawables.containsKey(view) && view !is ImageView) {
             val width = view.width.coerceAtLeast(view.measuredWidth)
             val height = view.height.coerceAtLeast(view.measuredHeight)
-            if (width <= 0 || height <= 0) return@forEach
-            val fullPage = width >= pageWidth * 0.92f && height >= pageHeight * 0.92f
-            if (view !is ImageView && width >= pageWidth * 0.30f) {
+            // 1~4 像素的分割线/描边保持原样，别把线也抹掉
+            if (width > 4 && height > 4 && width >= pageWidth * 0.30f) {
                 val background = view.background
                 if (background != null && background.alpha != 0) {
+                    val fullPage = width >= pageWidth * 0.92f && height >= pageHeight * 0.92f
+                    val target = if (fullPage || scrimmed) 0 else alpha
                     if (!originalAlphas.containsKey(view)) originalAlphas[view] = background.alpha
-                    background.alpha = if (fullPage) 0 else target
-                    if (fullPage) containers++ else semi++
-                    if (sample.size < 30) {
+                    background.alpha = target
+                    if (target == 0) {
+                        counters[0]++
+                    } else {
+                        counters[1]++
+                        scrimmed = true
+                    }
+                    if (log && sample.size < 24) {
                         sample.add(
                             "${view.javaClass.simpleName}#${idName(view)} ${width}x${height}" +
-                                " bg=${background.javaClass.simpleName}${if (fullPage) "→透明" else "→半透明"}"
+                                " bg=${background.javaClass.simpleName}${if (target == 0) "→归零" else "→压一层"}"
                         )
                     }
                 }
-            }
-            // 5.5.55 之前只改 background：微信的卡片白底有的挂在 foreground 上，这里一起收
-            val foreground = runCatching { view.foreground }.getOrNull()
-            if (foreground != null && foreground.alpha != 0 && width >= pageWidth * 0.30f) {
-                runCatching { foreground.alpha = if (fullPage) 0 else target }
+                val foreground = runCatching { view.foreground }.getOrNull()
+                if (foreground != null && foreground.alpha != 0) {
+                    runCatching { foreground.alpha = if (scrimmed) 0 else alpha }
+                }
             }
         }
-        if (log) {
-            HLog.i(
-                "$TAG 页面 ${page.javaClass.simpleName} 内容分层：整页容器置透明 ${containers} 个，" +
-                    "整行/整卡调半透明 ${semi} 个，遮罩 alpha=${target}/255" +
-                    " 背景平均亮度=${String.format(java.util.Locale.US, "%.2f", luma)}" +
-                    " 背景图=${bitmap.width}x${bitmap.height}"
-            )
-            sample.forEach { HLog.i("$TAG   分层: $it") }
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                view.getChildAt(index)?.let {
+                    scrimTree(it, page, pageWidth, pageHeight, alpha, scrimmed, counters, sample, log)
+                }
+            }
         }
     }
 
@@ -420,24 +448,36 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return (alpha * 255).toInt()
     }
 
-    private fun averageLuma(bitmap: Bitmap): Float = runCatching {
+    /** 采样背景图：返回 [r, g, b, 亮度]，0~1。 */
+    private fun sampleImage(bitmap: Bitmap): FloatArray = runCatching {
         val stepX = (bitmap.width / 24).coerceAtLeast(1)
         val stepY = (bitmap.height / 24).coerceAtLeast(1)
-        var sum = 0.0
+        var sumR = 0.0
+        var sumG = 0.0
+        var sumB = 0.0
         var count = 0
         var y = 0
         while (y < bitmap.height) {
             var x = 0
             while (x < bitmap.width) {
                 val color = bitmap.getPixel(x, y)
-                sum += (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255.0
+                sumR += Color.red(color) / 255.0
+                sumG += Color.green(color) / 255.0
+                sumB += Color.blue(color) / 255.0
                 count++
                 x += stepX
             }
             y += stepY
         }
-        if (count == 0) 0.5f else (sum / count).toFloat()
-    }.getOrDefault(0.5f)
+        if (count == 0) {
+            floatArrayOf(0.5f, 0.5f, 0.5f, 0.5f)
+        } else {
+            val r = (sumR / count).toFloat()
+            val g = (sumG / count).toFloat()
+            val b = (sumB / count).toFloat()
+            floatArrayOf(r, g, b, 0.299f * r + 0.587f * g + 0.114f * b)
+        }
+    }.getOrDefault(floatArrayOf(0.5f, 0.5f, 0.5f, 0.5f))
 
     private fun maybeShowSplash(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
         if (splashShown) return
