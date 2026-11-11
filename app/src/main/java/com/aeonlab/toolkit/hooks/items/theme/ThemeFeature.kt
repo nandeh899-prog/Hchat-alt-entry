@@ -77,6 +77,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedMap(WeakHashMap<View, Drawable?>())
     private val pageDrawables: MutableMap<View, Drawable> =
         Collections.synchronizedMap(WeakHashMap<View, Drawable>())
+    private val pageScrim: MutableMap<View, ScrimSpec> =
+        Collections.synchronizedMap(WeakHashMap<View, ScrimSpec>())
     private val enforcedDecors: MutableSet<ViewGroup> =
         Collections.newSetFromMap(WeakHashMap<ViewGroup, Boolean>())
     private val bitmapCache = object : LinkedHashMap<String, Bitmap>(4, 0.75f, true) {
@@ -101,6 +103,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     @Volatile
     private var lastEnforceAt = 0L
+
+    @Volatile
+    private var lastScrimAt = 0L
 
     @Synchronized
     fun installWeChatHooks(): Boolean {
@@ -333,36 +338,82 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         page.setBackgroundDrawable(drawable)
         pageDrawables[page] = drawable
-        // 微信每个页面的根容器（Fragment 根、列表、下拉空白区）都自带不透明白底，
-        // 只给 pager 子页铺图会被整块盖住——这是 5.5.53 里「日志没报错但看不到图」的原因。
-        val cleared = clearOpaquePageCovers(page)
+        pageScrim[page] = ScrimSpec(bitmap, overlayColor)
+        // 5.5.54 的实测：背景只从列表之外露出来——列表项、分组头、发现页卡片各自带着不透明白底，
+        // 铺在页面上的图被逐层盖住。这里做「内容分层」：
+        //   整页容器（≥92% 宽高）→ 完全透明，让背景沉到最底层；
+        //   整行/整卡（≥60% 宽）→ 换成按背景明暗算出的半透明遮罩，保证文字可读。
+        applyContentScrim(page, bitmap, overlayColor, log)
+    }
+
+    private data class ScrimSpec(val bitmap: Bitmap, val overlayColor: Int?)
+
+    /** 整页容器置透明、整行/整卡换半透明遮罩；遮罩浓度按背景图平均亮度算，亮图淡、暗图浓。 */
+    private fun applyContentScrim(page: View, bitmap: Bitmap, overlayColor: Int?, log: Boolean) {
+        val pageWidth = page.width.coerceAtLeast(page.measuredWidth)
+        val pageHeight = page.height.coerceAtLeast(page.measuredHeight)
+        if (pageWidth <= 0 || pageHeight <= 0) return
+        val luma = averageLuma(bitmap)
+        val scrim = scrimColorFor(luma, overlayColor)
+        val views = ArrayList<View>()
+        collectAllViews(page, views, 0)
+        var containers = 0
+        var rows = 0
+        views.forEach { view ->
+            if (view === page || pageDrawables.containsKey(view)) return@forEach
+            if (view is ImageView) return@forEach
+            val background = view.background ?: return@forEach
+            if (background is ColorDrawable && Color.alpha(background.color) == 0) return@forEach
+            val width = view.width.coerceAtLeast(view.measuredWidth)
+            val height = view.height.coerceAtLeast(view.measuredHeight)
+            if (width <= 0 || height <= 0) return@forEach
+            val fullPage = width >= pageWidth * 0.92f && height >= pageHeight * 0.92f
+            val target = when {
+                fullPage -> Color.TRANSPARENT
+                width >= pageWidth * 0.6f -> scrim
+                else -> return@forEach
+            }
+            if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
+            view.setBackgroundColor(target)
+            if (fullPage) containers++ else rows++
+        }
         if (log) {
-            HLog.i("$TAG 页面 ${page.javaClass.simpleName} 已铺背景图，清理整页不透明遮罩 ${cleared} 个")
+            HLog.i(
+                "$TAG 页面 ${page.javaClass.simpleName} 内容分层：整页容器置透明 ${containers} 个，" +
+                    "整行/整卡换半透明遮罩 ${rows} 个，遮罩=#${Integer.toHexString(scrim)}" +
+                    " 背景平均亮度=${String.format(java.util.Locale.US, "%.2f", luma)}"
+            )
         }
     }
 
-    private fun clearOpaquePageCovers(page: View): Int {
-        val pageWidth = page.width.coerceAtLeast(page.measuredWidth)
-        val pageHeight = page.height.coerceAtLeast(page.measuredHeight)
-        if (pageWidth <= 0 || pageHeight <= 0) return 0
-        val views = ArrayList<View>()
-        collectAllViews(page, views, 0)
-        val minWidth = pageWidth * 0.9f
-        val minHeight = pageHeight * 0.7f
-        var cleared = 0
-        views.forEach { view ->
-            if (view === page) return@forEach
-            val width = view.width.coerceAtLeast(view.measuredWidth)
-            val height = view.height.coerceAtLeast(view.measuredHeight)
-            if (width < minWidth || height < minHeight) return@forEach
-            val background = view.background ?: return@forEach
-            if (background is ColorDrawable && Color.alpha(background.color) == 0) return@forEach
-            if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
-            view.setBackgroundColor(Color.TRANSPARENT)
-            cleared++
-        }
-        return cleared
+    /**
+     * 遮罩浓度：主题包自带叠色（c 字段）时优先用它；否则按背景图平均亮度取白，
+     * 亮图 20% 左右、暗图 60% 左右——暗图下深色文字会糊，只能靠白色遮罩把底提亮。
+     */
+    private fun scrimColorFor(luma: Float, overlayColor: Int?): Int {
+        if (overlayColor != null && Color.alpha(overlayColor) > 0) return overlayColor
+        val alpha = (0.62f - 0.45f * luma).coerceIn(0.20f, 0.62f)
+        return Color.argb((alpha * 255).toInt(), 255, 255, 255)
     }
+
+    private fun averageLuma(bitmap: Bitmap): Float = runCatching {
+        val stepX = (bitmap.width / 24).coerceAtLeast(1)
+        val stepY = (bitmap.height / 24).coerceAtLeast(1)
+        var sum = 0.0
+        var count = 0
+        var y = 0
+        while (y < bitmap.height) {
+            var x = 0
+            while (x < bitmap.width) {
+                val color = bitmap.getPixel(x, y)
+                sum += (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255.0
+                count++
+                x += stepX
+            }
+            y += stepY
+        }
+        if (count == 0) 0.5f else (sum / count).toFloat()
+    }.getOrDefault(0.5f)
 
     private fun maybeShowSplash(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
         if (splashShown) return
@@ -458,6 +509,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         .onFailure { HLog.e("$TAG 页面背景被覆盖后重铺失败: ${it.message}", it) }
                 }
             }
+            if (now - lastScrimAt >= SCRIM_INTERVAL_MS) {
+                lastScrimAt = now
+                pageScrim.entries.toList().forEach { (page, spec) ->
+                    runCatching { applyContentScrim(page, spec.bitmap, spec.overlayColor, log = false) }
+                        .onFailure { HLog.e("$TAG 内容分层重扫失败: ${it.message}", it) }
+                }
+            }
         }
     }
 
@@ -484,6 +542,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { page.background = null }
         }
         pageDrawables.clear()
+        pageScrim.clear()
         lastTab = null
     }
 
@@ -804,5 +863,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val DUMP_MAX_DEPTH = 8
         const val DUMP_MAX_LINES = 70
         const val ENFORCE_INTERVAL_MS = 400L
+        const val SCRIM_INTERVAL_MS = 1200L
     }
 }
