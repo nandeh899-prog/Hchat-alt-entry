@@ -538,17 +538,21 @@ object ThemeSpec {
      * 逐项统计后写进导入提示，不静默丢弃。
      */
     private fun importWeixinPack(context: Context, zipFile: File, sourceName: String): ImportOutcome {
+        return runCatching {
+            ZipFile(zipFile).use { zf -> importWeixinPack(context, zf, sourceName) }
+        }.getOrElse {
+            ImportOutcome.Failure("读取主题包失败：${it.message ?: it.javaClass.simpleName}")
+        }
+    }
+
+    private fun importWeixinPack(context: Context, zf: ZipFile, sourceName: String): ImportOutcome {
         val settingsName = runCatching {
-            ZipFile(zipFile).use { zf ->
-                zf.entries().asSequence().firstOrNull {
-                    !it.isDirectory && it.name.substringAfterLast('/').equals("settings.json", ignoreCase = true)
-                }?.name
-            }
+            zf.entries().asSequence().firstOrNull {
+                !it.isDirectory && it.name.substringAfterLast('/').equals("settings.json", ignoreCase = true)
+            }?.name
         }.getOrNull() ?: return ImportOutcome.Failure("主题包里没有 settings.json")
         val text = runCatching {
-            ZipFile(zipFile).use { zf ->
-                zf.getInputStream(zf.getEntry(settingsName)).use { it.readBytes().toString(Charsets.UTF_8) }
-            }
+            zf.getInputStream(zf.getEntry(settingsName)).use { it.readBytes().toString(Charsets.UTF_8) }
         }.getOrNull() ?: return ImportOutcome.Failure("读取 settings.json 失败")
         val root = runCatching { JSONObject(text) }.getOrNull()
             ?: return ImportOutcome.Failure("settings.json 不是合法 JSON，无法导入")
@@ -574,13 +578,13 @@ object ThemeSpec {
             if (blurRadius > 0) blur[slot] = blurRadius
             val file = item.optString("p", "").trim()
             if (file.isEmpty()) return
-            val entry = findImageEntry(zipFile, file)
+            val entry = findImageEntry(zf, file)
             if (entry == null) {
                 warnings.add("$label 图片 $file 在压缩包里找不到")
                 return
             }
             val data = runCatching {
-                ZipFile(zipFile).use { zf -> zf.getInputStream(zf.getEntry(entry.name)).use { it.readBytes() } }
+                zf.getInputStream(zf.getEntry(entry.name)).use { it.readBytes() }
             }.getOrNull()
             if (data == null) {
                 warnings.add("$label 图片 $file 读取失败")
