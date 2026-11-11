@@ -82,6 +82,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedMap(WeakHashMap<View, ScrimSpec>())
     private val originalAlphas: MutableMap<View, Int> =
         Collections.synchronizedMap(WeakHashMap<View, Int>())
+    private val originalViewAlphas: MutableMap<View, Float> =
+        Collections.synchronizedMap(WeakHashMap<View, Float>())
+    private val dumpedPages: MutableSet<View> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
     private val enforcedDecors: MutableSet<ViewGroup> =
         Collections.newSetFromMap(WeakHashMap<ViewGroup, Boolean>())
     private val bitmapCache = object : LinkedHashMap<String, Bitmap>(4, 0.75f, true) {
@@ -380,13 +384,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val scrim = scrimColorFor(luma, overlayColor)
         val density = page.resources.displayMetrics.density
         val gapPx = (ROW_GAP_DP * density).toInt()
-        val counters = intArrayOf(0, 0, 0)
+        val counters = intArrayOf(0, 0, 0, 0)
         val sample = ArrayList<String>()
-        scrimTree(page, page, pageWidth, pageHeight, scrim, gapPx, false, counters, sample, log)
+        // 明细每页只打一次，避免 1.2 秒重扫刷屏
+        val detail = log && dumpedPages.add(page)
+        scrimTree(page, page, pageWidth, pageHeight, scrim, gapPx, false, counters, sample, detail)
         if (log) {
             HLog.i(
                 "$TAG 页面 ${page.javaClass.simpleName} 内容分层：容器置透明 ${counters[0]} 个，" +
-                    "通栏行压半透明 ${counters[1]} 个，索引条去底 ${counters[2]} 个，" +
+                    "通栏行压半透明 ${counters[1]} 个，索引条去底 ${counters[2]} 个，整页图片层透明 ${counters[3]} 个，" +
                     "行缝=${ROW_GAP_DP}dp 遮罩=#${Integer.toHexString(scrim)}" +
                     " 背景平均色=#${String.format(java.util.Locale.US, "%02X%02X%02X", (stats[0] * 255).toInt(), (stats[1] * 255).toInt(), (stats[2] * 255).toInt())}" +
                     " 亮度=${String.format(java.util.Locale.US, "%.2f", luma)} 背景图=${bitmap.width}x${bitmap.height}"
@@ -422,20 +428,40 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
                             view.background = ColorDrawable(Color.TRANSPARENT)
                             counters[2]++
-                            if (log && sample.size < 24) {
+                            if (log && sample.size < 40) {
                                 sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→索引条去底")
                             }
                         }
                     }
-                    view is ImageView -> Unit
-                    width < pageWidth * 0.30f -> Unit
+                    // 首页整片灰蓝的嫌疑：微信会话列表里盖着一张整页 ImageView（模糊/深色底），
+                    // 5.5.58 之前 ImageView 一律跳过，于是它的底永远盖在背景图上。大图直接让位。
+                    view is ImageView -> {
+                        if (width >= pageWidth * 0.50f && height >= pageHeight * 0.25f) {
+                            if (!originalViewAlphas.containsKey(view)) originalViewAlphas[view] = view.alpha
+                            view.alpha = 0f
+                            counters[3]++
+                            if (log && sample.size < 40) {
+                                sample.add(
+                                    "${view.javaClass.simpleName}#${idName(view)} ${width}x${height}" +
+                                        " drawable=${runCatching { view.drawable?.javaClass?.simpleName }.getOrNull() ?: "null"}→整页图片层透明"
+                                )
+                            }
+                        } else if (log && sample.size < 40) {
+                            sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} 跳过(小图)")
+                        }
+                    }
+                    width < pageWidth * 0.30f -> {
+                        if (log && sample.size < 40) {
+                            sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} 跳过(窄)")
+                        }
+                    }
                     background != null && background.alpha != 0 -> {
                         if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
                         val container = height >= pageHeight * 0.55f
                         if (container || scrimmed) {
                             view.background = ColorDrawable(Color.TRANSPARENT)
                             counters[0]++
-                            if (log && sample.size < 24) {
+                            if (log && sample.size < 40) {
                                 sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→置透明")
                             }
                         } else {
@@ -443,7 +469,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             view.background = InsetDrawable(ColorDrawable(scrim), 0, 0, 0, gapPx)
                             counters[1]++
                             scrimmed = true
-                            if (log && sample.size < 24) {
+                            if (log && sample.size < 40) {
                                 sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→通栏行${ROW_GAP_DP}dp缝")
                             }
                         }
@@ -639,6 +665,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { view.background?.alpha = alpha }
         }
         originalAlphas.clear()
+        originalViewAlphas.forEach { (view, alpha) ->
+            runCatching { view.alpha = alpha }
+        }
+        originalViewAlphas.clear()
         lastTab = null
     }
 
