@@ -74,6 +74,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
     @Volatile
     private var splashShown = false
 
+    /** 见过的 LauncherUI；用来在没有当前页面信息时兜底重刷。 */
+    private val launchers: MutableSet<Activity> = Collections.newSetFromMap(WeakHashMap<Activity, Boolean>())
+
+    @Volatile
+    private var lastDumpAt = 0L
+
     @Synchronized
     fun installWeChatHooks(): Boolean {
         if (installed) return true
@@ -92,6 +98,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             HookRegistry.get().hook(resume, object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
                     val activity = param.thisObject as? Activity ?: return
+                    if (activity.javaClass.name.contains(LAUNCHER_UI_CLASS)) launchers.add(activity)
                     runCatching { applyTheme(activity) }
                         .onFailure { HLog.e("$TAG 应用主题异常: ${it.message}", it) }
                 }
@@ -101,17 +108,31 @@ private class ThemeRuntime(private val context: FeatureContext) {
             return false
         }
         installed = true
-        HLog.i("$TAG 主题 Hook 已挂载")
+        HLog.i("$TAG 主题 Hook 已挂载（页面=${LAUNCHER_UI_CLASS}，微信版本=${hostVersion()}）")
+        // 设置页是微信内的叠加页面，保存不会产生 resume 事件，所以这里挂一条写设置回调。
+        ThemeSettings.onSettingsWritten = { scheduleReapply("设置已保存") }
+        scheduleReapply("Hook 安装完成")
         return true
     }
 
     private fun applyTheme(activity: Activity) {
         val snapshot = ThemeSettings.snapshot(context.hostContext())
-        val decor = activity.window?.decorView as? ViewGroup ?: return
+        val decor = activity.window?.decorView as? ViewGroup
+        if (decor == null) {
+            HLog.e("$TAG ${activity.javaClass.simpleName} 拿不到 decorView，本轮跳过")
+            return
+        }
         if (!snapshot.enabled) {
+            HLog.i("$TAG 主题未启用（读到的 enabled=false），恢复已改视图；配置=${prefsPath()}")
             restoreTouchedViews()
             return
         }
+        HLog.i(
+            "$TAG 开始应用主题：页面=${activity.javaClass.simpleName} 标题栏色=${snapshot.actionBarBackgroundColor.ifBlank { "-" }}" +
+                " 隐藏标题栏=${snapshot.actionBarHide} 底栏开关=${snapshot.tabEnabled} 隐藏底栏=${snapshot.tabHideNative}" +
+                " 圆形头像=${snapshot.roundAvatar} 页面背景=${snapshot.backgroundEnabled}"
+        )
+        dumpDecor(decor)
         applyActionBar(activity, decor, snapshot)
         applyBottomTab(activity, decor, snapshot)
         applyPageBackgrounds(activity, decor, snapshot)
@@ -121,9 +142,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun applyActionBar(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
         val bar = findActionBar(activity, decor)
         if (bar == null) {
-            HLog.e("$TAG 没找到 ActionBar 容器，标题栏相关主题项本轮未生效")
+            HLog.e("$TAG 没找到 ActionBar 容器（id=action_bar/action_bar_container/title_bar + 类名 ActionBar/TitleBar 全未命中），标题栏相关主题项本轮未生效")
             return
         }
+        HLog.i("$TAG 标题栏容器命中: ${bar.javaClass.name}#${idName(bar)}")
         if (snapshot.actionBarHide) {
             if (bar.visibility != View.GONE) {
                 bar.visibility = View.GONE
@@ -152,9 +174,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (!snapshot.tabEnabled) return
         val tab = findBottomTab(decor)
         if (tab == null) {
-            HLog.e("$TAG 没找到底栏（$BOTTOM_TAB_CLASS / BottomTab 结构），底栏主题项本轮未生效")
+            HLog.e("$TAG 没找到底栏（$BOTTOM_TAB_CLASS、BottomTab、TabView 类名全未命中），底栏主题项本轮未生效；视图树见上一条快照")
             return
         }
+        HLog.i("$TAG 底栏容器命中: ${tab.javaClass.name}#${idName(tab)} 子项=${tab.childCount} 隐藏=${snapshot.tabHideNative}")
         if (snapshot.tabHideNative) {
             if (tab.visibility != View.GONE) {
                 tab.visibility = View.GONE
@@ -302,22 +325,48 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun findActionBar(activity: Activity, root: ViewGroup): View? {
-        val id = runCatching {
-            activity.resources.getIdentifier("action_bar", "id", HOST_PACKAGE)
-        }.getOrDefault(0)
-        if (id != 0) {
+        for (idName in ACTION_BAR_ID_NAMES) {
+            val id = runCatching {
+                activity.resources.getIdentifier(idName, "id", HOST_PACKAGE)
+            }.getOrDefault(0)
+            if (id == 0) continue
             val byId = runCatching { root.findViewById<View>(id) }.getOrNull()
-            if (byId is ViewGroup) return byId
+            if (byId is ViewGroup && byId.visibility == View.VISIBLE) return byId
         }
-        return findViewByClassName(root, "ActionBarContainer")
-            ?: findViewByClassName(root, "ActionBarLayout")
-            ?: findViewByClassName(root, "MMWindowActionBar")
+        for (className in ACTION_BAR_CLASS_NAMES) {
+            findViewByClassName(root, className)?.let { if (it is ViewGroup) return it }
+        }
+        return null
     }
 
     private fun findBottomTab(root: ViewGroup): ViewGroup? {
-        val byClass = findViewByClassName(root, BOTTOM_TAB_SIMPLE_NAME) as? ViewGroup
-        if (byClass != null) return byClass
-        return findViewByClassName(root, "BottomTab") as? ViewGroup
+        for (className in BOTTOM_TAB_CLASS_NAMES) {
+            val found = findViewByClassName(root, className) as? ViewGroup
+            if (found != null) return found
+        }
+        // 类名兜不住时按结构认：贴底、扁条、2~6 个子项且每项都是图标+文字
+        val groups = ArrayList<ViewGroup>()
+        collectViewGroups(root, groups, 0)
+        val rootHeight = root.height
+        if (rootHeight <= 0) return null
+        val structural = groups
+            .filter { it.height > 0 && it.height <= rootHeight / 4 }
+            .filter { it.top > rootHeight * 6 / 10 }
+            .filter { group ->
+                group.childCount in 2..6 &&
+                    (0 until group.childCount).all { hasIconAndLabel(group.getChildAt(it)) }
+            }
+            .maxByOrNull { it.top }
+        if (structural != null) {
+            HLog.i("$TAG 底栏按结构命中: ${structural.javaClass.name}#${idName(structural)}")
+        }
+        return structural
+    }
+
+    private fun hasIconAndLabel(view: View?): Boolean {
+        if (view == null) return false
+        return findFirstView(view, ImageView::class.java) != null &&
+            findFirstView(view, TextView::class.java) != null
     }
 
     private fun findViewPager(root: ViewGroup): ViewGroup? {
@@ -327,6 +376,87 @@ private class ThemeRuntime(private val context: FeatureContext) {
             .filter { it.javaClass.name.contains("ViewPager") }
             .maxByOrNull { it.childCount }
             ?: candidates.firstOrNull { it.childCount >= 4 && it.javaClass.name.contains("Frame") }
+    }
+
+    /** 设置写入后立刻重刷（设置页与 Hook 同在微信进程，写完就能拿到新值）。 */
+    private fun scheduleReapply(reason: String) {
+        val run = Runnable { applyToCurrent(reason) }
+        mainHandler.post(run)
+        mainHandler.postDelayed(run, 400L)
+        mainHandler.postDelayed(run, 1400L)
+    }
+
+    private fun applyToCurrent(reason: String) {
+        val activity = currentActivity() ?: launchers.firstOrNull { !it.isFinishing }
+        if (activity == null) {
+            HLog.e("$TAG 重刷($reason) 拿不到当前页面，稍后重试")
+            return
+        }
+        if (!activity.javaClass.name.contains(LAUNCHER_UI_CLASS)) {
+            HLog.i("$TAG 重刷($reason) 当前页面是 ${activity.javaClass.simpleName}，跳过")
+            return
+        }
+        runCatching { applyTheme(activity) }
+            .onFailure { HLog.e("$TAG 重刷($reason) 异常: ${it.message}", it) }
+    }
+
+    private fun currentActivity(): Activity? {
+        return runCatching {
+            val threadClass = Class.forName("android.app.ActivityThread")
+            val thread = threadClass.getMethod("currentActivityThread").invoke(null)
+                ?: return@runCatching null
+            val field = threadClass.getDeclaredField("mActivities").apply { isAccessible = true }
+            val records = field.get(thread) as? Map<*, *> ?: return@runCatching null
+            var fallback: Activity? = null
+            for (value in records.values) {
+                val record = value ?: continue
+                val paused = runCatching {
+                    record.javaClass.getDeclaredField("paused").apply { isAccessible = true }.getBoolean(record)
+                }.getOrDefault(true)
+                if (paused) continue
+                val activity = runCatching {
+                    record.javaClass.getDeclaredField("activity").apply { isAccessible = true }.get(record) as? Activity
+                }.getOrNull() ?: continue
+                if (activity.isFinishing) continue
+                if (activity.javaClass.name.contains(LAUNCHER_UI_CLASS)) return@runCatching activity
+                if (fallback == null) fallback = activity
+            }
+            fallback
+        }.getOrNull()
+    }
+
+    private fun prefsPath(): String = runCatching {
+        val dir = com.aeonlab.toolkit.preferences.AeonLabStorage.storageDir(context.hostContext())
+        "${dir.absolutePath}/${ThemeSettings.PREFS_NAME}"
+    }.getOrDefault("?")
+
+    private fun hostVersion(): String = runCatching {
+        context.hostContext().packageManager
+            .getPackageInfo(HOST_PACKAGE, 0).versionName ?: "?"
+    }.getOrDefault("?")
+
+    private fun idName(view: View): String = runCatching {
+        if (view.id == 0) "-" else view.resources.getResourceEntryName(view.id)
+    }.getOrDefault("-")
+
+    /** 命中不了目标时靠这条快照定位：类名 + id 名 + 可见性，限 40 行、10 秒一次。 */
+    private fun dumpDecor(decor: ViewGroup) {
+        val now = System.currentTimeMillis()
+        if (now - lastDumpAt < 10_000L) return
+        lastDumpAt = now
+        val lines = ArrayList<String>()
+        fun walk(view: View, depth: Int) {
+            if (lines.size >= 40 || depth > 6) return
+            val hidden = if (view.visibility != View.VISIBLE) "(invisible)" else ""
+            lines.add("  ".repeat(depth) + view.javaClass.simpleName + "#" + idName(view) + hidden)
+            if (view is ViewGroup) {
+                for (index in 0 until minOf(view.childCount, 8)) {
+                    walk(view.getChildAt(index) ?: continue, depth + 1)
+                }
+            }
+        }
+        walk(decor, 0)
+        HLog.i("$TAG 视图树快照:\n" + lines.joinToString("\n"))
     }
 
     private fun findViewByClassName(root: View, simpleName: String): View? {
@@ -395,6 +525,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val LAUNCHER_UI_CLASS = "com.tencent.mm.ui.LauncherUI"
         const val BOTTOM_TAB_CLASS = "com.tencent.mm.ui.LauncherUIBottomTabView"
         const val BOTTOM_TAB_SIMPLE_NAME = "LauncherUIBottomTabView"
+        val ACTION_BAR_ID_NAMES = listOf("action_bar", "action_bar_container", "title_bar", "title_bar_container")
+        val ACTION_BAR_CLASS_NAMES = listOf("ActionBarContainer", "ActionBarLayout", "MMWindowActionBar", "TitleBarView")
+        val BOTTOM_TAB_CLASS_NAMES = listOf("LauncherUIBottomTabView", "BottomTabView", "HomeBottomTab", "MMTabView")
         const val SPLASH_DURATION_MS = 1200L
         const val MAX_DEPTH = 32
     }

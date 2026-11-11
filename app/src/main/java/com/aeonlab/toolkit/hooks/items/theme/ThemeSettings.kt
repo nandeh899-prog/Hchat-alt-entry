@@ -14,6 +14,16 @@ import com.aeonlab.toolkit.preferences.AeonLabStorage
 object ThemeSettings {
     const val PREFS_NAME = "AeonLab_beautify_theme_config"
 
+    /**
+     * 设置写入后的回调。
+     *
+     * 设置页是叠加在微信 Activity 上的 Compose 页面（不是独立 Activity），
+     * 保存/返回都不会触发 LauncherUI.onResume，所以必须写完立刻通知 Hook 重刷，
+     * 否则用户要离开微信再回来才能看到效果。
+     */
+    @Volatile
+    var onSettingsWritten: ((Context) -> Unit)? = null
+
     const val KEY_ENABLE = "theme_enable"
     const val KEY_NAME = "theme_name"
     const val KEY_AUTHOR = "theme_author"
@@ -120,6 +130,7 @@ object ThemeSettings {
             editor.putString(key, snapshot.tabIcons.getOrElse(index) { "" })
         }
         editor.apply()
+        runCatching { onSettingsWritten?.invoke(context) }
     }
 
     /**

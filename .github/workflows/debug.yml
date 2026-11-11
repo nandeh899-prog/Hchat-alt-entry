@@ -1,4 +1,4 @@
-name: 测试包构建 5.5.52 / 536
+name: 测试包构建 5.5.53 / 537
 
 # 真机测试阶段专用：release 变体 + 关闭 R8 + 关闭资源收缩，产出可覆盖安装的测试包。
 # debug 变体在 Compose 编译 46,295 行的 MiuixSettingsPage.kt 时会抛 ClassTooLargeException
@@ -9,16 +9,16 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - fix/5.5.52-536-theme
+      - fix/5.5.53-537-theme
 
 permissions:
   contents: write
 
 env:
-  HCAT_VERSION_NAME: "5.5.52"
-  HCAT_VERSION_CODE: "536"
+  HCAT_VERSION_NAME: "5.5.53"
+  HCAT_VERSION_CODE: "537"
   HCAT_APP_ID_SUFFIX: ".coexist"
-  HCAT_APK_NAME: "Hchat-5.5.52-536-debug.apk"
+  HCAT_APK_NAME: "Hchat-5.5.53-537-debug.apk"
   HCAT_MINIFY: "false"
 
 jobs:
@@ -137,9 +137,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Hchat-5.5.52-536-debug
+          name: Hchat-5.5.53-537-debug
           path: |
-            /tmp/out/Hchat-5.5.52-536-debug.apk
+            /tmp/out/Hchat-5.5.53-537-debug.apk
             /tmp/out/build.log
             /tmp/out/step-outcome.txt
             /tmp/out/build-info.txt
@@ -149,7 +149,7 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OUT_BRANCH: builds/5.5.52-536-r${{ github.run_number }}
+          OUT_BRANCH: builds/5.5.53-537-r${{ github.run_number }}
         run: |
           set -eo pipefail
           cd /tmp/out
@@ -160,7 +160,7 @@ jobs:
           for f in build.log build-seconds.txt step-outcome.txt build-info.txt *.apk *.gz; do
             if [ -e "$f" ]; then git add -- "$f"; fi
           done
-          git commit -q --allow-empty -m "测试包 5.5.52 / 536 (run ${{ github.run_number }})"
+          git commit -q --allow-empty -m "测试包 5.5.53 / 537 (run ${{ github.run_number }})"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           git push -q origin "HEAD:refs/heads/${OUT_BRANCH}"
           echo "已推送工作分支：${OUT_BRANCH}"
@@ -168,5 +168,5 @@ jobs:
       - name: 构建失败则整轮标记失败
         if: steps.build.outcome != 'success'
         run: |
-          echo "::error::测试包构建失败，详细日志见工作分支 builds/5.5.52-536-r${{ github.run_number }} 的 build.log"
+          echo "::error::测试包构建失败，详细日志见工作分支 builds/5.5.53-537-r${{ github.run_number }} 的 build.log"
           exit 1
