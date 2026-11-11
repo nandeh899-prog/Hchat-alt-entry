@@ -7,9 +7,6 @@ name: 测试包构建 5.5.51 / 535
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - fix/5.5.51-535-group-restore
 
 permissions:
   contents: write

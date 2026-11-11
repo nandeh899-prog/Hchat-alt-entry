@@ -1,4 +1,4 @@
-name: R8 发布构建 5.5.50 / 534
+name: R8 发布构建 5.5.51 / 535
 
 # 只负责：用 R8 构建 release APK、上传 artifact、并把产物推进一个工作分支。
 # 不创建 Release、不发 Telegram、不改任何既有分支、不使用 force push。
@@ -10,15 +10,16 @@ on:
       - release/5.5.45-529
       - r8-5.5.49-533
       - fix/5.5.50-534-group-disable
+      - fix/5.5.51-535-group-restore
 
 permissions:
   contents: write
 
 env:
-  HCAT_VERSION_NAME: "5.5.50"
-  HCAT_VERSION_CODE: "534"
+  HCAT_VERSION_NAME: "5.5.51"
+  HCAT_VERSION_CODE: "535"
   HCAT_APP_ID_SUFFIX: ".coexist"
-  HCAT_APK_NAME: "Hchat-5.5.50-534.apk"
+  HCAT_APK_NAME: "Hchat-5.5.51-535.apk"
 
 jobs:
   build:
@@ -156,7 +157,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Hchat-5.5.50-534
+          name: Hchat-5.5.51-535
           path: |
             /tmp/out/Hchat-5.5.50-534.apk
             /tmp/out/mapping.txt
@@ -169,7 +170,7 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OUT_BRANCH: builds/5.5.50-534-r${{ github.run_number }}
+          OUT_BRANCH: builds/5.5.51-535-r${{ github.run_number }}
         run: |
           set -eo pipefail
           cd /tmp/out
@@ -185,7 +186,7 @@ jobs:
           for f in build.log build-seconds.txt step-outcome.txt build-info.txt *.apk *.gz; do
             if [ -e "$f" ]; then git add -- "$f"; fi
           done
-          git commit -q --allow-empty -m "R8 产物 5.5.50 / 534 (run ${{ github.run_number }})"
+          git commit -q --allow-empty -m "R8 产物 5.5.51 / 535 (run ${{ github.run_number }})"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           git push -q origin "HEAD:refs/heads/${OUT_BRANCH}"
           echo "已推送工作分支：${OUT_BRANCH}"
@@ -193,5 +194,5 @@ jobs:
       - name: 构建失败则整轮标记失败
         if: steps.build.outcome != 'success'
         run: |
-          echo "::error::R8 release 构建失败，详细日志见工作分支 builds/5.5.50-534-r${{ github.run_number }} 的 build.log"
+          echo "::error::R8 release 构建失败，详细日志见工作分支 builds/5.5.51-535-r${{ github.run_number }} 的 build.log"
           exit 1
