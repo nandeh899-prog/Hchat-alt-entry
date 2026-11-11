@@ -84,6 +84,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedMap(WeakHashMap<View, Int>())
     private val originalViewAlphas: MutableMap<View, Float> =
         Collections.synchronizedMap(WeakHashMap<View, Float>())
+    private val originalVisibilities: MutableMap<View, Int> =
+        Collections.synchronizedMap(WeakHashMap<View, Int>())
+    private val originalWillNotDraw: MutableMap<View, Boolean> =
+        Collections.synchronizedMap(WeakHashMap<View, Boolean>())
     private val dumpedPages: MutableSet<View> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
     private val enforcedDecors: MutableSet<ViewGroup> =
@@ -243,9 +247,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
             "$TAG 底栏容器命中: ${tab.javaClass.name}#${idName(tab)} 子项=${tab.childCount}" +
                 " 尺寸=${tab.width}x${tab.height} 可见=${tab.isShown} 隐藏=${snapshot.tabHideNative}"
         )
-        // 5.5.60 起按微X 真机截图：底栏保留（即使主题包写着隐藏），换成主题图标
+        // 5.5.62 起跟随开关：隐藏原生底栏=开 → 真的隐藏（5.5.60 为了对齐微X 截图改成常显，
+        // 与设置页开关语义冲突，用户实测报「隐藏底栏失效」，这里改回跟随开关）。
         if (snapshot.tabHideNative) {
-            HLog.i("$TAG 主题包要求隐藏底栏，但本轮按微X 观感保留底栏并套用图标")
+            HLog.i("$TAG 隐藏原生底栏=开，隐藏底栏容器: ${tab.javaClass.name}#${idName(tab)}")
+            hideView(tab)
+            return
         }
         showView(tab)
         if (snapshot.tabBackgroundColor.isBlank()) {
@@ -403,15 +410,16 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val scrim = scrimColorFor(luma, overlayColor, isHome)
         val density = page.resources.displayMetrics.density
         val gapPx = (ROW_GAP_DP * density).toInt()
-        val counters = intArrayOf(0, 0, 0, 0)
+        val counters = intArrayOf(0, 0, 0, 0, 0, 0)
         val sample = ArrayList<String>()
         // 明细每页只打一次，避免 1.2 秒重扫刷屏
         val detail = log && dumpedPages.add(page)
-        scrimTree(page, page, pageWidth, pageHeight, scrim, gapPx, false, counters, sample, detail)
+        scrimTree(page, page, pageWidth, pageHeight, scrim, gapPx, false, counters, sample, detail, isHome)
         if (log) {
             HLog.i(
                 "$TAG 页面 ${page.javaClass.simpleName} 内容分层：容器置透明 ${counters[0]} 个，" +
                     "通栏行压半透明 ${counters[1]} 个，索引条去底 ${counters[2]} 个，整页图片层透明 ${counters[3]} 个，" +
+                    "整页自绘层禁用 ${counters[4]} 个，动态背景层隐藏 ${counters[5]} 个，" +
                     "行缝=${ROW_GAP_DP}dp 遮罩=#${Integer.toHexString(scrim)}" +
                     " 背景平均色=#${String.format(java.util.Locale.US, "%02X%02X%02X", (stats[0] * 255).toInt(), (stats[1] * 255).toInt(), (stats[2] * 255).toInt())}" +
                     " 亮度=${String.format(java.util.Locale.US, "%.2f", luma)} 背景图=${bitmap.width}x${bitmap.height}"
@@ -430,13 +438,44 @@ private class ThemeRuntime(private val context: FeatureContext) {
         underScrim: Boolean,
         counters: IntArray,
         sample: MutableList<String>,
-        log: Boolean
+        log: Boolean,
+        isHome: Boolean
     ) {
         var scrimmed = underScrim
         if (view !== page && !pageDrawables.containsKey(view)) {
             val width = view.width.coerceAtLeast(view.measuredWidth)
             val height = view.height.coerceAtLeast(view.measuredHeight)
             if (width > 4 && height > 4) {
+                // 微信 8.0.49 的「动态背景」层：GradientColorBackgroundView / DynamicBgContainer
+                // 自己按主题色画渐变（深紫就是它），background 为 null 所以前几轮的 background 规则全都看不见它。
+                // 直接隐藏这一层，页面背景图（挂在 pager 子页上）才透得出来。
+                val className = view.javaClass.name
+                if (className.contains("GradientColorBackgroundView") || className.contains("DynamicBgContainer")) {
+                    if (view.visibility != View.GONE) {
+                        if (!originalVisibilities.containsKey(view)) originalVisibilities[view] = view.visibility
+                        view.visibility = View.GONE
+                        counters[5]++
+                        if (log && sample.size < 120) {
+                            sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} →隐藏动态背景层")
+                        }
+                    }
+                    return scrimTree(
+                        view, page, pageWidth, pageHeight, scrim, gapPx, underScrim,
+                        counters, sample, false, isHome
+                    )
+                }
+                // 首页整片深紫：5.5.59 的日志已证明「整页图片层透明 0 个」（不是 ImageView），
+                // 5.5.61 的日志证明「被宿主换掉 0 条」（页面 background 一直是背景图），
+                // 所以深紫只可能是某一层自己 onDraw/dispatchDraw 画的。这里对首页整页级的
+                // ViewGroup 关掉自绘（setWillNotDraw(true)），行与文字仍由子 View 正常绘制。
+                if (isHome && view is ViewGroup && width >= pageWidth * 0.85f && height >= pageHeight * 0.45f) {
+                    if (!originalWillNotDraw.containsKey(view)) originalWillNotDraw[view] = view.willNotDraw()
+                    view.setWillNotDraw(true)
+                    counters[4]++
+                    if (log && sample.size < 120) {
+                        sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} →禁用自绘(willNotDraw)")
+                    }
+                }
                 val background = view.background
                 val narrow = width <= pageWidth * 0.18f
                 val tall = height >= pageHeight * 0.30f
@@ -447,7 +486,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
                             view.background = ColorDrawable(Color.TRANSPARENT)
                             counters[2]++
-                            if (log && sample.size < 40) {
+                            if (log && sample.size < 120) {
                                 sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→索引条去底")
                             }
                         }
@@ -459,18 +498,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             if (!originalViewAlphas.containsKey(view)) originalViewAlphas[view] = view.alpha
                             view.alpha = 0f
                             counters[3]++
-                            if (log && sample.size < 40) {
+                            if (log && sample.size < 120) {
                                 sample.add(
                                     "${view.javaClass.simpleName}#${idName(view)} ${width}x${height}" +
                                         " drawable=${runCatching { view.drawable?.javaClass?.simpleName }.getOrNull() ?: "null"}→整页图片层透明"
                                 )
                             }
-                        } else if (log && sample.size < 40) {
+                        } else if (log && sample.size < 120) {
                             sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} 跳过(小图)")
                         }
                     }
                     width < pageWidth * 0.30f -> {
-                        if (log && sample.size < 40) {
+                        if (log && sample.size < 120) {
                             sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} 跳过(窄)")
                         }
                     }
@@ -480,7 +519,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         if (container || scrimmed) {
                             view.background = ColorDrawable(Color.TRANSPARENT)
                             counters[0]++
-                            if (log && sample.size < 40) {
+                            if (log && sample.size < 120) {
                                 sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→置透明")
                             }
                         } else {
@@ -488,7 +527,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             view.background = InsetDrawable(ColorDrawable(scrim), 0, 0, 0, gapPx)
                             counters[1]++
                             scrimmed = true
-                            if (log && sample.size < 40) {
+                            if (log && sample.size < 120) {
                                 sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→通栏行${ROW_GAP_DP}dp缝")
                             }
                         }
@@ -499,7 +538,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (view is ViewGroup) {
             for (index in 0 until view.childCount) {
                 view.getChildAt(index)?.let {
-                    scrimTree(it, page, pageWidth, pageHeight, scrim, gapPx, scrimmed, counters, sample, log)
+                    scrimTree(it, page, pageWidth, pageHeight, scrim, gapPx, scrimmed, counters, sample, log, isHome)
                 }
             }
         }
@@ -543,6 +582,21 @@ private class ThemeRuntime(private val context: FeatureContext) {
             decor.setBackgroundDrawable(drawable)
         }
         HLog.i("$TAG 状态栏区域已铺背景图: 解码=${image.width}x${image.height} 标题栏透明=${snapshot.actionBarBackgroundColor.isBlank()}")
+        // decor 层还有两块「动态背景」：DynamicBgContainer 与 GradientColorBackgroundView。
+        // 它们自己画渐变（深紫的来源），background 为 null，只能按类名隐藏。
+        var hiddenDynamic = 0
+        listOf("DynamicBgContainer", "GradientColorBackgroundView").forEach { className ->
+            findViewByClassName(decor, className)?.let { view ->
+                if (view.visibility != View.GONE) {
+                    if (!originalVisibilities.containsKey(view)) originalVisibilities[view] = view.visibility
+                    view.visibility = View.GONE
+                    hiddenDynamic++
+                }
+            }
+        }
+        if (hiddenDynamic > 0) {
+            HLog.i("$TAG 动态背景层（decor 级）已隐藏 $hiddenDynamic 个：DynamicBgContainer/GradientColorBackgroundView")
+        }
         applyImmersiveStatusBar(activity, decor, image)
     }
 
@@ -728,8 +782,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (tab == null) tab = findBottomTab(decor, logCandidates = false)
             if (tab != null) {
                 lastTab = WeakReference(tab)
-                // 5.5.60 起底栏保留：只确保可见，不再隐藏
-                if (tab.visibility != View.VISIBLE) showView(tab)
+                if (tab.visibility != View.GONE) {
+                    HLog.i("$TAG 底栏被微信恢复显示，重新隐藏: ${tab.javaClass.name}#${idName(tab)}")
+                    hideView(tab)
+                }
             }
         }
         if (snapshot.backgroundEnabled) {
@@ -787,6 +843,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { view.alpha = alpha }
         }
         originalViewAlphas.clear()
+        originalWillNotDraw.forEach { (view, flag) ->
+            runCatching { view.setWillNotDraw(flag) }
+        }
+        originalWillNotDraw.clear()
+        originalVisibilities.forEach { (view, visibility) ->
+            runCatching { view.visibility = visibility }
+        }
+        originalVisibilities.clear()
         lastTab = null
     }
 
