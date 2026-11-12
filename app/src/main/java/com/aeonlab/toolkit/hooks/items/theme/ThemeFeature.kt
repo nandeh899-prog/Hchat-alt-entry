@@ -124,6 +124,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastEnforceAt = 0L
     private var lastDarkIcons = true
     private var lastActionBar: WeakReference<View>? = null
+    private var actionBarDrawable: Drawable? = null
     private var framePumpUntil = 0L
 
     @Volatile
@@ -399,7 +400,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         //   整页容器（≥92% 宽高）→ 完全透明，让背景沉到最底层；
         //   整行/整卡（≥60% 宽）→ 换成按背景明暗算出的半透明遮罩，保证文字可读。
         applyContentScrim(page, bitmap, overlayColor, isHome, log)
-        if (isHome) ensureHomeImageLayer(page, bitmap, log)
+        if (isHome) ensureHomeImageLayer(page, bitmap, log) else ensurePageImageHosts(page, bitmap, log)
     }
 
     private data class ScrimSpec(val bitmap: Bitmap, val overlayColor: Int?, val path: String, val isHome: Boolean)
@@ -589,22 +590,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // LinearLayout 都是 1240x2772 的整页容器）。这些容器我们只在扫一遍时置透明，
         // 宿主一重新 setBackgroundColor 就又紫了。这里把首页的整页容器直接铺成背景图，
         // 并在 enforce 里持续压回（见 repaintHomeHosts）。
-        val hosts = ArrayList<View>()
-        val hostsW = pageWidthOf(page)
-        val hostsH = pageHeightOf(page)
-        for (index in 0 until page.childCount) {
-            collectBigContainers(page.getChildAt(index), hostsW, hostsH, hosts)
-        }
-        var painted = 0
-        hosts.forEach { host ->
-            val drawable = homeImageDrawables[host]
-                ?: android.graphics.drawable.BitmapDrawable(page.resources, bitmap)
-            if (!homeImageHosts.containsKey(host)) homeImageHosts[host] = host.background
-            homeImageDrawables[host] = drawable
-            runCatching { host.background = drawable }
-                .onSuccess { painted++ }
-                .onFailure { HLog.e("$TAG 首页容器铺图失败: ${it.message}", it) }
-        }
+        ensurePageImageHosts(page, bitmap, log)
         var hints = 0
         collectCacheColorHints(page) { list ->
             if (!originalCacheColorHints.containsKey(list)) originalCacheColorHints[list] = list.cacheColorHint
@@ -614,7 +600,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (log) {
             HLog.i(
                 "$TAG 首页图片层已插入: 解码=${bitmap.width}x${bitmap.height} 子节点=${page.childCount}" +
-                    " 整页容器铺图=$painted 个 列表cacheColorHint置透明=$hints 个"
+                    " 列表cacheColorHint置透明=$hints 个"
             )
         }
     }
@@ -627,12 +613,37 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 首页整页级容器（≥85% 页宽、≥45% 页高）。5.5.63 日志里命中的是
      * ConversationListView#j8g / WxRecyclerView#mg / LinearLayout#imk 三个 1240x2772 的容器。
      */
+    /** 页面内整页级容器（≥85% 页宽、≥15% 页高）统一铺背景图：我页头像/微信号那块白、首页列表容器都靠它透出壁纸。 */
+    private fun ensurePageImageHosts(page: View, bitmap: Bitmap, log: Boolean) {
+        if (page !is ViewGroup) return
+        val hosts = ArrayList<View>()
+        val pageW = pageWidthOf(page)
+        val pageH = pageHeightOf(page)
+        for (index in 0 until page.childCount) {
+            collectBigContainers(page.getChildAt(index), pageW, pageH, hosts)
+        }
+        val drawable = homeImageDrawables[page]
+            ?: android.graphics.drawable.BitmapDrawable(page.resources, bitmap)
+        homeImageDrawables[page] = drawable
+        var painted = 0
+        hosts.forEach { host ->
+            if (!homeImageHosts.containsKey(host)) homeImageHosts[host] = host.background
+            homeImageDrawables[host] = drawable
+            if (host.background !== drawable) {
+                runCatching { host.background = drawable }.onSuccess { painted++ }
+            }
+        }
+        if (log && painted > 0) {
+            HLog.i("$TAG 页面容器铺图: ${painted} 个整页容器已铺背景图（${bitmap.width}x${bitmap.height}）")
+        }
+    }
+
     private fun collectBigContainers(view: View, pageWidth: Int, pageHeight: Int, out: MutableList<View>) {
         // 页面本身由 pageDrawables 负责，这里只管页面内的容器，避免两套 BitmapDrawable 互相覆盖（5.5.64 的 31/25 次来回刷）
         if (view is ViewGroup) {
             val width = view.width.coerceAtLeast(view.measuredWidth)
             val height = view.height.coerceAtLeast(view.measuredHeight)
-            if (width >= pageWidth * 0.85f && height >= pageHeight * 0.45f) out.add(view)
+            if (width >= pageWidth * 0.85f && height >= pageHeight * 0.15f) out.add(view)
             for (index in 0 until view.childCount) {
                 val child = view.getChildAt(index)
                 if (child.tag == HOME_IMAGE_TAG) continue
@@ -697,6 +708,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
             decor.setBackgroundDrawable(drawable)
         }
         HLog.i("$TAG 状态栏区域已铺背景图: 解码=${image.width}x${image.height} 标题栏透明=${snapshot.actionBarBackgroundColor.isBlank()}")
+        runCatching { findActionBar(activity, decor)?.let { paintActionBar(decor, it, image, log = true) } }
+            .onFailure { HLog.e("$TAG 标题栏铺图失败: ${it.message}", it) }
         applyImmersiveStatusBar(activity, decor, image)
     }
 
@@ -950,6 +963,42 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     /**
+     * 标题栏真正消失（5.5.67 起）：
+     * 5.5.66 日志里「标题栏被微信恢复显示，重新隐藏」37 次，说明 hideView 的 GONE 每次都被微信自己改回来，
+     * 微信赢在这条路上；而「标题栏已置透明」26 次也挡不住白底，因为白底在 ActionBarContainer 的**子 View**
+     * （ActionBarView / 标题 TextView / 搜索与加号按钮）上，不在容器本身。
+     * 所以改成：容器背景铺成背景图（不再是白/浅灰），子 View 全部 GONE（标题文字与图标彻底不显示），
+     * enforce 每轮再压一次。这样即使微信把容器显示回来，顶部也是背景图、没有白条和标题。
+     */
+    private fun paintActionBar(decor: ViewGroup, bar: View, bitmap: Bitmap, log: Boolean) {
+        val drawable = actionBarDrawable ?: android.graphics.drawable.BitmapDrawable(bar.resources, bitmap)
+        actionBarDrawable = drawable
+        var changed = false
+        if (!replacedBackgrounds.containsKey(bar)) replacedBackgrounds[bar] = bar.background
+        if (bar.background !== drawable) {
+            runCatching { bar.background = drawable }
+            changed = true
+        }
+        var hidden = 0
+        if (bar is ViewGroup) {
+            for (index in 0 until bar.childCount) {
+                val child = bar.getChildAt(index)
+                if (child.visibility != View.GONE) {
+                    if (!originalVisibilities.containsKey(child)) originalVisibilities[child] = child.visibility
+                    runCatching { child.visibility = View.GONE }
+                    hidden++
+                }
+            }
+        }
+        if (log && (changed || hidden > 0)) {
+            HLog.i(
+                "$TAG 标题栏已铺背景图并隐藏子树: 容器=${bar.javaClass.simpleName}#${idName(bar)}" +
+                    " 底色改写=${changed} 子View隐藏=$hidden 个（标题文字/搜索/加号）"
+            )
+        }
+    }
+
+    /**
      * 首帧补刷：只靠 OnPreDraw 会「不触摸就不重绘 → 不跑 enforce」，
      * 只靠定时器又会漏掉页面重建的那一帧。这里用 Choreographer 逐帧推 2.4 秒，
      * 保证进入页面后每一帧都跑一次 enforce(force=true) 并强制 invalidate。
@@ -986,7 +1035,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (bar == null) bar = findActionBar(activity, decor)
             if (bar != null) {
                 lastActionBar = WeakReference(bar)
-                if (bar.visibility != View.GONE) {
+                val barBitmap = pageScrim.values.firstOrNull()?.bitmap
+                if (barBitmap != null) {
+                    paintActionBar(decor, bar, barBitmap, log = false)
+                } else if (bar.visibility != View.GONE) {
                     HLog.i("$TAG 标题栏被微信恢复显示，重新隐藏: ${bar.javaClass.name}#${idName(bar)}")
                     hideView(bar)
                 }
