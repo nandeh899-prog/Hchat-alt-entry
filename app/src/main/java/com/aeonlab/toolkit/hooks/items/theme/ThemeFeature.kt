@@ -125,6 +125,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastDarkIcons = true
     private var lastActionBar: WeakReference<View>? = null
     private var actionBarDrawable: Drawable? = null
+    private val topDumpedPages: MutableSet<View> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
     private var framePumpUntil = 0L
 
     @Volatile
@@ -428,6 +430,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val sample = ArrayList<String>()
         // 明细每页只打一次，避免 1.2 秒重扫刷屏
         val detail = log && dumpedPages.add(page)
+        dumpTopRegion(page, detail)
         scrimTree(page, page, pageWidth, pageHeight, scrim, gapPx, false, counters, sample, detail, isHome)
         if (log) {
             HLog.i(
@@ -440,6 +443,40 @@ private class ThemeRuntime(private val context: FeatureContext) {
             )
             sample.forEach { HLog.i("$TAG   分层: $it") }
         }
+    }
+
+    /** 顶部 600px 稠密转储：白块到底挂在哪个 View 上，只能靠这份明细。 */
+    private fun dumpTopRegion(page: View, log: Boolean) {
+        if (!log) return
+        if (!topDumpedPages.add(page)) return
+        val lines = ArrayList<String>()
+        fun walk(view: View, depth: Int) {
+            if (lines.size >= 60 || depth > 12) return
+            val w = view.width.coerceAtLeast(view.measuredWidth)
+            val h = view.height.coerceAtLeast(view.measuredHeight)
+            var top = 0
+            var cur: View? = view
+            while (cur != null && cur !== page) {
+                top += cur.top
+                cur = cur.parent as? View
+            }
+            if (top < 600 && w > 100) {
+                val bg = view.background
+                val desc = when {
+                    bg == null -> "null"
+                    bg is ColorDrawable -> "${bg.javaClass.simpleName}#${Integer.toHexString(bg.color)}"
+                    else -> "${bg.javaClass.simpleName} a=${bg.alpha}"
+                }
+                lines.add(
+                    "${"·".repeat(depth)}${view.javaClass.simpleName}#${idName(view)} ${w}x${h}" +
+                        " top=$top bg=$desc vis=${view.visibility}"
+                )
+            }
+            if (view is ViewGroup) for (i in 0 until view.childCount) walk(view.getChildAt(i), depth + 1)
+        }
+        walk(page, 0)
+        HLog.i("$TAG 顶部区域转储(页面 ${page.javaClass.simpleName}): ${lines.size} 条")
+        lines.forEach { HLog.i("$TAG   顶部: $it") }
     }
 
     private fun scrimTree(
@@ -498,13 +535,16 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     }
                     // 顶部大色块（我页头像/微信号那一整块白）不在「≥55% 页高」里，之前一直没被清掉。
                     // 这里对页面顶部 45% 区域、宽度 ≥60% 页宽的不透明色块单独清一次。
-                    background is ColorDrawable && Color.alpha(background.color) >= 200 &&
-                        view.top < pageHeight * 0.45f && width >= pageWidth * 0.60f -> {
+                    view.top < pageHeight * 0.45f && width >= pageWidth * 0.50f &&
+                        background != null && background !is BitmapDrawable &&
+                        !(background is ColorDrawable && Color.alpha(background.color) == 0) -> {
                         if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
+                        val was = background.javaClass.simpleName +
+                            (if (background is ColorDrawable) "#${Integer.toHexString(background.color)}" else "")
                         view.background = ColorDrawable(Color.TRANSPARENT)
                         counters[0]++
                         if (log && sample.size < 120) {
-                            sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} top=${view.top} bg=${background.javaClass.simpleName}→顶部白块清底")
+                            sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} top=${view.top} bg=$was→顶部清底")
                         }
                     }
                     width < pageWidth * 0.30f -> {
