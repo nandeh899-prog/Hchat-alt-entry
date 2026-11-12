@@ -123,6 +123,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     @Volatile
     private var lastEnforceAt = 0L
     private var lastDarkIcons = true
+    private var lastActionBar: WeakReference<View>? = null
     private var framePumpUntil = 0L
 
     @Volatile
@@ -213,6 +214,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             return
         }
         HLog.i("$TAG 标题栏容器命中: ${bar.javaClass.name}#${idName(bar)}")
+        lastActionBar = WeakReference(bar)
         if (snapshot.actionBarHide) {
             if (bar.visibility != View.GONE) {
                 bar.visibility = View.GONE
@@ -491,6 +493,17 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             }
                         } else if (log && sample.size < 120) {
                             sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} 跳过(小图)")
+                        }
+                    }
+                    // 顶部大色块（我页头像/微信号那一整块白）不在「≥55% 页高」里，之前一直没被清掉。
+                    // 这里对页面顶部 45% 区域、宽度 ≥60% 页宽的不透明色块单独清一次。
+                    background is ColorDrawable && Color.alpha(background.color) >= 200 &&
+                        view.top < pageHeight * 0.45f && width >= pageWidth * 0.60f -> {
+                        if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
+                        view.background = ColorDrawable(Color.TRANSPARENT)
+                        counters[0]++
+                        if (log && sample.size < 120) {
+                            sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} top=${view.top} bg=${background.javaClass.simpleName}→顶部白块清底")
                         }
                     }
                     width < pageWidth * 0.30f -> {
@@ -967,6 +980,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
         lastEnforceAt = now
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) return
+        if (snapshot.actionBarHide) {
+            var bar = lastActionBar?.get()
+            if (bar != null && !bar.isAttachedToWindow) bar = null
+            if (bar == null) bar = findActionBar(activity, decor)
+            if (bar != null) {
+                lastActionBar = WeakReference(bar)
+                if (bar.visibility != View.GONE) {
+                    HLog.i("$TAG 标题栏被微信恢复显示，重新隐藏: ${bar.javaClass.name}#${idName(bar)}")
+                    hideView(bar)
+                }
+            }
+        }
         if (snapshot.backgroundEnabled) reassertImmersive(activity, decor, force)
         if (snapshot.tabEnabled) {
             var tab = lastTab?.get()
@@ -1374,7 +1399,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val DUMP_MAX_LINES = 70
         val FIRST_FRAME_DELAYS_MS = longArrayOf(0L, 60L, 160L, 320L, 700L, 1500L, 3000L)
         const val ENFORCE_INTERVAL_MS = 400L
-        const val SCRIM_INTERVAL_MS = 1200L
+        const val SCRIM_INTERVAL_MS = 250L
         const val FRAME_PUMP_MS = 2400L
         const val ROW_GAP_DP = 6f
         const val HOME_IMAGE_TAG = "hchat_home_image_layer"
