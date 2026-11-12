@@ -125,6 +125,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastDarkIcons = true
     private var lastActionBar: WeakReference<View>? = null
     private var actionBarDrawable: Drawable? = null
+    private val originalAlphas = WeakHashMap<View, Float>()
+    private val lifecycleBumped: MutableSet<Activity> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Activity, Boolean>()))
     private val topDumpedPages: MutableSet<View> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
     private var framePumpUntil = 0L
@@ -218,13 +221,16 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         HLog.i("$TAG 标题栏容器命中: ${bar.javaClass.name}#${idName(bar)}")
         lastActionBar = WeakReference(bar)
+        // 5.5.71：隐藏标题栏不再用 GONE（会连带子 View 不参与命中测试、搜索与＋号点不动），
+        // 改成 alpha=0：视觉上消失、布局不变、点击照常命中。
         if (snapshot.actionBarHide) {
-            if (bar.visibility != View.GONE) {
-                bar.visibility = View.GONE
-                hiddenViews.add(bar)
+            if (bar.alpha != 0f) {
+                if (!originalAlphas.containsKey(bar)) originalAlphas[bar] = bar.alpha
+                runCatching { bar.alpha = 0f }
+                HLog.i("$TAG 标题栏 alpha=0（不 GONE、不重排，保留搜索/＋号点击）")
             }
-        } else if (hiddenViews.remove(bar)) {
-            bar.visibility = View.VISIBLE
+        } else if (originalAlphas.containsKey(bar)) {
+            runCatching { bar.alpha = originalAlphas.remove(bar) ?: 1f }
         }
         val barColor = ThemeSettings.parseColor(snapshot.actionBarBackgroundColor)
         if (barColor == null) {
@@ -448,6 +454,24 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
     }
 
+    /**
+     * 状态栏层白名单（5.5.71）：只清「状态栏那一条」的底色，不再按「顶部 45% 区域 + 宽度」清块。
+     * 5.5.70 的宽规则把下拉小程序面板那张 1042x537、#26223a 的卡片一起清了，面板因此看不见。
+     * 命中条件：系统 id statusBarBackground / 资源名 statusBarBackground / 高度等于 status_bar_height。
+     */
+    private fun isStatusBarLayer(view: View, height: Int): Boolean {
+        if (view.id == android.R.id.statusBarBackground) return true
+        val name = runCatching { view.resources.getResourceEntryName(view.id) }.getOrNull()
+        if (name == "statusBarBackground") return true
+        val barHeight = statusBarHeightOf(view)
+        return barHeight > 0 && height == barHeight
+    }
+
+    private fun statusBarHeightOf(view: View): Int = runCatching {
+        val id = view.resources.getIdentifier("status_bar_height", "dimen", "android")
+        if (id > 0) view.resources.getDimensionPixelSize(id) else 0
+    }.getOrDefault(0)
+
     /** 是否位于滚动容器内部（列表行/条目的底色由行遮罩统一处理，不能在这里整块清或铺图）。 */
     private fun insideScrollingContainer(view: View, page: View): Boolean {
         var cur: View? = view.parent as? View
@@ -553,8 +577,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     }
                     // 顶部大色块（我页头像/微信号那一整块白）不在「≥55% 页高」里，之前一直没被清掉。
                     // 这里对页面顶部 45% 区域、宽度 ≥60% 页宽的不透明色块单独清一次。
-                    view.top < pageHeight * 0.45f && width >= pageWidth * 0.50f &&
-                        (!insideScrollingContainer(view, page) || height >= pageHeight * 0.12f) &&
+                    isStatusBarLayer(view, height) &&
                         background != null && background !is BitmapDrawable &&
                         !(background is ColorDrawable && Color.alpha(background.color) == 0) -> {
                         if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
@@ -563,7 +586,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         view.background = ColorDrawable(Color.TRANSPARENT)
                         counters[0]++
                         if (log && sample.size < 120) {
-                            sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} top=${view.top} bg=$was→顶部清底")
+                            sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} top=${view.top} bg=$was→状态栏层清底")
                         }
                     }
                     width < pageWidth * 0.30f -> {
@@ -632,6 +655,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         val image = ImageView(page.context)
         image.tag = HOME_IMAGE_TAG
+        // 5.5.71：覆盖层不能吃触摸，否则会挡住标题栏搜索/＋号（参考 Wuyu134 的做法）
+        image.isClickable = false
+        image.isFocusable = false
+        image.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         image.scaleType = ImageView.ScaleType.FIT_XY
         image.setImageBitmap(bitmap)
         runCatching {
@@ -959,6 +986,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 5.5.63 真机：通讯录/发现/我刚进入时标题栏白、没有背景图，手指点一下才刷出来。
         // 根因是兜底逻辑挂在 OnPreDrawListener 上——没有 invalidate 就不会触发绘制，
         // 也就永远不会跑 enforce；首帧之后只能等用户触摸。这里改成定时补刷 + 每轮结束强制重绘。
+        installLifecycleBumps(activity, decor)
         FIRST_FRAME_DELAYS_MS.forEach { delay ->
             mainHandler.postDelayed({
                 runCatching {
@@ -975,6 +1003,61 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 return true
             }
         })
+    }
+
+    /**
+     * 5.5.71：补刷从「OnPreDraw 一次性」改为挂 Activity 生命周期。
+     * 真机日志（18:54:12.282–.340）证明清底只发生在一个 58ms 窗口里，之后 4 分 56 秒再没有第二次；
+     * 静态页面不重绘 → OnPreDraw 不回调 → 宿主把底色写回来后没人纠正，于是「静止白、碰一下才透明」。
+     * 现在 onCreate/onStart/onResume/onWindowFocusChanged 四个点各触发一次（每次内部再延迟 80ms 重清一次），
+     * 外加 decor 的 AttachStateChange 与主题设置变更兜底，保证无人触摸时也会被清到。
+     */
+    private fun installLifecycleBumps(activity: Activity, decor: ViewGroup) {
+        if (!lifecycleBumped.add(activity)) return
+        val bump: (String) -> Unit = { tag ->
+            mainHandler.post {
+                runCatching {
+                    HLog.i("$TAG 生命周期补刷触发: $tag")
+                    enforce(activity, decor, force = true)
+                    decor.postInvalidateOnAnimation()
+                }.onFailure { HLog.e("$TAG 生命周期补刷异常($tag): ${it.message}", it) }
+                mainHandler.postDelayed({
+                    runCatching {
+                        enforce(activity, decor, force = true)
+                        decor.postInvalidateOnAnimation()
+                    }.onFailure { HLog.e("$TAG 生命周期补刷(80ms)异常($tag): ${it.message}", it) }
+                }, LIFECYCLE_BUMP_DELAY_MS)
+            }
+        }
+        bump("onCreate")
+        runCatching {
+            activity.application.registerActivityLifecycleCallbacks(
+                object : android.app.Application.ActivityLifecycleCallbacks {
+                    override fun onActivityCreated(a: Activity, b: android.os.Bundle?) = bump("onCreate")
+                    override fun onActivityStarted(a: Activity) = bump("onStart")
+                    override fun onActivityResumed(a: Activity) = bump("onResume")
+                    override fun onActivityPaused(a: Activity) {}
+                    override fun onActivityStopped(a: Activity) {}
+                    override fun onActivitySaveInstanceState(a: Activity, b: android.os.Bundle) {}
+                    override fun onActivityDestroyed(a: Activity) {}
+                }
+            )
+        }.onFailure { HLog.e("$TAG 生命周期回调注册失败: ${it.message}", it) }
+        runCatching {
+            decor.viewTreeObserver.addOnWindowFocusChangeListener { focused ->
+                if (focused) bump("onWindowFocusChanged")
+            }
+        }.onFailure { HLog.e("$TAG 窗口焦点监听注册失败: ${it.message}", it) }
+        runCatching {
+            decor.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) = bump("覆盖层Attached")
+                override fun onViewDetachedFromWindow(v: View) {}
+            })
+        }.onFailure { HLog.e("$TAG AttachStateChange 监听注册失败: ${it.message}", it) }
+        runCatching {
+            ThemeSettings.preferences(context.hostContext())
+                .registerOnSharedPreferenceChangeListener { _, _ -> bump("设置变更") }
+        }.onFailure { HLog.e("$TAG 设置变更监听注册失败: ${it.message}", it) }
     }
 
     /**
@@ -1492,6 +1575,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val DUMP_MAX_DEPTH = 8
         const val DUMP_MAX_LINES = 70
         val FIRST_FRAME_DELAYS_MS = longArrayOf(0L, 60L, 160L, 320L, 700L, 1500L, 3000L)
+        const val LIFECYCLE_BUMP_DELAY_MS = 80L
         const val ENFORCE_INTERVAL_MS = 400L
         const val SCRIM_INTERVAL_MS = 1200L
         const val FRAME_PUMP_MS = 2400L
