@@ -1,0 +1,6 @@
+run_id=43157420348
+run_number=30
+ref=fix/5.5.69-553-theme
+sha=42632e0d950041a7abfeabb70164c7ec8b0d58b3
+version_name=5.5.69 version_code=553 suffix=.coexist
+variant=release without R8 (HCAT_MINIFY=false)
