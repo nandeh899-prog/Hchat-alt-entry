@@ -554,7 +554,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     // 顶部大色块（我页头像/微信号那一整块白）不在「≥55% 页高」里，之前一直没被清掉。
                     // 这里对页面顶部 45% 区域、宽度 ≥60% 页宽的不透明色块单独清一次。
                     view.top < pageHeight * 0.45f && width >= pageWidth * 0.50f &&
-                        !insideScrollingContainer(view, page) &&
+                        (!insideScrollingContainer(view, page) || height >= pageHeight * 0.12f) &&
                         background != null && background !is BitmapDrawable &&
                         !(background is ColorDrawable && Color.alpha(background.color) == 0) -> {
                         if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
@@ -767,8 +767,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
             decor.setBackgroundDrawable(drawable)
         }
         HLog.i("$TAG 状态栏区域已铺背景图: 解码=${image.width}x${image.height} 标题栏透明=${snapshot.actionBarBackgroundColor.isBlank()}")
-        runCatching { findActionBar(activity, decor)?.let { paintActionBar(decor, it, image, log = true) } }
-            .onFailure { HLog.e("$TAG 标题栏铺图失败: ${it.message}", it) }
         applyImmersiveStatusBar(activity, decor, image)
     }
 
@@ -1088,21 +1086,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
         lastEnforceAt = now
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) return
-        if (snapshot.actionBarHide) {
-            var bar = lastActionBar?.get()
-            if (bar != null && !bar.isAttachedToWindow) bar = null
-            if (bar == null) bar = findActionBar(activity, decor)
-            if (bar != null) {
-                lastActionBar = WeakReference(bar)
-                val barBitmap = pageScrim.values.firstOrNull()?.bitmap
-                if (barBitmap != null) {
-                    paintActionBar(decor, bar, barBitmap, log = false)
-                } else if (bar.visibility != View.GONE) {
-                    HLog.i("$TAG 标题栏被微信恢复显示，重新隐藏: ${bar.javaClass.name}#${idName(bar)}")
-                    hideView(bar)
-                }
-            }
-        }
         if (snapshot.backgroundEnabled) reassertImmersive(activity, decor, force)
         if (snapshot.tabEnabled) {
             var tab = lastTab?.get()
