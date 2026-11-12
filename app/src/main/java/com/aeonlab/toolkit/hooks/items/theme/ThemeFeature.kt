@@ -402,7 +402,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         //   整页容器（≥92% 宽高）→ 完全透明，让背景沉到最底层；
         //   整行/整卡（≥60% 宽）→ 换成按背景明暗算出的半透明遮罩，保证文字可读。
         applyContentScrim(page, bitmap, overlayColor, isHome, log)
-        if (isHome) ensureHomeImageLayer(page, bitmap, log) else ensurePageImageHosts(page, bitmap, log)
+        // 5.5.69 回退：5.5.67 起四页都铺「整页容器图」，真机日志出现「页面容器铺图: 19 个」，
+        // 通讯录把列表容器/行容器全涂成壁纸，整页看不见内容并卡死。铺图只保留在首页（去紫需要），
+        // 其余页面只走「清底」路径。
+        if (isHome) ensureHomeImageLayer(page, bitmap, log)
     }
 
     private data class ScrimSpec(val bitmap: Bitmap, val overlayColor: Int?, val path: String, val isHome: Boolean)
@@ -443,6 +446,21 @@ private class ThemeRuntime(private val context: FeatureContext) {
             )
             sample.forEach { HLog.i("$TAG   分层: $it") }
         }
+    }
+
+    /** 是否位于滚动容器内部（列表行/条目的底色由行遮罩统一处理，不能在这里整块清或铺图）。 */
+    private fun insideScrollingContainer(view: View, page: View): Boolean {
+        var cur: View? = view.parent as? View
+        var depth = 0
+        while (cur != null && cur !== page && depth < 24) {
+            val name = cur.javaClass.simpleName
+            if (cur is android.widget.AdapterView<*> ||
+                name.contains("RecyclerView") || name.contains("ListView") || name.contains("ScrollView")
+            ) return true
+            cur = cur.parent as? View
+            depth++
+        }
+        return false
     }
 
     /** 顶部 600px 稠密转储：白块到底挂在哪个 View 上，只能靠这份明细。 */
@@ -536,6 +554,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     // 顶部大色块（我页头像/微信号那一整块白）不在「≥55% 页高」里，之前一直没被清掉。
                     // 这里对页面顶部 45% 区域、宽度 ≥60% 页宽的不透明色块单独清一次。
                     view.top < pageHeight * 0.45f && width >= pageWidth * 0.50f &&
+                        !insideScrollingContainer(view, page) &&
                         background != null && background !is BitmapDrawable &&
                         !(background is ColorDrawable && Color.alpha(background.color) == 0) -> {
                         if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
@@ -683,7 +702,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (view is ViewGroup) {
             val width = view.width.coerceAtLeast(view.measuredWidth)
             val height = view.height.coerceAtLeast(view.measuredHeight)
-            if (width >= pageWidth * 0.85f && height >= pageHeight * 0.15f) out.add(view)
+            if (width >= pageWidth * 0.85f && height >= pageHeight * 0.45f) out.add(view)
             for (index in 0 until view.childCount) {
                 val child = view.getChildAt(index)
                 if (child.tag == HOME_IMAGE_TAG) continue
@@ -1491,7 +1510,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val DUMP_MAX_LINES = 70
         val FIRST_FRAME_DELAYS_MS = longArrayOf(0L, 60L, 160L, 320L, 700L, 1500L, 3000L)
         const val ENFORCE_INTERVAL_MS = 400L
-        const val SCRIM_INTERVAL_MS = 250L
+        const val SCRIM_INTERVAL_MS = 1200L
         const val FRAME_PUMP_MS = 2400L
         const val ROW_GAP_DP = 6f
         const val HOME_IMAGE_TAG = "hchat_home_image_layer"
