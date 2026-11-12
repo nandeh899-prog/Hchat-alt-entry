@@ -125,7 +125,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastDarkIcons = true
     private var lastActionBar: WeakReference<View>? = null
     private var actionBarDrawable: Drawable? = null
-    private val originalAlphas = WeakHashMap<View, Float>()
     private val lifecycleBumped: MutableSet<Activity> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Activity, Boolean>()))
     private val topDumpedPages: MutableSet<View> =
@@ -225,12 +224,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 改成 alpha=0：视觉上消失、布局不变、点击照常命中。
         if (snapshot.actionBarHide) {
             if (bar.alpha != 0f) {
-                if (!originalAlphas.containsKey(bar)) originalAlphas[bar] = bar.alpha
+                if (!originalViewAlphas.containsKey(bar)) originalViewAlphas[bar] = bar.alpha
                 runCatching { bar.alpha = 0f }
                 HLog.i("$TAG 标题栏 alpha=0（不 GONE、不重排，保留搜索/＋号点击）")
             }
-        } else if (originalAlphas.containsKey(bar)) {
-            runCatching { bar.alpha = originalAlphas.remove(bar) ?: 1f }
+        } else if (originalViewAlphas.containsKey(bar)) {
+            runCatching { bar.alpha = originalViewAlphas.remove(bar) ?: 1f }
         }
         val barColor = ThemeSettings.parseColor(snapshot.actionBarBackgroundColor)
         if (barColor == null) {
