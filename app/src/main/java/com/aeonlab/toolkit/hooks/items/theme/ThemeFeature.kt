@@ -86,6 +86,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedMap(WeakHashMap<View, Float>())
     private val originalVisibilities: MutableMap<View, Int> =
         Collections.synchronizedMap(WeakHashMap<View, Int>())
+    private val originalCacheColorHints: MutableMap<android.widget.AbsListView, Int> =
+        Collections.synchronizedMap(WeakHashMap<android.widget.AbsListView, Int>())
     private val originalWillNotDraw: MutableMap<View, Boolean> =
         Collections.synchronizedMap(WeakHashMap<View, Boolean>())
     private val dumpedPages: MutableSet<View> =
@@ -387,6 +389,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         //   整页容器（≥92% 宽高）→ 完全透明，让背景沉到最底层；
         //   整行/整卡（≥60% 宽）→ 换成按背景明暗算出的半透明遮罩，保证文字可读。
         applyContentScrim(page, bitmap, overlayColor, isHome, log)
+        if (isHome) ensureHomeImageLayer(page, bitmap, log)
     }
 
     private data class ScrimSpec(val bitmap: Bitmap, val overlayColor: Int?, val path: String, val isHome: Boolean)
@@ -410,7 +413,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val scrim = scrimColorFor(luma, overlayColor, isHome)
         val density = page.resources.displayMetrics.density
         val gapPx = (ROW_GAP_DP * density).toInt()
-        val counters = intArrayOf(0, 0, 0, 0, 0, 0)
+        val counters = intArrayOf(0, 0, 0, 0, 0)
         val sample = ArrayList<String>()
         // 明细每页只打一次，避免 1.2 秒重扫刷屏
         val detail = log && dumpedPages.add(page)
@@ -418,8 +421,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (log) {
             HLog.i(
                 "$TAG 页面 ${page.javaClass.simpleName} 内容分层：容器置透明 ${counters[0]} 个，" +
-                    "通栏行压半透明 ${counters[1]} 个，索引条去底 ${counters[2]} 个，整页图片层透明 ${counters[3]} 个，" +
-                    "整页自绘层禁用 ${counters[4]} 个，动态背景层隐藏 ${counters[5]} 个，" +
+                    "通栏行压半透明 ${counters[1]} 个，索引条去底 ${counters[2]} 个，" +
+                    "整页图片层透明 ${counters[3]} 个，" +
                     "行缝=${ROW_GAP_DP}dp 遮罩=#${Integer.toHexString(scrim)}" +
                     " 背景平均色=#${String.format(java.util.Locale.US, "%02X%02X%02X", (stats[0] * 255).toInt(), (stats[1] * 255).toInt(), (stats[2] * 255).toInt())}" +
                     " 亮度=${String.format(java.util.Locale.US, "%.2f", luma)} 背景图=${bitmap.width}x${bitmap.height}"
@@ -446,36 +449,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val width = view.width.coerceAtLeast(view.measuredWidth)
             val height = view.height.coerceAtLeast(view.measuredHeight)
             if (width > 4 && height > 4) {
-                // 微信 8.0.49 的「动态背景」层：GradientColorBackgroundView / DynamicBgContainer
-                // 自己按主题色画渐变（深紫就是它），background 为 null 所以前几轮的 background 规则全都看不见它。
-                // 直接隐藏这一层，页面背景图（挂在 pager 子页上）才透得出来。
-                val className = view.javaClass.name
-                if (className.contains("GradientColorBackgroundView") || className.contains("DynamicBgContainer")) {
-                    if (view.visibility != View.GONE) {
-                        if (!originalVisibilities.containsKey(view)) originalVisibilities[view] = view.visibility
-                        view.visibility = View.GONE
-                        counters[5]++
-                        if (log && sample.size < 120) {
-                            sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} →隐藏动态背景层")
-                        }
-                    }
-                    return scrimTree(
-                        view, page, pageWidth, pageHeight, scrim, gapPx, underScrim,
-                        counters, sample, false, isHome
-                    )
-                }
-                // 首页整片深紫：5.5.59 的日志已证明「整页图片层透明 0 个」（不是 ImageView），
-                // 5.5.61 的日志证明「被宿主换掉 0 条」（页面 background 一直是背景图），
-                // 所以深紫只可能是某一层自己 onDraw/dispatchDraw 画的。这里对首页整页级的
-                // ViewGroup 关掉自绘（setWillNotDraw(true)），行与文字仍由子 View 正常绘制。
-                if (isHome && view is ViewGroup && width >= pageWidth * 0.85f && height >= pageHeight * 0.45f) {
-                    if (!originalWillNotDraw.containsKey(view)) originalWillNotDraw[view] = view.willNotDraw()
-                    view.setWillNotDraw(true)
-                    counters[4]++
-                    if (log && sample.size < 120) {
-                        sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} →禁用自绘(willNotDraw)")
-                    }
-                }
                 val background = view.background
                 val narrow = width <= pageWidth * 0.18f
                 val tall = height >= pageHeight * 0.30f
@@ -494,7 +467,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     // 首页整片灰蓝的嫌疑：微信会话列表里盖着一张整页 ImageView（模糊/深色底），
                     // 5.5.58 之前 ImageView 一律跳过，于是它的底永远盖在背景图上。大图直接让位。
                     view is ImageView -> {
-                        if (width >= pageWidth * 0.50f && height >= pageHeight * 0.25f) {
+                        if (view.tag == HOME_IMAGE_TAG) {
+                            if (log && sample.size < 120) {
+                                sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} 跳过(首页图片层本体)")
+                            }
+                        } else if (width >= pageWidth * 0.50f && height >= pageHeight * 0.25f) {
                             if (!originalViewAlphas.containsKey(view)) originalViewAlphas[view] = view.alpha
                             view.alpha = 0f
                             counters[3]++
@@ -557,6 +534,58 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     /**
+     * 首页图片层（5.5.63 起）：5.5.62 的日志证明 decor 级 DynamicBgContainer /
+     * GradientColorBackgroundView 就是四页壁纸的挂载点（隐藏后四页全白），所以那一层必须留着；
+     * 首页的深紫是同一层按「当前 fragment 的背景色」画的，改不掉它，只能在首页页面里**盖一层自己的图**。
+     * 做法：把 ImageView 插到 pager 首页（LayoutListenerView）的第 0 个子节点（最底层），
+     * 再把列表的 cacheColorHint 置透明，避免 AbsListView 用缓存色把图片刷白。
+     */
+    private fun ensureHomeImageLayer(page: View, bitmap: Bitmap, log: Boolean) {
+        if (page !is ViewGroup) return
+        val existing = page.findViewWithTag<View>(HOME_IMAGE_TAG)
+        if (existing is ImageView) {
+            runCatching { existing.setImageBitmap(bitmap) }
+            if (log) HLog.i("$TAG 首页图片层已存在，更新图片: ${bitmap.width}x${bitmap.height}")
+            return
+        }
+        val image = ImageView(page.context)
+        image.tag = HOME_IMAGE_TAG
+        image.scaleType = ImageView.ScaleType.FIT_XY
+        image.setImageBitmap(bitmap)
+        runCatching {
+            page.addView(
+                image,
+                0,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+        }.onFailure { HLog.e("$TAG 首页图片层插入失败: ${it.message}", it) }
+        var hints = 0
+        collectCacheColorHints(page) { list ->
+            if (!originalCacheColorHints.containsKey(list)) originalCacheColorHints[list] = list.cacheColorHint
+            list.cacheColorHint = Color.TRANSPARENT
+            hints++
+        }
+        if (log) {
+            HLog.i(
+                "$TAG 首页图片层已插入: 解码=${bitmap.width}x${bitmap.height} 子节点=${page.childCount}" +
+                    " 列表cacheColorHint置透明=$hints 个"
+            )
+        }
+    }
+
+    private fun collectCacheColorHints(view: View, action: (android.widget.AbsListView) -> Unit) {
+        if (view is android.widget.AbsListView) action(view)
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                collectCacheColorHints(view.getChildAt(index), action)
+            }
+        }
+    }
+
+    /**
      * 状态栏区域与标题栏：真机截图里背景图一直铺到状态栏，标题栏是透明的。
      * 做法是把首页那张图挂到 decorView 上，再把状态栏/导航栏置透明；
      * 页面自己的背景仍然盖在上面（同图同尺寸，看不出接缝）。
@@ -582,21 +611,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
             decor.setBackgroundDrawable(drawable)
         }
         HLog.i("$TAG 状态栏区域已铺背景图: 解码=${image.width}x${image.height} 标题栏透明=${snapshot.actionBarBackgroundColor.isBlank()}")
-        // decor 层还有两块「动态背景」：DynamicBgContainer 与 GradientColorBackgroundView。
-        // 它们自己画渐变（深紫的来源），background 为 null，只能按类名隐藏。
-        var hiddenDynamic = 0
-        listOf("DynamicBgContainer", "GradientColorBackgroundView").forEach { className ->
-            findViewByClassName(decor, className)?.let { view ->
-                if (view.visibility != View.GONE) {
-                    if (!originalVisibilities.containsKey(view)) originalVisibilities[view] = view.visibility
-                    view.visibility = View.GONE
-                    hiddenDynamic++
-                }
-            }
-        }
-        if (hiddenDynamic > 0) {
-            HLog.i("$TAG 动态背景层（decor 级）已隐藏 $hiddenDynamic 个：DynamicBgContainer/GradientColorBackgroundView")
-        }
         applyImmersiveStatusBar(activity, decor, image)
     }
 
@@ -843,6 +857,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { view.alpha = alpha }
         }
         originalViewAlphas.clear()
+        originalCacheColorHints.forEach { (view, hint) ->
+            runCatching { view.cacheColorHint = hint }
+        }
+        originalCacheColorHints.clear()
         originalWillNotDraw.forEach { (view, flag) ->
             runCatching { view.setWillNotDraw(flag) }
         }
@@ -1173,6 +1191,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val ENFORCE_INTERVAL_MS = 400L
         const val SCRIM_INTERVAL_MS = 1200L
         const val ROW_GAP_DP = 6f
+        const val HOME_IMAGE_TAG = "hchat_home_image_layer"
         const val HOME_ROW_ALPHA = 31
         const val CONTENT_ROW_ALPHA = 13
     }
