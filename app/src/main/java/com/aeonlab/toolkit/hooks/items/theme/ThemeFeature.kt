@@ -121,6 +121,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     @Volatile
     private var lastEnforceAt = 0L
+    private var lastDarkIcons = true
+    private var framePumpUntil = 0L
 
     @Volatile
     private var lastScrimAt = 0L
@@ -574,10 +576,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 宿主一重新 setBackgroundColor 就又紫了。这里把首页的整页容器直接铺成背景图，
         // 并在 enforce 里持续压回（见 repaintHomeHosts）。
         val hosts = ArrayList<View>()
-        collectBigContainers(page, pageWidthOf(page), pageHeightOf(page), hosts)
+        val hostsW = pageWidthOf(page)
+        val hostsH = pageHeightOf(page)
+        for (index in 0 until page.childCount) {
+            collectBigContainers(page.getChildAt(index), hostsW, hostsH, hosts)
+        }
         var painted = 0
         hosts.forEach { host ->
-            val drawable = android.graphics.drawable.BitmapDrawable(page.resources, bitmap)
+            val drawable = homeImageDrawables[host]
+                ?: android.graphics.drawable.BitmapDrawable(page.resources, bitmap)
             if (!homeImageHosts.containsKey(host)) homeImageHosts[host] = host.background
             homeImageDrawables[host] = drawable
             runCatching { host.background = drawable }
@@ -607,6 +614,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * ConversationListView#j8g / WxRecyclerView#mg / LinearLayout#imk 三个 1240x2772 的容器。
      */
     private fun collectBigContainers(view: View, pageWidth: Int, pageHeight: Int, out: MutableList<View>) {
+        // 页面本身由 pageDrawables 负责，这里只管页面内的容器，避免两套 BitmapDrawable 互相覆盖（5.5.64 的 31/25 次来回刷）
         if (view is ViewGroup) {
             val width = view.width.coerceAtLeast(view.measuredWidth)
             val height = view.height.coerceAtLeast(view.measuredHeight)
@@ -691,6 +699,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val stats = sampleImage(image)
         val luma = stats[3]
         val darkIcons = luma >= 0.55f
+        lastDarkIcons = darkIcons
         runCatching {
             var flags = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
@@ -702,6 +711,31 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 it.navigationBarColor = Color.TRANSPARENT
             }
         }.onFailure { HLog.e("$TAG 全沉浸状态栏设置失败: ${it.message}", it) }
+        // API 30+ 只设 systemUiVisibility 不管用：必须同时关掉「decor 让出系统栏」，
+        // 否则内容仍被顶到状态栏下面，顶部留一条白。这里连 FitSystemWindowLayoutView 的顶部 padding 一起清掉。
+        var paddingCleared = 0
+        runCatching {
+            if (Build.VERSION.SDK_INT >= 30) activity.window?.setDecorFitsSystemWindows(false)
+            if (decor.isFitsSystemWindows) decor.isFitsSystemWindows = false
+            for (index in 0 until decor.childCount) {
+                val child = decor.getChildAt(index)
+                if (child.isFitsSystemWindows) child.isFitsSystemWindows = false
+                if (child.paddingTop != 0) {
+                    child.setPadding(child.paddingLeft, 0, child.paddingRight, child.paddingBottom)
+                    paddingCleared++
+                }
+            }
+            findViewByClassName(decor, "FitSystemWindowLayoutView")?.let { fit ->
+                fit.isFitsSystemWindows = false
+                if (fit.paddingTop != 0) {
+                    fit.setPadding(fit.paddingLeft, 0, fit.paddingRight, fit.paddingBottom)
+                    paddingCleared++
+                }
+            }
+        }.onFailure { HLog.e("$TAG 关闭系统栏让位失败: ${it.message}", it) }
+        if (paddingCleared > 0) {
+            HLog.i("$TAG 状态栏让位已关闭: decorFitsSystemWindows=false 清顶部padding=$paddingCleared 处")
+        }
 
         val targets = ArrayList<View>()
         listOf("statusBarBackground", "action_bar", "action_bar_container", "content").forEach { name ->
@@ -859,6 +893,72 @@ private class ThemeRuntime(private val context: FeatureContext) {
         })
     }
 
+    /**
+     * 状态栏沉浸的「补注」：微信在 resume / 首帧会用 setSystemUiVisibility(0) 和
+     * decorFitsSystemWindows(true) 把 5.5.61 设的全沉浸重置掉，只在 applyWindowBackground 里设一次不够。
+     * 这里每轮 enforce 比对一次，被改回就重新注入并打日志。
+     */
+    private fun reassertImmersive(activity: Activity, decor: ViewGroup, force: Boolean) {
+        if (!decor.isAttachedToWindow) return
+        var flags = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        if (lastDarkIcons) flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        val current = decor.systemUiVisibility
+        if (current != flags) {
+            runCatching { decor.systemUiVisibility = flags }
+            HLog.i(
+                "$TAG 状态栏沉浸被宿主重置，已重新注入: 0x${Integer.toHexString(current)} → 0x${Integer.toHexString(flags)}"
+            )
+        }
+        runCatching {
+            activity.window?.let { window ->
+                if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false)
+                if (window.statusBarColor != Color.TRANSPARENT) window.statusBarColor = Color.TRANSPARENT
+                if (window.navigationBarColor != Color.TRANSPARENT) window.navigationBarColor = Color.TRANSPARENT
+            }
+        }
+        if (force) {
+            // 兜底补刷期间顺带把标题区底色再清一遍（宿主会重新上白）
+            var cleared = 0
+            listOf("ActionBarOverlayLayout", "ContentFrameLayout", "ActionBarContainer", "FitSystemWindowLayoutView").forEach { className ->
+                findViewByClassName(decor, className)?.let { view ->
+                    val background = view.background
+                    if (background is ColorDrawable && Color.alpha(background.color) != 0) {
+                        if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
+                        view.setBackgroundColor(Color.TRANSPARENT)
+                        cleared++
+                    }
+                }
+            }
+            if (cleared > 0) HLog.i("$TAG 标题区底色被宿主重上，已再清 $cleared 处")
+        }
+    }
+
+    /**
+     * 首帧补刷：只靠 OnPreDraw 会「不触摸就不重绘 → 不跑 enforce」，
+     * 只靠定时器又会漏掉页面重建的那一帧。这里用 Choreographer 逐帧推 2.4 秒，
+     * 保证进入页面后每一帧都跑一次 enforce(force=true) 并强制 invalidate。
+     */
+    private fun installFramePump(activity: Activity, decor: ViewGroup) {
+        val now = SystemClock.uptimeMillis()
+        if (now < framePumpUntil) return
+        framePumpUntil = now + FRAME_PUMP_MS
+        HLog.i("$TAG 首帧逐帧补刷已启动: ${FRAME_PUMP_MS}ms 内每帧 enforce")
+        val choreographer = runCatching { android.view.Choreographer.getInstance() }.getOrNull() ?: return
+        val callback = object : android.view.Choreographer.FrameCallback {
+            override fun doFrame(frameTimeNanos: Long) {
+                if (SystemClock.uptimeMillis() > framePumpUntil) return
+                if (!decor.isAttachedToWindow) return
+                runCatching { enforce(activity, decor, force = true) }
+                    .onFailure { HLog.e("$TAG 逐帧补刷异常: ${it.message}", it) }
+                runCatching { decor.postInvalidateOnAnimation() }
+                choreographer.postFrameCallback(this)
+            }
+        }
+        choreographer.postFrameCallback(callback)
+    }
+
     private fun enforce(activity: Activity, decor: ViewGroup, force: Boolean = false) {
         if (!decor.isAttachedToWindow) return
         val now = SystemClock.uptimeMillis()
@@ -866,6 +966,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         lastEnforceAt = now
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) return
+        if (snapshot.backgroundEnabled) reassertImmersive(activity, decor, force)
         if (snapshot.tabEnabled) {
             var tab = lastTab?.get()
             if (tab != null && !tab.isAttachedToWindow) tab = null
@@ -1273,6 +1374,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val FIRST_FRAME_DELAYS_MS = longArrayOf(0L, 60L, 160L, 320L, 700L, 1500L, 3000L)
         const val ENFORCE_INTERVAL_MS = 400L
         const val SCRIM_INTERVAL_MS = 1200L
+        const val FRAME_PUMP_MS = 2400L
         const val ROW_GAP_DP = 6f
         const val HOME_IMAGE_TAG = "hchat_home_image_layer"
         const val HOME_ROW_ALPHA = 31
