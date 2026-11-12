@@ -86,6 +86,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedMap(WeakHashMap<View, Float>())
     private val originalVisibilities: MutableMap<View, Int> =
         Collections.synchronizedMap(WeakHashMap<View, Int>())
+    private val homeImageHosts: MutableMap<View, android.graphics.drawable.Drawable?> =
+        Collections.synchronizedMap(WeakHashMap<View, android.graphics.drawable.Drawable?>())
+    private val homeImageDrawables: MutableMap<View, android.graphics.drawable.BitmapDrawable> =
+        Collections.synchronizedMap(WeakHashMap<View, android.graphics.drawable.BitmapDrawable>())
+    private var lastHomeRepaintLogAt = 0L
     private val originalCacheColorHints: MutableMap<android.widget.AbsListView, Int> =
         Collections.synchronizedMap(WeakHashMap<android.widget.AbsListView, Int>())
     private val originalWillNotDraw: MutableMap<View, Boolean> =
@@ -490,7 +495,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} 跳过(窄)")
                         }
                     }
-                    background != null && background.alpha != 0 -> {
+                    background != null && background.alpha != 0 && !homeImageHosts.containsKey(view) -> {
                         if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
                         val container = height >= pageHeight * 0.55f
                         if (container || scrimmed) {
@@ -545,6 +550,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val existing = page.findViewWithTag<View>(HOME_IMAGE_TAG)
         if (existing is ImageView) {
             runCatching { existing.setImageBitmap(bitmap) }
+            repaintHomeHosts(log = false)
             if (log) HLog.i("$TAG 首页图片层已存在，更新图片: ${bitmap.width}x${bitmap.height}")
             return
         }
@@ -562,6 +568,22 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 )
             )
         }.onFailure { HLog.e("$TAG 首页图片层插入失败: ${it.message}", it) }
+        // 5.5.63 的日志：首页页面本身已经铺了背景图（背景平均色=#9FD8DB 是青绿壁纸），
+        // 但屏幕上仍是深紫 ⇒ 紫是页面之上、列表容器自己重新上的底色（ConversationListView / WxRecyclerView /
+        // LinearLayout 都是 1240x2772 的整页容器）。这些容器我们只在扫一遍时置透明，
+        // 宿主一重新 setBackgroundColor 就又紫了。这里把首页的整页容器直接铺成背景图，
+        // 并在 enforce 里持续压回（见 repaintHomeHosts）。
+        val hosts = ArrayList<View>()
+        collectBigContainers(page, pageWidthOf(page), pageHeightOf(page), hosts)
+        var painted = 0
+        hosts.forEach { host ->
+            val drawable = android.graphics.drawable.BitmapDrawable(page.resources, bitmap)
+            if (!homeImageHosts.containsKey(host)) homeImageHosts[host] = host.background
+            homeImageDrawables[host] = drawable
+            runCatching { host.background = drawable }
+                .onSuccess { painted++ }
+                .onFailure { HLog.e("$TAG 首页容器铺图失败: ${it.message}", it) }
+        }
         var hints = 0
         collectCacheColorHints(page) { list ->
             if (!originalCacheColorHints.containsKey(list)) originalCacheColorHints[list] = list.cacheColorHint
@@ -571,8 +593,50 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (log) {
             HLog.i(
                 "$TAG 首页图片层已插入: 解码=${bitmap.width}x${bitmap.height} 子节点=${page.childCount}" +
-                    " 列表cacheColorHint置透明=$hints 个"
+                    " 整页容器铺图=$painted 个 列表cacheColorHint置透明=$hints 个"
             )
+        }
+    }
+
+    private fun pageWidthOf(page: View): Int = page.width.coerceAtLeast(page.measuredWidth)
+
+    private fun pageHeightOf(page: View): Int = page.height.coerceAtLeast(page.measuredHeight)
+
+    /**
+     * 首页整页级容器（≥85% 页宽、≥45% 页高）。5.5.63 日志里命中的是
+     * ConversationListView#j8g / WxRecyclerView#mg / LinearLayout#imk 三个 1240x2772 的容器。
+     */
+    private fun collectBigContainers(view: View, pageWidth: Int, pageHeight: Int, out: MutableList<View>) {
+        if (view is ViewGroup) {
+            val width = view.width.coerceAtLeast(view.measuredWidth)
+            val height = view.height.coerceAtLeast(view.measuredHeight)
+            if (width >= pageWidth * 0.85f && height >= pageHeight * 0.45f) out.add(view)
+            for (index in 0 until view.childCount) {
+                val child = view.getChildAt(index)
+                if (child.tag == HOME_IMAGE_TAG) continue
+                collectBigContainers(child, pageWidth, pageHeight, out)
+            }
+        }
+    }
+
+    /** 宿主把首页容器的底色刷回去时，把背景图重新压上（enforce 每次都会调）。 */
+    private fun repaintHomeHosts(log: Boolean) {
+        if (homeImageDrawables.isEmpty()) return
+        homeImageHosts.keys.toList().forEach { host ->
+            val drawable = homeImageDrawables[host] ?: return@forEach
+            if (host.background !== drawable) {
+                runCatching { host.background = drawable }
+                if (log) {
+                    val now = SystemClock.uptimeMillis()
+                    if (now - lastHomeRepaintLogAt >= 3000L) {
+                        lastHomeRepaintLogAt = now
+                        HLog.i(
+                            "$TAG 首页容器底色被宿主刷回（当前=${host.background?.javaClass?.simpleName ?: "null"}），已重新压回背景图: " +
+                                "${host.javaClass.simpleName}#${idName(host)}"
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -774,6 +838,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
      */
     private fun installEnforcement(activity: Activity, decor: ViewGroup) {
         if (!enforcedDecors.add(decor)) return
+        // 5.5.63 真机：通讯录/发现/我刚进入时标题栏白、没有背景图，手指点一下才刷出来。
+        // 根因是兜底逻辑挂在 OnPreDrawListener 上——没有 invalidate 就不会触发绘制，
+        // 也就永远不会跑 enforce；首帧之后只能等用户触摸。这里改成定时补刷 + 每轮结束强制重绘。
+        FIRST_FRAME_DELAYS_MS.forEach { delay ->
+            mainHandler.postDelayed({
+                runCatching {
+                    enforce(activity, decor, force = true)
+                    decor.postInvalidateOnAnimation()
+                }.onFailure { HLog.e("$TAG 首帧补刷异常: ${it.message}", it) }
+            }, delay)
+        }
+        HLog.i("$TAG 首帧补刷已排程: ${FIRST_FRAME_DELAYS_MS.joinToString("/")}ms，每轮结束后强制 invalidate")
         decor.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
             override fun onPreDraw(): Boolean {
                 runCatching { enforce(activity, decor) }
@@ -783,10 +859,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         })
     }
 
-    private fun enforce(activity: Activity, decor: ViewGroup) {
+    private fun enforce(activity: Activity, decor: ViewGroup, force: Boolean = false) {
         if (!decor.isAttachedToWindow) return
         val now = SystemClock.uptimeMillis()
-        if (now - lastEnforceAt < ENFORCE_INTERVAL_MS) return
+        if (!force && now - lastEnforceAt < ENFORCE_INTERVAL_MS) return
         lastEnforceAt = now
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) return
@@ -815,6 +891,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     }
                 }
             }
+            repaintHomeHosts(log = true)
             if (now - lastScrimAt >= SCRIM_INTERVAL_MS) {
                 lastScrimAt = now
                 pageScrim.entries.toList().forEach { (page, spec) ->
@@ -865,6 +942,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { view.setWillNotDraw(flag) }
         }
         originalWillNotDraw.clear()
+        homeImageHosts.entries.toList().forEach { (view, background) ->
+            runCatching { view.background = background }
+        }
+        homeImageHosts.clear()
+        homeImageDrawables.clear()
         originalVisibilities.forEach { (view, visibility) ->
             runCatching { view.visibility = visibility }
         }
@@ -1188,6 +1270,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val MAX_DEPTH = 32
         const val DUMP_MAX_DEPTH = 8
         const val DUMP_MAX_LINES = 70
+        val FIRST_FRAME_DELAYS_MS = longArrayOf(0L, 60L, 160L, 320L, 700L, 1500L, 3000L)
         const val ENFORCE_INTERVAL_MS = 400L
         const val SCRIM_INTERVAL_MS = 1200L
         const val ROW_GAP_DP = 6f
