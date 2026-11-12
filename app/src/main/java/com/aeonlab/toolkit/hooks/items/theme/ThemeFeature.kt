@@ -8,6 +8,7 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.LayerDrawable
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -716,17 +717,17 @@ private class ThemeRuntime(private val context: FeatureContext) {
         var paddingCleared = 0
         runCatching {
             if (Build.VERSION.SDK_INT >= 30) activity.window?.setDecorFitsSystemWindows(false)
-            if (decor.isFitsSystemWindows) decor.isFitsSystemWindows = false
+            if (decor.fitsSystemWindows) decor.fitsSystemWindows = false
             for (index in 0 until decor.childCount) {
                 val child = decor.getChildAt(index)
-                if (child.isFitsSystemWindows) child.isFitsSystemWindows = false
+                if (child.fitsSystemWindows) child.fitsSystemWindows = false
                 if (child.paddingTop != 0) {
                     child.setPadding(child.paddingLeft, 0, child.paddingRight, child.paddingBottom)
                     paddingCleared++
                 }
             }
             findViewByClassName(decor, "FitSystemWindowLayoutView")?.let { fit ->
-                fit.isFitsSystemWindows = false
+                fit.fitsSystemWindows = false
                 if (fit.paddingTop != 0) {
                     fit.setPadding(fit.paddingLeft, 0, fit.paddingRight, fit.paddingBottom)
                     paddingCleared++
