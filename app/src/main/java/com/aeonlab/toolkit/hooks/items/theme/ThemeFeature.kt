@@ -1053,7 +1053,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         "bg=${child.background?.javaClass?.simpleName ?: "null"}"
                 )
                 dumpDeep(child, "decor[$i]", 0)
-                if (false) {
+                if (false && child is ViewGroup) {
                     for (j in 0 until minOf(child.childCount, 6)) {
                         val grand = child.getChildAt(j) ?: continue
                         HLog.i(
