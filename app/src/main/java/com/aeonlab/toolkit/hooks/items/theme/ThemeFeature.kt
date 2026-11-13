@@ -559,6 +559,21 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val narrow = width <= pageWidth * 0.18f
                 val tall = height >= pageHeight * 0.30f
                 when {
+                    // 5.5.77：我页顶部头像/微信号白块——背景清透明后仍纯白（19:23 日志 398 次重压无效），
+                    // 判定为该容器自绘（RoundedCornerFrameLayout 的 onDraw 画白底）。
+                    // 对这类大号自绘圆角容器直接关绘制，只保留子 View。
+                    "RoundedCornerFrameLayout" in view.javaClass.simpleName &&
+                        width >= pageWidth * 0.50f && height >= pageHeight * 0.10f &&
+                        view.top < pageHeight * 0.50f -> {
+                        if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
+                        view.background = ColorDrawable(Color.TRANSPARENT)
+                        runCatching { view.setWillNotDraw(true) }
+                        counters[0]++
+                        clearedViews.add(view)
+                        if (log && sample.size < 120) {
+                            sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} top=${view.top}→自绘圆角容器已禁绘制")
+                        }
+                    }
                     // 右侧 A–Z 索引条：窄且高，去掉它自带的半透明衬底，字母直接压在背景上
                     narrow && tall -> {
                         if (background != null && background.alpha != 0) {
@@ -1116,7 +1131,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             decor.viewTreeObserver.addOnGlobalLayoutListener {
                 val now = SystemClock.uptimeMillis()
-                if (now - lastLayoutBumpAt < 800L) return@addOnGlobalLayoutListener
+                if (now - lastLayoutBumpAt < 200L) return@addOnGlobalLayoutListener
                 lastLayoutBumpAt = now
                 runCatching {
                     val snap = ThemeSettings.snapshot(context.hostContext())
