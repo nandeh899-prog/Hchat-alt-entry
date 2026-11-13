@@ -1,0 +1,6 @@
+run_id=43433858490
+run_number=45
+ref=fix/5.5.79-563-theme
+sha=5754daaa395e67596e9d3aecf3bbf3e1982fd806
+version_name=5.5.79 version_code=563 suffix=.coexist
+variant=release without R8 (HCAT_MINIFY=false)
