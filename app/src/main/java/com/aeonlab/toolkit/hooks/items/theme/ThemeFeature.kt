@@ -137,7 +137,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var actionBarDrawable: Drawable? = null
     private val lifecycleBumped: MutableSet<Activity> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Activity, Boolean>()))
-    private val topDumpedPages: MutableSet<View> =
+    private val topDumpedAt: MutableMap<View, Long> =
+        java.util.Collections.synchronizedMap(java.util.WeakHashMap())
+    private val titleDumped = java.util.Collections.synchronizedSet(java.util.HashSet<View>())
+    private val topDumpIntervalMs = 60_000L
+    private const val TOP_DUMP_INTERVAL_MS = 60_000L
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
     private var framePumpUntil = 0L
     private var lastClearReassertLogAt = 0L
@@ -508,7 +512,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
     /** 顶部 600px 稠密转储：白块到底挂在哪个 View 上，只能靠这份明细。 */
     private fun dumpTopRegion(page: View, log: Boolean) {
         if (!log) return
-        if (!topDumpedPages.add(page)) return
+        val nowMs = android.os.SystemClock.elapsedRealtime()
+        val lastDumpMs = topDumpedAt[page]
+        if (lastDumpMs != null && nowMs - lastDumpMs < TOP_DUMP_INTERVAL_MS) return
+        topDumpedAt[page] = nowMs
         val lines = ArrayList<String>()
         fun walk(view: View, depth: Int) {
             if (lines.size >= 120 || depth > 20) return
@@ -913,6 +920,23 @@ private class ThemeRuntime(private val context: FeatureContext) {
             view.setBackgroundColor(Color.TRANSPARENT)
             cleared++
             names.add("${view.javaClass.simpleName}#${idName(view)}")
+        }
+        if (cleared == 0 && titleDumped.add(decor)) {
+            val rows = ArrayList<String>()
+            fun walk(v: View, d: Int) {
+                if (rows.size >= 30 || d > 14) return
+                val w = v.width.coerceAtLeast(v.measuredWidth)
+                val h = v.height.coerceAtLeast(v.measuredHeight)
+                if (h > 40 && w > 200 && v.background != null) {
+                    val b = v.background
+                    val col = if (b is ColorDrawable) Integer.toHexString(b.color) else b.javaClass.simpleName
+                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=$col")
+                }
+                if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1)
+            }
+            walk(decor, 0)
+            HLog.i("$TAG 标题卡清空0处，decor 顶部带底色视图转储 ${rows.size} 条")
+            rows.forEach { HLog.i("$TAG   标题区: $it") }
         }
         HLog.i(
             "$TAG 标题卡片区域已全透明: 清空 $cleared 处底色 [${names.joinToString("/")}]" +
