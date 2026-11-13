@@ -143,6 +143,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastClearReassertLogAt = 0L
     private var lastLayoutBumpAt = 0L
     @Volatile private var rowMaskAlpha = -1
+    @Volatile private var lastAppliedRowStrength = -1
     private val periodicTicked: MutableSet<Activity> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Activity, Boolean>()))
 
@@ -510,7 +511,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (!topDumpedPages.add(page)) return
         val lines = ArrayList<String>()
         fun walk(view: View, depth: Int) {
-            if (lines.size >= 60 || depth > 12) return
+            if (lines.size >= 120 || depth > 20) return
             val w = view.width.coerceAtLeast(view.measuredWidth)
             val h = view.height.coerceAtLeast(view.measuredHeight)
             var top = 0
@@ -519,7 +520,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 top += cur.top
                 cur = cur.parent as? View
             }
-            if (top < 600 && w > 100) {
+            if (top < 1200 && w > 100) {
                 val bg = view.background
                 val desc = when {
                     bg == null -> "null"
@@ -812,6 +813,16 @@ private class ThemeRuntime(private val context: FeatureContext) {
     @Suppress("DEPRECATION")
     private fun applyWindowBackground(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
         rowMaskAlpha = (snapshot.rowMaskStrength.coerceIn(0, 100) * 255) / 100
+        if (snapshot.rowMaskStrength != lastAppliedRowStrength) {
+            if (lastAppliedRowStrength >= 0) {
+                runCatching {
+                    scrimmedPages.clear()
+                    rowScrimDrawables.clear()
+                    HLog.i("$TAG 行遮罩强度变更: $lastAppliedRowStrength -> ${snapshot.rowMaskStrength}，已重置分层缓存并重扫")
+                }
+            }
+            lastAppliedRowStrength = snapshot.rowMaskStrength
+        }
         if (!snapshot.backgroundEnabled) return
         runCatching {
             val window = activity.window ?: return@runCatching
@@ -1060,7 +1071,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
         }
         mainHandler.postDelayed(tick, PERIODIC_TICK_MS)
-        HLog.i("$TAG 常驻补刷已启动: ${PERIODIC_TICK_MS}ms 轮询（只做状态断言）")
+        HLog.i("$TAG PeriodicTick armed ${PERIODIC_TICK_MS}ms 常驻补刷已启动（只做状态断言）")
     }
 
     /**
