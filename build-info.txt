@@ -1,0 +1,6 @@
+run_id=43401949391
+run_number=41
+ref=fix/5.5.76-560-theme
+sha=9226eeb5a66213e33f45cd8e369b6361afb733cb
+version_name=5.5.76 version_code=560 suffix=.coexist
+variant=release without R8 (HCAT_MINIFY=false)
