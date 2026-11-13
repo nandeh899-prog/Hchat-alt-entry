@@ -1032,9 +1032,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
      */
     /** 5.5.75：从容器往下打三层，带 top/bottom/y/translationY，用于定位标题栏为何在页面底部。 */
     private fun dumpDeep(view: View, prefix: String, depth: Int) {
-        if (depth >= 3 || view !is ViewGroup) return
-        for (i in 0 until minOf(view.childCount, 8)) {
-            val child = view.getChildAt(i) ?: continue
+        if (depth >= 3) return
+        val group = view as? ViewGroup ?: return
+        for (i in 0 until minOf(group.childCount, 8)) {
+            val child = group.getChildAt(i) ?: continue
             HLog.i("$TAG $prefix[$i]: ${child.javaClass.name}#${idName(child)} ${child.width}x${child.height} top=${child.top} bottom=${child.bottom} y=${child.y} tY=${child.translationY} vis=${child.visibility} alpha=${child.alpha}")
             dumpDeep(child, "$prefix[$i]", depth + 1)
         }
@@ -1274,19 +1275,24 @@ private class ThemeRuntime(private val context: FeatureContext) {
             scrimRetryCount[page] = tried + 1
             runCatching {
                 val parent = page.parent as? ViewGroup
-                if (page.childCount <= 2 && parent != null) {
+                val pageGroup = page as? ViewGroup
+                if (pageGroup != null && pageGroup.childCount <= 2 && parent != null) {
+                    var replaced = false
                     for (i in 0 until parent.childCount) {
                         val sibling = parent.getChildAt(i)
                         if (sibling === page || sibling.javaClass != page.javaClass) continue
                         if (!sibling.isAttachedToWindow || sibling.width <= 0) continue
-                        if (sibling.childCount > 2 && sibling.background !is android.graphics.drawable.BitmapDrawable) {
-                            HLog.i("$TAG 占位页面替换为真实页面: ${sibling.javaClass.name}#${idName(sibling)} 子项=${sibling.childCount} 尺寸=${sibling.width}x${sibling.height}")
+                        val siblingGroup = sibling as? ViewGroup
+                        val siblingChildren = siblingGroup?.childCount ?: 0
+                        if (siblingChildren > 2 && sibling.background !is android.graphics.drawable.BitmapDrawable) {
+                            HLog.i("$TAG 占位页面替换为真实页面: ${sibling.javaClass.name}#${idName(sibling)} 子项=$siblingChildren 尺寸=${sibling.width}x${sibling.height}")
                             pageScrim.remove(page)
                             applyPageBitmap(sibling, spec.bitmap, sibling.resources, spec.overlayColor, true, spec.path, spec.isHome)
+                            replaced = true
                             break
                         }
                     }
-                    continue
+                    if (replaced) return@runCatching
                 }
                 applyContentScrim(page, spec.bitmap, spec.overlayColor, spec.isHome, log = tried == 0)
             }.onFailure { HLog.e("$TAG 页面分层重试异常: ${it.message}", it) }
