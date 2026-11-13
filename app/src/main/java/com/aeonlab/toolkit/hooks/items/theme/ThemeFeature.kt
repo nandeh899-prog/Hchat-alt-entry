@@ -141,6 +141,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
     private var framePumpUntil = 0L
     private var lastClearReassertLogAt = 0L
+    private var lastLayoutBumpAt = 0L
 
     @Volatile
     private var lastScrimAt = 0L
@@ -1086,6 +1087,19 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             )
         }.onFailure { HLog.e("$TAG 生命周期回调注册失败: ${it.message}", it) }
+        // 5.5.74：切页后 ViewPager 会新建一套页面视图，pageScrim 里存的是启动时的占位引用
+        // （5.5.73 日志：页面 2/3/4 子项=2、分层计数恒 0），必须重新解析页面再跑一次完整背景/清底。
+        runCatching {
+            decor.viewTreeObserver.addOnGlobalLayoutListener {
+                val now = SystemClock.uptimeMillis()
+                if (now - lastLayoutBumpAt < 800L) return@addOnGlobalLayoutListener
+                lastLayoutBumpAt = now
+                runCatching {
+                    val snap = ThemeSettings.snapshot(context.hostContext())
+                    if (snap.enabled) applyWindowBackground(activity, decor, snap)
+                }.onFailure { HLog.e("$TAG 布局变更重扫异常: ${it.message}", it) }
+            }
+        }.onFailure { HLog.e("$TAG 布局变更监听注册失败: ${it.message}", it) }
         runCatching {
             decor.viewTreeObserver.addOnWindowFocusChangeListener { focused ->
                 if (focused) bump("onWindowFocusChanged")
