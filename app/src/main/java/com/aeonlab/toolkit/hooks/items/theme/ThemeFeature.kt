@@ -141,8 +141,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
         java.util.Collections.synchronizedMap(java.util.WeakHashMap())
     private val titleDumped = java.util.Collections.synchronizedSet(java.util.HashSet<View>())
     private val topDumpIntervalMs = 60_000L
-    private val rowScrimDrawables: MutableMap<View, Drawable> =
-        Collections.synchronizedMap(WeakHashMap())
     private var framePumpUntil = 0L
     private var lastClearReassertLogAt = 0L
     private var lastLayoutBumpAt = 0L
@@ -514,7 +512,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (!log) return
         val nowMs = android.os.SystemClock.elapsedRealtime()
         val lastDumpMs = topDumpedAt[page]
-        if (lastDumpMs != null && nowMs - lastDumpMs < TOP_DUMP_INTERVAL_MS) return
+        if (lastDumpMs != null && nowMs - lastDumpMs < topDumpIntervalMs) return
         topDumpedAt[page] = nowMs
         val lines = ArrayList<String>()
         fun walk(view: View, depth: Int) {
