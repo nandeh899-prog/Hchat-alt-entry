@@ -97,6 +97,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private val originalWillNotDraw: MutableMap<View, Boolean> =
         Collections.synchronizedMap(WeakHashMap<View, Boolean>())
     /** 被我们清成透明的视图；宿主把底色写回来后要能重新清（5.5.72）。 */
+    private val rowScrimDrawables: MutableMap<View, Drawable> =
+        Collections.synchronizedMap(WeakHashMap<View, Drawable>())
     private val clearedViews: MutableSet<View> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
     /** 已经真正清到底色的页面；没进这个集合的页面会在 enforce 里重试（5.5.72）。 */
@@ -618,7 +620,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             }
                         } else {
                             // 通栏行：纯色（无圆角）＋ 行底留缝，让背景从行间透出来
-                            view.background = InsetDrawable(ColorDrawable(scrim), 0, 0, 0, gapPx)
+                            val insetRow = InsetDrawable(ColorDrawable(scrim), 0, 0, 0, gapPx)
+                            view.background = insetRow
+                            rowScrimDrawables[view] = insetRow
                             counters[1]++
                             scrimmed = true
                             if (log && sample.size < 120) {
@@ -1201,6 +1205,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
         choreographer.postFrameCallback(callback)
     }
 
+    /** 5.5.73：宿主把通栏行的白底写回来后重压遮罩（发现页分组行、我页顶部块都是这条路）。 */
+    private fun reassertRowScrims() {
+        var fixed = 0
+        for ((view, drawable) in rowScrimDrawables.entries.toList()) {
+            if (!view.isAttachedToWindow) continue
+            if (view.background === drawable) continue
+            runCatching { view.background = drawable }
+            fixed++
+        }
+        if (fixed > 0) HLog.i("$TAG 通栏行遮罩被宿主覆盖，已重压: $fixed 个")
+    }
+
     /**
      * 5.5.72：真机日志（11:05:20）里「→置透明」整场只出现 1 次（首页 ConversationListView#j8g），
      * 之后 4 分钟没有第二次；宿主把 #ffededed 写回来后没人纠正，静态页面就一直是浅灰/白。
@@ -1257,6 +1273,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (snapshot.backgroundEnabled) reassertImmersive(activity, decor, force)
         if (snapshot.backgroundEnabled) {
             reassertClearedBackgrounds()
+            reassertRowScrims()
             retryUnscrimmedPages()
         }
         if (snapshot.tabEnabled) {
