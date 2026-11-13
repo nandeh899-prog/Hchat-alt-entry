@@ -187,6 +187,7 @@ internal fun ThemeMiuixPage(
                         }
                     }
                 }
+            }
             if (snapshot.enabled) {
                 item { SmallTitle(modifier = Modifier.padding(top = 10.dp), text = "Tab（底栏）") }
                 item {
