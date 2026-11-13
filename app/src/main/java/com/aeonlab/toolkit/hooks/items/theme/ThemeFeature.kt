@@ -96,6 +96,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedMap(WeakHashMap<android.widget.AbsListView, Int>())
     private val originalWillNotDraw: MutableMap<View, Boolean> =
         Collections.synchronizedMap(WeakHashMap<View, Boolean>())
+    /** 被我们清成透明的视图；宿主把底色写回来后要能重新清（5.5.72）。 */
+    private val clearedViews: MutableSet<View> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
+    /** 已经真正清到底色的页面；没进这个集合的页面会在 enforce 里重试（5.5.72）。 */
+    private val scrimmedPages: MutableSet<View> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
+    private val scrimRetryCount: MutableMap<View, Int> =
+        Collections.synchronizedMap(WeakHashMap<View, Int>())
     private val dumpedPages: MutableSet<View> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
     private val enforcedDecors: MutableSet<ViewGroup> =
@@ -130,6 +138,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private val topDumpedPages: MutableSet<View> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
     private var framePumpUntil = 0L
+    private var lastClearReassertLogAt = 0L
 
     @Volatile
     private var lastScrimAt = 0L
@@ -210,6 +219,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         applyTypeface(activity, decor)
         maybeShowSplash(activity, decor, snapshot)
         installEnforcement(activity, decor)
+        dumpDecorTree(decor)
     }
 
     private fun applyActionBar(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
@@ -440,6 +450,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val detail = log && dumpedPages.add(page)
         dumpTopRegion(page, detail)
         scrimTree(page, page, pageWidth, pageHeight, scrim, gapPx, false, counters, sample, detail, isHome)
+        val scrimmedTotal = counters[0] + counters[1] + counters[2] + counters[3]
+        if (scrimmedTotal > 0) scrimmedPages.add(page)
         if (log) {
             HLog.i(
                 "$TAG 页面 ${page.javaClass.simpleName} 内容分层：容器置透明 ${counters[0]} 个，" +
@@ -583,6 +595,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         val was = background.javaClass.simpleName +
                             (if (background is ColorDrawable) "#${Integer.toHexString(background.color)}" else "")
                         view.background = ColorDrawable(Color.TRANSPARENT)
+                        clearedViews.add(view)
                         counters[0]++
                         if (log && sample.size < 120) {
                             sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} top=${view.top} bg=$was→状态栏层清底")
@@ -598,6 +611,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         val container = height >= pageHeight * 0.55f
                         if (container || scrimmed) {
                             view.background = ColorDrawable(Color.TRANSPARENT)
+                            clearedViews.add(view)
                             counters[0]++
                             if (log && sample.size < 120) {
                                 sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→置透明")
@@ -1011,6 +1025,32 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 现在 onCreate/onStart/onResume/onWindowFocusChanged 四个点各触发一次（每次内部再延迟 80ms 重清一次），
      * 外加 decor 的 AttachStateChange 与主题设置变更兜底，保证无人触摸时也会被清到。
      */
+    /** 5.5.72 诊断专用：decor 直接子层的位置/大小/透明度，用来定位「标题栏出现在页面底部」。 */
+    private fun dumpDecorTree(decor: ViewGroup) {
+        runCatching {
+            HLog.i("$TAG decor 层转储: 子项=${decor.childCount} 尺寸=${decor.width}x${decor.height}")
+            for (i in 0 until minOf(decor.childCount, 12)) {
+                val child = decor.getChildAt(i) ?: continue
+                HLog.i(
+                    "$TAG decor[$i]: ${child.javaClass.name}#${idName(child)} " +
+                        "${child.width}x${child.height} top=${child.top} y=${child.y} " +
+                        "vis=${child.visibility} alpha=${child.alpha} " +
+                        "bg=${child.background?.javaClass?.simpleName ?: "null"}"
+                )
+                if (child is ViewGroup) {
+                    for (j in 0 until minOf(child.childCount, 6)) {
+                        val grand = child.getChildAt(j) ?: continue
+                        HLog.i(
+                            "$TAG decor[$i][$j]: ${grand.javaClass.name}#${idName(grand)} " +
+                                "${grand.width}x${grand.height} top=${grand.top} y=${grand.y} " +
+                                "vis=${grand.visibility} alpha=${grand.alpha}"
+                        )
+                    }
+                }
+            }
+        }.onFailure { HLog.e("$TAG decor 转储失败: ${it.message}", it) }
+    }
+
     private fun installLifecycleBumps(activity: Activity, decor: ViewGroup) {
         if (!lifecycleBumped.add(activity)) return
         val bump: (String) -> Unit = { tag ->
@@ -1161,6 +1201,52 @@ private class ThemeRuntime(private val context: FeatureContext) {
         choreographer.postFrameCallback(callback)
     }
 
+    /**
+     * 5.5.72：真机日志（11:05:20）里「→置透明」整场只出现 1 次（首页 ConversationListView#j8g），
+     * 之后 4 分钟没有第二次；宿主把 #ffededed 写回来后没人纠正，静态页面就一直是浅灰/白。
+     * 这里对已经清过的视图做廉价的状态断言：底色不再是全透明就再清一次，不做全树扫描。
+     */
+    private fun reassertClearedBackgrounds() {
+        var fixed = 0
+        val now = SystemClock.uptimeMillis()
+        for (view in clearedViews.toList()) {
+            if (!view.isAttachedToWindow) continue
+            val bg = view.background
+            val alreadyTransparent = bg is ColorDrawable && Color.alpha(bg.color) == 0
+            if (alreadyTransparent) continue
+            runCatching { view.background = ColorDrawable(Color.TRANSPARENT) }
+            fixed++
+        }
+        if (fixed > 0 && now - lastClearReassertLogAt >= 3000L) {
+            lastClearReassertLogAt = now
+            HLog.i("$TAG 已清底视图被宿主重新上色，重新清透明: $fixed 个")
+        }
+    }
+
+    /**
+     * 5.5.72：真机日志（11:05:20）里页面 2/3/4 的分层结果是「容器置透明 0 个、通栏行 0 个」——
+     * 启动那一刻 ViewPager 只对首页量好了子 View，另外三页的子 View 还是 0x0，被 scrimTree 的
+     * 「width>4 && height>4」条件整片跳过；之后 enforce 只重铺页面背景、不再跑分层，
+     * 于是那三页的卡片白底一直留着，表现为「发现页要点一下才出图」「我页顶部白块」。
+     * 这里对「还没清到底」的页面按需重试，最多 20 次，成功一次就进 scrimmedPages 不再跑。
+     */
+    private fun retryUnscrimmedPages() {
+        val pages = pageScrim.entries.toList()
+        for ((page, spec) in pages) {
+            if (scrimmedPages.contains(page)) continue
+            if (!page.isAttachedToWindow) continue
+            val width = page.width.coerceAtLeast(page.measuredWidth)
+            val height = page.height.coerceAtLeast(page.measuredHeight)
+            if (width <= 0 || height <= 0) continue
+            val tried = scrimRetryCount[page] ?: 0
+            if (tried >= 20) continue
+            scrimRetryCount[page] = tried + 1
+            runCatching {
+                applyContentScrim(page, spec.bitmap, spec.overlayColor, spec.isHome, log = tried == 0)
+            }.onFailure { HLog.e("$TAG 页面分层重试异常: ${it.message}", it) }
+        }
+    }
+
     private fun enforce(activity: Activity, decor: ViewGroup, force: Boolean = false) {
         if (!decor.isAttachedToWindow) return
         val now = SystemClock.uptimeMillis()
@@ -1169,6 +1255,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) return
         if (snapshot.backgroundEnabled) reassertImmersive(activity, decor, force)
+        if (snapshot.backgroundEnabled) {
+            reassertClearedBackgrounds()
+            retryUnscrimmedPages()
+        }
         if (snapshot.tabEnabled) {
             var tab = lastTab?.get()
             if (tab != null && !tab.isAttachedToWindow) tab = null
