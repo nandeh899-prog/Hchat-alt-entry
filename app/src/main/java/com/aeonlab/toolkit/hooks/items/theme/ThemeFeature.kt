@@ -141,7 +141,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
         java.util.Collections.synchronizedMap(java.util.WeakHashMap())
     private val titleDumped = java.util.Collections.synchronizedSet(java.util.HashSet<View>())
     private val topDumpIntervalMs = 60_000L
-    private const val TOP_DUMP_INTERVAL_MS = 60_000L
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
     private var framePumpUntil = 0L
     private var lastClearReassertLogAt = 0L
