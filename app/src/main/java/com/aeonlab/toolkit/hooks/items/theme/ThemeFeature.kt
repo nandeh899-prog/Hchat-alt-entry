@@ -142,6 +142,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var framePumpUntil = 0L
     private var lastClearReassertLogAt = 0L
     private var lastLayoutBumpAt = 0L
+    private val periodicTicked: MutableSet<Activity> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Activity, Boolean>()))
 
     @Volatile
     private var lastScrimAt = 0L
@@ -1005,6 +1007,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 根因是兜底逻辑挂在 OnPreDrawListener 上——没有 invalidate 就不会触发绘制，
         // 也就永远不会跑 enforce；首帧之后只能等用户触摸。这里改成定时补刷 + 每轮结束强制重绘。
         installLifecycleBumps(activity, decor)
+        installPeriodicTick(activity, decor)
         FIRST_FRAME_DELAYS_MS.forEach { delay ->
             mainHandler.postDelayed({
                 runCatching {
@@ -1021,6 +1024,25 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 return true
             }
         })
+    }
+
+    /**
+     * 5.5.76：真机报「通讯录/发现/我的刚打开都是白底，触屏一下才透出壁纸」。
+     * 说明清理仍是边沿触发：只有绘制/触摸才会跑 enforce，静止页面没人纠正。
+     * 这里改成常驻低频轮询（500ms），只做已登记视图的状态断言与未清底页面的重试，不扫全树。
+     */
+    private fun installPeriodicTick(activity: Activity, decor: ViewGroup) {
+        if (!periodicTicked.add(activity)) return
+        val tick = object : Runnable {
+            override fun run() {
+                if (!decor.isAttachedToWindow) return
+                runCatching { enforce(activity, decor, force = true) }
+                    .onFailure { HLog.e("$TAG 常驻补刷异常: ${it.message}", it) }
+                mainHandler.postDelayed(this, PERIODIC_TICK_MS)
+            }
+        }
+        mainHandler.postDelayed(tick, PERIODIC_TICK_MS)
+        HLog.i("$TAG 常驻补刷已启动: ${PERIODIC_TICK_MS}ms 轮询（只做状态断言）")
     }
 
     /**
@@ -1718,6 +1740,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val DUMP_MAX_LINES = 70
         val FIRST_FRAME_DELAYS_MS = longArrayOf(0L, 60L, 160L, 320L, 700L, 1500L, 3000L)
         const val LIFECYCLE_BUMP_DELAY_MS = 80L
+        const val PERIODIC_TICK_MS = 500L
         const val ENFORCE_INTERVAL_MS = 400L
         const val SCRIM_INTERVAL_MS = 1200L
         const val FRAME_PUMP_MS = 2400L
