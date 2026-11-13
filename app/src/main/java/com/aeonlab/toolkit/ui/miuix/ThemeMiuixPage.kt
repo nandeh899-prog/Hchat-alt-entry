@@ -13,6 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.text.font.FontWeight
+import top.yukonga.miuix.kmp.basic.Slider
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -159,6 +165,28 @@ internal fun ThemeMiuixPage(
                 }
             }
 
+            if (snapshot.enabled) {
+                item { SmallTitle(modifier = Modifier.padding(top = 10.dp), text = "行遮罩") }
+                item {
+                    var strength by remember { mutableStateOf(snapshot.rowMaskStrength) }
+                    SettingsCard {
+                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+                            Text(
+                                text = "行遮罩强度 $strength%",
+                                color = MiuixTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Slider(
+                                value = strength.toFloat(),
+                                onValueChange = { strength = it.toInt().coerceIn(0, 100) },
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                valueRange = 0f..100f,
+                                steps = 99,
+                                onValueChangeFinished = { persist(snapshot.copy(rowMaskStrength = strength)) }
+                            )
+                        }
+                    }
+                }
             if (snapshot.enabled) {
                 item { SmallTitle(modifier = Modifier.padding(top = 10.dp), text = "Tab（底栏）") }
                 item {

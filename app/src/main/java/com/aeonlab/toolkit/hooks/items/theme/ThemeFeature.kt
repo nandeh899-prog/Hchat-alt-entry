@@ -142,6 +142,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var framePumpUntil = 0L
     private var lastClearReassertLogAt = 0L
     private var lastLayoutBumpAt = 0L
+    @Volatile private var rowMaskAlpha = -1
     private val periodicTicked: MutableSet<Activity> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Activity, Boolean>()))
 
@@ -668,7 +669,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (overlayColor != null && Color.alpha(overlayColor) > 0) return overlayColor
         // 5.5.60 起按微X 真机截图取值：行几乎全透（12/255），只留细分隔线；
         // 首页文字密，保留极淡一层（31/255），其它三页更透（13/255）。
-        val alpha = if (isHome) HOME_ROW_ALPHA else CONTENT_ROW_ALPHA
+        val alpha = if (rowMaskAlpha >= 0) rowMaskAlpha else if (isHome) HOME_ROW_ALPHA else CONTENT_ROW_ALPHA
         return Color.argb(alpha, 255, 255, 255)
     }
 
@@ -810,6 +811,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      */
     @Suppress("DEPRECATION")
     private fun applyWindowBackground(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
+        rowMaskAlpha = (snapshot.rowMaskStrength.coerceIn(0, 100) * 255) / 100
         if (!snapshot.backgroundEnabled) return
         runCatching {
             val window = activity.window ?: return@runCatching
@@ -1017,6 +1019,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 否则「设置里开着、界面上没变化」会一直复现。
      */
     private fun installEnforcement(activity: Activity, decor: ViewGroup) {
+        HLog.i("$TAG 模块版本: ${com.aeonlab.toolkit.BuildConfig.VERSION_NAME}/${com.aeonlab.toolkit.BuildConfig.VERSION_CODE}")
         if (!enforcedDecors.add(decor)) return
         // 5.5.63 真机：通讯录/发现/我刚进入时标题栏白、没有背景图，手指点一下才刷出来。
         // 根因是兜底逻辑挂在 OnPreDrawListener 上——没有 invalidate 就不会触发绘制，

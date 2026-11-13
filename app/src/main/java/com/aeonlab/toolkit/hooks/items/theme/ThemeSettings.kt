@@ -64,6 +64,7 @@ object ThemeSettings {
     /** 主题包里的背景「叠色」与「模糊半径」，按槽位存成 JSON（微X 主题的 c / b 两个字段）。 */
     const val KEY_BG_OVERLAY = "theme_background_overlay"
     const val KEY_BG_BLUR = "theme_background_blur"
+    const val KEY_ROW_MASK_STRENGTH = "theme_row_mask_strength"
 
     fun preferences(context: Context): SharedPreferences =
         AeonLabStorage.preferences(context, PREFS_NAME)
@@ -75,6 +76,7 @@ object ThemeSettings {
     fun snapshot(context: Context): ThemeSnapshot {
         val sp = preferences(context)
         return ThemeSnapshot(
+            rowMaskStrength = sp.getInt(KEY_ROW_MASK_STRENGTH, 12),
             enabled = sp.getBoolean(KEY_ENABLE, false),
             name = sp.getString(KEY_NAME, "").orEmpty(),
             author = sp.getString(KEY_AUTHOR, "").orEmpty(),
@@ -108,6 +110,7 @@ object ThemeSettings {
             .putString(KEY_NAME, snapshot.name)
             .putString(KEY_AUTHOR, snapshot.author)
             .putString(KEY_NOTE, snapshot.note)
+            .putInt(KEY_ROW_MASK_STRENGTH, snapshot.rowMaskStrength)
             .putBoolean(KEY_TAB_ENABLE, snapshot.tabEnabled)
             .putBoolean(KEY_TAB_HIDE, snapshot.tabHideNative)
             .putString(KEY_TAB_BG_COLOR, snapshot.tabBackgroundColor)
@@ -217,7 +220,8 @@ data class ThemeSnapshot(
     val backgroundDiscover: String = "",
     val backgroundMe: String = "",
     val backgroundOverlay: Map<String, String> = emptyMap(),
-    val backgroundBlur: Map<String, Int> = emptyMap()
+    val backgroundBlur: Map<String, Int> = emptyMap(),
+    val rowMaskStrength: Int = 12
 ) {
     fun backgroundPaths(): List<String> = listOf(
         backgroundSplash,
