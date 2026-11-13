@@ -1053,16 +1053,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         "bg=${child.background?.javaClass?.simpleName ?: "null"}"
                 )
                 dumpDeep(child, "decor[$i]", 0)
-                if (false && child is ViewGroup) {
-                    for (j in 0 until minOf(child.childCount, 6)) {
-                        val grand = child.getChildAt(j) ?: continue
-                        HLog.i(
-                            "$TAG decor[$i][$j]: ${grand.javaClass.name}#${idName(grand)} " +
-                                "${grand.width}x${grand.height} top=${grand.top} y=${grand.y} " +
-                                "vis=${grand.visibility} alpha=${grand.alpha}"
-                        )
-                    }
-                }
             }
         }.onFailure { HLog.e("$TAG decor 转储失败: ${it.message}", it) }
     }
