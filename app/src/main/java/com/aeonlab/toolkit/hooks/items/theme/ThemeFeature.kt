@@ -24,7 +24,10 @@ import com.aeonlab.toolkit.hooks.core.FeatureContext
 import com.aeonlab.toolkit.hooks.core.HookRegistry
 import com.aeonlab.toolkit.utils.HLog
 import com.aeonlab.toolkit.utils.KavaReflector
+import android.graphics.Canvas
+import android.graphics.Paint
 import com.aeonlab.toolkit.xposed.compat.XC_MethodHook
+import com.aeonlab.toolkit.xposed.compat.XposedBridge
 import java.lang.ref.WeakReference
 import java.util.Collections
 import java.util.WeakHashMap
@@ -187,6 +190,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         installed = true
         HLog.i("$TAG 主题 Hook 已挂载（页面=${LAUNCHER_UI_CLASS}，微信版本=${hostVersion()}）")
+        installGreyPainterProbe()
         // 设置页是微信内的叠加页面，保存不会产生 resume 事件，所以这里挂一条写设置回调。
         ThemeSettings.onSettingsWritten = { scheduleReapply("设置已保存") }
         scheduleReapply("Hook 安装完成")
@@ -1778,6 +1782,56 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
     }
 
+    /** 5.5.90：灰条绘制者取证——16:03 日志 g6w 全程透明且灰条仍在（第 5 次证伪），绘制不走 view.background，
+     *  改为 hook Canvas 画矩形/圆角矩形/纯色的调用，命中 #ededed / #7a7396 时抓调用栈，让绘制者自己现身。 */
+    private val painterProbeSigs: MutableMap<String, Long> = Collections.synchronizedMap(HashMap())
+
+    private fun installGreyPainterProbe() {
+        val grey = 0xffededed.toInt()
+        val purple = 0xff7a7396.toInt()
+        fun hookOne(method: String) {
+            runCatching {
+                XposedBridge.hookAllMethods(Canvas::class.java, method, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val color = when {
+                            param.args.lastOrNull() is Paint -> (param.args.last() as Paint).color
+                            method == "drawColor" && param.args.isNotEmpty() -> param.args[0] as? Int ?: return
+                            else -> return
+                        }
+                        if (color != grey && color != purple) return
+                        reportPainter(color)
+                    }
+                })
+                HLog.i("$TAG 灰条绘制者取证已挂: Canvas.$method")
+            }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 Canvas.$method: ${it.message}", it) }
+        }
+        hookOne("drawRect")
+        hookOne("drawRoundRect")
+        hookOne("drawColor")
+    }
+
+    private fun reportPainter(color: Int) {
+        val st = Throwable().stackTrace
+        var top: String? = null
+        val chain = ArrayList<String>()
+        for (f in st) {
+            val cn = f.className
+            if (cn.startsWith("com.aeonlab") || cn.startsWith("de.robv") || cn.startsWith("LSP")) continue
+            val item = "${cn.substringAfterLast('.')}→${f.methodName}(${f.fileName ?: "?"}:${f.lineNumber})"
+            if (chain.size < 8) chain.add(item)
+            if (top == null && cn.startsWith("com.tencent.")) top = item
+        }
+        val sig = color.toString() + "|" + (top ?: chain.firstOrNull() ?: "?")
+        val now = SystemClock.elapsedRealtime()
+        synchronized(painterProbeSigs) {
+            val last = painterProbeSigs[sig]
+            if (last != null && now - last < 60_000L) return
+            painterProbeSigs[sig] = now
+            if (painterProbeSigs.size > 64) painterProbeSigs.clear()
+        }
+        HLog.i("$TAG 灰条绘制者取证: color=#${Integer.toHexString(color)} 调用栈=${chain.joinToString(" <- ")}")
+    }
+
     /**
      * 5.5.89：15:14 日志行为证据——statusBarBackground 清后 280/285 次采样透明（排除），而
      * FirstScreenFrameLayout#g6w 清一次后 32/33 次转储都是 #ededed：微信在持续把它刷回，
@@ -1790,7 +1844,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         fs.tag = FIRST_SCREEN_TAG
         runCatching { fs.setWillNotDraw(true) }
         runCatching {
-            if (!clearedViews.add(fs)) return
+            clearedViews.add(fs)
             fs.setBackgroundColor(Color.TRANSPARENT)
             fs.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
                 override fun onPreDraw(): Boolean {
