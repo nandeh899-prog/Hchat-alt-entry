@@ -2015,7 +2015,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         stack.add(decor)
         while (stack.isNotEmpty()) {
             val v = stack.removeAt(stack.size - 1)
-            if (v.getTag(WHITE_NINEPATCH_TAG) == null) {
+            if (v.tag != WHITE_NINEPATCH_TAG) {
                 var absTop = 0
                 runCatching {
                     var cur: View = v
@@ -2045,7 +2045,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     if (hit != null) {
                         runCatching {
                             v.background = ColorDrawable(Color.TRANSPARENT)
-                            v.setTag(WHITE_NINEPATCH_TAG, true)
+                            v.tag = WHITE_NINEPATCH_TAG
                             val now = SystemClock.uptimeMillis()
                             if (now - lastWhiteNinePatchLogAt >= 1000L) {
                                 lastWhiteNinePatchLogAt = now
