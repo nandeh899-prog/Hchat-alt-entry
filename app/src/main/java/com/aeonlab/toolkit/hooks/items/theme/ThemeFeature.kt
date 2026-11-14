@@ -2013,6 +2013,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun neutralizeWhiteNinePatch(decor: ViewGroup) {
         val stack = ArrayList<View>()
         stack.add(decor)
+        val inventory = ArrayList<String>()
+        var inventoryLogged = false
+        val nowAll = SystemClock.uptimeMillis()
+        if (nowAll - lastWhiteNinePatchLogAt >= topDumpIntervalMs) inventoryLogged = true
         while (stack.isNotEmpty()) {
             val v = stack.removeAt(stack.size - 1)
             if (v.tag != WHITE_NINEPATCH_TAG) {
@@ -2027,39 +2031,80 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     }
                 }
                 val d = runCatching { v.background }.getOrNull()
-                // 5.5.100：22:00 日志显示采样守卫一轮 0 命中（.9 角点/左中大概率是透明，白只在边条中段）。
-                // 顶部 300px 内宽≥800 的 NinePatchDrawable 背景（含 InsetDrawable 解包）不再看采样，一律清透明。
-                var nine: android.graphics.drawable.NinePatchDrawable? = d as? android.graphics.drawable.NinePatchDrawable
-                var wrap = ""
-                if (nine == null && d is android.graphics.drawable.InsetDrawable) {
-                    nine = runCatching { d.drawable as? android.graphics.drawable.NinePatchDrawable }.getOrNull()
-                    if (nine != null) wrap = "Inset包"
-                }
-                val now2 = SystemClock.uptimeMillis()
-                if (absTop <= 300 && v.width >= 800 && d != null && nine == null && now2 - lastWhiteNinePatchLogAt >= topDumpIntervalMs) {
-                    // 60 秒一次的顶部候选清单：非 .9 的背景类型也点名，便于核对漏网
-                    HLog.i("$TAG 顶部非九宫格背景: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} top=$absTop bg=${descDrawable(d)}")
-                }
-                if (absTop <= 300 && v.width >= 800 && nine != null) {
-                    val samples = runCatching {
-                        val m = nine.javaClass.getMethod("getBitmap")
-                        m.isAccessible = true
-                        val bmp = m.invoke(nine) as? android.graphics.Bitmap
-                        if (bmp != null && bmp.width > 0 && bmp.height > 0) {
-                            listOf(bmp.getPixel(0, 0), bmp.getPixel(bmp.width - 1, 0), bmp.getPixel(0, bmp.height / 2)).joinToString("/") { Integer.toHexString(it) }
-                        } else "无位图"
-                    }.getOrDefault("采样失败")
-                    runCatching {
-                        v.background = ColorDrawable(Color.TRANSPARENT)
-                        v.tag = WHITE_NINEPATCH_TAG
-                        if (now2 - lastWhiteNinePatchLogAt >= 1000L) {
-                            lastWhiteNinePatchLogAt = now2
-                            HLog.i("$TAG 顶部白底九宫格已清$wrap: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} top=$absTop samples=$samples")
+                if (absTop <= 300 && d != null) {
+                    var nine: android.graphics.drawable.NinePatchDrawable? = d as? android.graphics.drawable.NinePatchDrawable
+                    var wrap = ""
+                    if (nine == null && d is android.graphics.drawable.InsetDrawable) {
+                        nine = runCatching { d.drawable as? android.graphics.drawable.NinePatchDrawable }.getOrNull()
+                        if (nine != null) wrap = "Inset包"
+                    }
+                    var whiteHit = false
+                    var samples = ""
+                    if (v.width >= 300) {
+                        runCatching {
+                            when (d) {
+                                is ColorDrawable -> {
+                                    samples = "Color#" + Integer.toHexString(d.color)
+                                    whiteHit = Color.alpha(d.color) == 255 && Color.red(d.color) >= 224 && Color.green(d.color) >= 224 && Color.blue(d.color) >= 224
+                                }
+                                is android.graphics.drawable.BitmapDrawable -> {
+                                    val bmp = d.bitmap
+                                    if (bmp != null && bmp.width > 0 && bmp.height > 0) {
+                                        val c0 = bmp.getPixel(0, 0)
+                                        val c1 = bmp.getPixel(bmp.width - 1, 0)
+                                        val c2 = bmp.getPixel(0, bmp.height / 2)
+                                        samples = "Bmp#" + Integer.toHexString(c0) + "/" + Integer.toHexString(c1) + "/" + Integer.toHexString(c2)
+                                        whiteHit = listOf(c0, c1, c2).any { c ->
+                                            Color.alpha(c) == 255 && Color.red(c) >= 224 && Color.green(c) >= 224 && Color.blue(c) >= 224
+                                        }
+                                    }
+                                }
+                                is android.graphics.drawable.GradientDrawable -> {
+                                    runCatching {
+                                        val c = d.color?.defaultColor
+                                        if (c != null) {
+                                            samples = "Grad#" + Integer.toHexString(c)
+                                            whiteHit = Color.alpha(c) == 255 && Color.red(c) >= 224 && Color.green(c) >= 224 && Color.blue(c) >= 224
+                                        }
+                                    }
+                                }
+                            }
                         }
+                        if (nine != null) {
+                            // 21:31 实锤 .9 白底是主嫌疑，不看采样直接清
+                            whiteHit = true
+                            samples = "NinePatch"
+                        }
+                    }
+                    if (absTop <= 300 && v.width >= 800 && nine != null) {
+                        runCatching {
+                            v.background = ColorDrawable(Color.TRANSPARENT)
+                            v.tag = WHITE_NINEPATCH_TAG
+                            if (inventoryLogged) {
+                                HLog.i("$TAG 顶部白底九宫格已清$wrap: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} top=$absTop samples=$samples")
+                            }
+                        }
+                    } else if (whiteHit && v.width >= 800) {
+                        runCatching {
+                            v.background = ColorDrawable(Color.TRANSPARENT)
+                            v.tag = WHITE_NINEPATCH_TAG
+                            if (inventoryLogged) {
+                                HLog.i("$TAG 顶部白底已清透明: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} top=$absTop samples=$samples")
+                            }
+                        }
+                    }
+                    if (inventoryLogged && inventory.size < 40) {
+                        inventory.add("top=$absTop ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} bg=$d 样本=$samples")
                     }
                 }
             }
             if (v is ViewGroup) for (i in 0 until v.childCount) stack.add(v.getChildAt(i))
+        }
+        if (inventoryLogged) {
+            lastWhiteNinePatchLogAt = nowAll
+            if (inventory.isNotEmpty()) {
+                inventory.forEach { HLog.i("$TAG 顶部背景全量: $it") }
+            }
         }
     }
 
