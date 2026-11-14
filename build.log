@@ -1,0 +1,476 @@
+openjdk version "21.0.13" 2026-10-20 LTS
+OpenJDK Runtime Environment Temurin-21.0.13+9 (build 21.0.13+9-LTS)
+OpenJDK 64-Bit Server VM Temurin-21.0.13+9 (build 21.0.13+9-LTS, mixed mode, sharing)
+Starting a Gradle Daemon (subsequent builds will be faster)
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libaeonlab_crash.so, libandroidx.graphics.path.so, libdexkit.so, liblink2symlink.so, libloader.so, libproot.so, libsilk_codec.so, libtermux.so. Run with --info option to learn more.
+
+> Task :app:extractReleaseNativeSymbolTables FROM-CACHE
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:generateReleaseBuildConfig FROM-CACHE
+> Task :app:generateReleaseResources FROM-CACHE
+> Task :app:packageReleaseResources FROM-CACHE
+> Task :app:processReleaseNavigationResources FROM-CACHE
+> Task :app:parseReleaseLocalResources FROM-CACHE
+> Task :app:generateReleaseRFile FROM-CACHE
+> Task :app:compileReleaseKotlin
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/crash/CrashReportRuntime.kt:188:69 'val id: Long' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/crash/CrashReportRuntime.kt:471:104 'val id: Long' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/contact/WeChatVerifyUserApi.kt:98:42 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/media/FavoriteMenuItemResolver.kt:112:72 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/media/FavoriteVoiceResolver.kt:164:99 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/message/MultiSelectMessageResolver.kt:105:105 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/message/WeChatLocalMessageApi.kt:55:43 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/message/WeChatLocalMessageApi.kt:243:50 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/message/WeChatLocalMessageApi.kt:248:57 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/runtime/WeChatConfigApi.kt:39:80 'field versionCode: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsCachedPostStorage.kt:316:107 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsCachedPostStorage.kt:327:97 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsCachedPostStorage.kt:334:107 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:21:8 This class is not recommended for use in Kotlin. Use 'kotlin.collections.Collection' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:25:8 This class is not recommended for use in Kotlin. Use 'kotlin.collections.Map' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:122:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:123:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:177:40 This class is not recommended for use in Kotlin. Use 'kotlin.collections.Collection' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:178:33 This class is not recommended for use in Kotlin. Use 'kotlin.collections.Map' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:189:39 This class is not recommended for use in Kotlin. Use 'kotlin.collections.Collection' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:191:14 This class is not recommended for use in Kotlin. Use 'kotlin.collections.Collection' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:191:25 This class is not recommended for use in Kotlin. Use 'kotlin.collections.Collection' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:191:66 This class is not recommended for use in Kotlin. Use 'kotlin.collections.Collection' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:192:28 This class is not recommended for use in Kotlin. Use 'kotlin.collections.Collection' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:192:41 This class is not recommended for use in Kotlin. Use 'kotlin.collections.Collection' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:311:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:349:36 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsContextMenuDispatcher.kt:439:65 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsForwardContentResolver.kt:262:79 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/SnsLivePhotoUploadLocator.kt:71:37 Unnecessary safe call on a non-null receiver of type 'FieldData'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/api/sns/WeChatSnsPostObserver.kt:70:45 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/core/HookRegistry.kt:38:13 Condition is always 'true'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/aeonlabextra/AeonLabExtraFeature.kt:421:110 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/aeonlabextra/AeonLabExtraFeature.kt:436:44 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/aeonlabextra/AeonLabExtraFeature.kt:449:51 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/aeonlabextra/AeonLabExtraFeature.kt:449:77 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/aeonlabextra/AeonLabExtraFeature.kt:471:46 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/aeonlabextra/AeonLabExtraFeature.kt:773:100 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/aeonlabextra/AeonLabExtraFeature.kt:1346:77 'field scaledDensity: Float' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/aeonlabextra/AeonLabExtraFeature.kt:2042:115 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/aeonlabextra/AeonLabExtraFeature.kt:3578:111 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/aeonlabextra/AeonLabExtraFeature.kt:3636:115 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/antirecall/AntiRecallFeature.kt:73:51 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/antirecall/AntiRecallFeature.kt:219:48 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/antirecall/AntiRecallFeature.kt:220:45 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/antirecall/AntiRecallFeature.kt:327:107 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/antirecall/AntiRecallFeature.kt:942:104 Unchecked cast of 'Any?' to 'Array<String>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/callmedialimit/CallMediaLimitFeature.kt:241:101 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/callmedialimit/CallMediaLimitFeature.kt:316:63 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/callmedialimit/CallMediaLimitFeature.kt:325:63 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/callmedialimit/CallRingtoneBlockFeature.kt:91:50 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/callmedialimit/CallRingtoneBlockFeature.kt:94:51 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/callmedialimit/CallRingtoneBlockFeature.kt:120:42 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/chattime/ChatTimeStyleFeature.kt:343:35 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupHomeProjection.kt:299:42 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:242:31 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:251:43 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:253:39 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:254:44 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:275:47 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:296:35 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:502:41 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:503:38 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:504:42 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:523:40 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:539:41 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:562:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:563:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:596:38 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:645:44 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:668:41 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:669:38 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:670:42 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:728:31 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:908:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:964:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:1300:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:1974:31 Unnecessary safe call on a non-null receiver of type 'ConversationGroupRuntime.ConversationRecord'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:2792:47 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/conversationgroup/ConversationGroupRuntime.kt:2793:57 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1712:63 'var systemUiVisibility: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1713:53 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1725:32 'static field SYSTEM_UI_FLAG_LAYOUT_STABLE: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1726:18 'static field SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1727:20 'var systemUiVisibility: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1728:19 'var systemUiVisibility: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1728:46 'var systemUiVisibility: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1733:20 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1734:20 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1744:26 'var systemUiVisibility: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/custombottombar/CustomBottomBarFeature.kt:1745:16 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customfriendavatar/CustomFriendAvatarFeature.kt:172:32 'static field EXTRA_SHORTCUT_ICON: String' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customfriendavatar/CustomFriendAvatarFeature.kt:407:44 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customfriendavatar/CustomFriendAvatarFeature.kt:408:66 Unchecked cast of 'Any?' to 'MutableList<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customfriendavatar/CustomFriendAvatarFeature.kt:460:56 'static field EXTRA_LARGE_ICON: String' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:180:50 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:258:36 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:340:36 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:389:75 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:537:79 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:660:25 Unnecessary safe call on a non-null receiver of type 'Set<XC_MethodHook.Unhook>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:1035:26 'constructor(p0: Context!): Notification.Builder' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:1064:14 'fun setPriority(p0: Int): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:1064:39 'static field PRIORITY_HIGH: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:1087:21 'fun setDefaults(p0: Int): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:1088:67 'fun setSound(p0: Uri!): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:1089:39 'fun setVibrate(p0: LongArray!): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:1292:47 'constructor(p0: Int, p1: CharSequence!, p2: PendingIntent?): Notification.Action.Builder' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/customnotify/CustomNotificationRuntime.kt:1314:33 'constructor(p0: Int, p1: CharSequence!, p2: PendingIntent?): Notification.Action.Builder' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/editmsg/EditMessageFeature.kt:595:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/editmsg/EditMessageFeature.kt:621:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/editmsg/EditMessageFeature.kt:695:44 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/editmsg/EditMessageFeature.kt:811:109 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/emojisave/EmojiSaveFeature.kt:118:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/emojisave/EmojiSaveFeature.kt:129:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/emojisave/EmojiSaveFeature.kt:176:24 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/fakelocation/FakeLocationFeature.kt:168:68 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/fakelocation/FakeLocationFeature.kt:221:105 This class is not recommended for use in Kotlin. Use 'kotlin.Double' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/floatingshortcut/FloatingShortcutRuntime.kt:267:35 Condition is always 'true'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/gameemoji/GameEmojiFeature.kt:77:47 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/gameemoji/GameEmojiFeature.kt:106:73 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/groupadmin/GroupAdminCommands.kt:990:86 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/groupadmin/GroupAdminMiuixPage.kt:1625:33 Unnecessary non-null assertion (!!) on a non-null receiver of type 'GroupAdminRuleCatalog.RuleSpec'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/grouplabel/QuickGroupChatLabelFeature.kt:119:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/grouplabel/QuickGroupChatLabelFeature.kt:149:38 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/grouplabel/QuickGroupChatLabelFeature.kt:328:44 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/groupleave/GroupLeaveMonitorHighlighter.kt:65:46 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/groupleave/GroupLeaveMonitorHighlighter.kt:240:53 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/groupleave/GroupLeaveMonitorRuntime.kt:180:13 Elvis operator (?:) always returns the left operand of non-nullable type 'String'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hidemenu/HideChatMenuFeature.kt:85:51 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hometextcolor/HomeTextColorFeature.kt:350:32 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hometextcolor/HomeTextColorFeature.kt:359:43 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hometextcolor/HomeTextColorFeature.kt:392:52 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hometextcolor/HomeTextColorFeature.kt:393:49 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hometextcolor/HomeTextColorFeature.kt:414:52 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hometextcolor/HomeTextColorFeature.kt:422:52 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hometextcolor/HomeTextColorFeature.kt:606:53 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hometextcolor/HomeTextColorFeature.kt:761:44 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hometextcolor/HomeTextColorFeature.kt:769:55 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hotupdate/DisableHotUpdateFeature.kt:341:66 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hotupdate/DisableHotUpdateFeature.kt:342:66 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/hotupdate/DisableHotUpdateFeature.kt:343:60 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/inputhint/OutgoingMessageStatsRepository.kt:221:67 Unnecessary safe call on a non-null receiver of type 'ContentValues'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/keywordnotify/KeywordNotificationRuntime.kt:402:115 'constructor(p0: Context!): Notification.Builder' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/keywordnotify/KeywordNotificationRuntime.kt:415:14 'fun setPriority(p0: Int): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/keywordnotify/KeywordNotificationRuntime.kt:415:39 'static field PRIORITY_HIGH: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/keywordnotify/KeywordNotificationRuntime.kt:428:21 'fun setDefaults(p0: Int): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/keywordnotify/KeywordNotificationRuntime.kt:429:57 'fun setSound(p0: Uri!): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/keywordnotify/KeywordNotificationRuntime.kt:430:34 'fun setVibrate(p0: LongArray!): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/membertitle/MemberTitleRenderer.kt:81:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messageblock/MessageBlockFeature.kt:50:47 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messagebubble/MessageBubbleFeature.kt:953:78 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messageforward/MessageForwardFeature.kt:220:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messageforward/MessageForwardFeature.kt:234:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messageforward/MessageForwardFeature.kt:260:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messageforward/MessageForwardFeature.kt:269:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messageforward/MessageForwardFeature.kt:302:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messageforward/MessageForwardFeature.kt:337:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messageforward/MessageForwardFeature.kt:1468:44 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messageforward/MessageForwardFeature.kt:1564:111 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messageforward/MessageForwardFeature.kt:1588:65 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messagetextcolor/MessageTextColorFeature.kt:113:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messagetextcolor/MessageTextColorFeature.kt:948:39 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/messagetextcolor/MessageTextColorFeature.kt:1029:109 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/moments/MomentsAutoForwardFeature.kt:379:21 'when' is exhaustive so 'else' is redundant here.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/moments/MomentsBottomDetailFeature.kt:173:38 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'WeakHashMap<Any, LinkedHashMap<Long, Any>>?'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/moments/MomentsBottomDetailFeature.kt:187:32 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'WeakHashMap<Any, LinkedHashMap<Long, Any>>?'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/moments/MomentsKeywordBlockFeature.kt:182:61 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/moments/MomentsKeywordBlockFeature.kt:674:21 Unnecessary safe call on a non-null receiver of type 'Any'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/moments/MomentsPostNotificationFeature.kt:188:26 'constructor(p0: Context!): Notification.Builder' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/moments/MomentsPostNotificationFeature.kt:203:14 'fun setDefaults(p0: Int): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/moments/MomentsPostNotificationFeature.kt:205:14 'fun setPriority(p0: Int): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/moments/MomentsPostNotificationFeature.kt:205:39 'static field PRIORITY_HIGH: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/moments/OriginalMomentsUploadFeature.kt:124:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/momentsfake/MomentsFakeInteractionRuntime.kt:314:52 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/momentsfake/MomentsFakeInteractionRuntime.kt:318:47 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/momentsfake/MomentsFakeInteractionRuntime.kt:518:65 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/multirecall/MultiRecallFeature.kt:82:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/multirecall/MultiRecallFeature.kt:88:34 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/multirecall/MultiRecallFeature.kt:160:65 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:229:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:230:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:231:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:232:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:233:42 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:235:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:258:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:259:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:260:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:261:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:262:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:263:42 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:265:41 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:269:43 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/musicorder/QQMusicOrderRuntime.kt:273:23 Unnecessary safe call on a non-null receiver of type 'HttpURLConnection'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/payment/fakebalance/FakeWalletBalanceFeature.kt:98:41 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/payment/fakebalance/FakeWalletBalanceFeature.kt:111:31 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/payment/fakebalance/FakeWalletBalanceFeature.kt:136:41 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/payment/fakebalance/FakeWalletBalanceFeature.kt:151:31 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/payment/fakebalance/FakeWalletBalanceFeature.kt:153:35 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/payment/fakebalance/FakeWalletBalanceFeature.kt:245:35 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/payment/fakebalance/FakeWalletBalanceFeature.kt:247:26 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/payment/fakebalance/FakeWalletBalanceFeature.kt:280:49 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/payment/fakebalance/FakeWalletBalanceFeature.kt:285:31 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/profileid/ProfileIdFeature.kt:428:50 'fun get(p0: String!): Any?' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/protobuf/ProtobufPacketFileLogger.kt:39:24 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickcontactedit/QuickContactEditFeature.kt:184:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickcontactedit/QuickContactEditFeature.kt:185:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickcontactedit/QuickContactEditFeature.kt:199:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickcontactedit/QuickContactEditFeature.kt:289:59 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickcontactedit/QuickContactEditFeature.kt:399:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickcontactedit/QuickContactEditFeature.kt:437:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickcontactedit/QuickContactEditFeature.kt:448:44 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickmoments/QuickMomentsFeature.kt:157:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickmoments/QuickMomentsFeature.kt:158:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickmoments/QuickMomentsFeature.kt:191:38 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickmoments/QuickMomentsFeature.kt:226:44 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickread/QuickMarkReadFeature.kt:62:39 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quickread/QuickMarkReadFeature.kt:608:77 'field scaledDensity: Float' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quoteclear/QuoteDeleteClearFeature.kt:166:31 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quoteclear/QuoteDeleteClearFeature.kt:189:20 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/quoteclear/QuoteDeleteClearFeature.kt:296:31 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/realtail/ContactProfilePrefetcher.kt:103:73 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/realtail/ContactProfilePrefetcher.kt:145:64 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/realtail/ContactProfilePrefetcher.kt:146:78 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/realtail/ContactProfilePrefetcher.kt:147:84 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/realtail/RealNameTailRenderer.kt:73:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/roundavatar/RoundAvatarFeature.kt:193:47 'field largeIcon: Bitmap!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/roundavatar/RoundAvatarFeature.kt:194:34 'field largeIcon: Bitmap!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptMenuDispatcher.kt:78:33 Non-public primary constructor is exposed via the generated 'copy()' method of the 'data' class.
+
+The generated 'copy()' will change its visibility in future releases.
+
+To suppress the warning do one of the following:
+- Annotate the data class with the '@ConsistentCopyVisibility' annotation.
+- Use the '-Xconsistent-data-class-copy-visibility' compiler flag.
+- Annotate the data class with the '@ExposedCopyVisibility' annotation 
+  (Discouraged, but can be used to keep binary compatibility).
+
+To learn more, see the documentation of the '@ConsistentCopyVisibility' and '@ExposedCopyVisibility' annotations.
+
+This will become an error in language version 2.5. See https://youtrack.jetbrains.com/issue/KT-11914.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptMenuDispatcher.kt:383:35 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptMenuDispatcher.kt:406:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptMenuDispatcher.kt:407:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptMenuDispatcher.kt:420:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptMenuDispatcher.kt:493:43 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptMenuDispatcher.kt:553:23 Java type mismatch: inferred type is 'Class<in CapturedType(*)#1!>?', but 'Class<in CapturedType(*)#2!>?' was expected.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptMenuDispatcher.kt:737:65 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginBridge.kt:679:64 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginBridge.kt:680:58 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginBridge.kt:681:64 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginBridge.kt:682:62 This class is not recommended for use in Kotlin. Use 'kotlin.Double' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginBridge.kt:683:60 This class is not recommended for use in Kotlin. Use 'kotlin.Float' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginBridge.kt:684:60 This class is not recommended for use in Kotlin. Use 'kotlin.Short' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginBridge.kt:685:58 This class is not recommended for use in Kotlin. Use 'kotlin.Byte' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginBridge.kt:686:68 This class is not recommended for use in Kotlin. Use 'kotlin.Char' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginManager.kt:823:34 Condition is always 'true'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginManager.kt:870:34 Condition is always 'true'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginManager.kt:1052:52 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'File?'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginManager.kt:1507:39 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'File?'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginRuntime.kt:1395:24 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginRuntime.kt:2275:43 'constructor(p0: String!, p1: Int): FileObserver' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginRuntime.kt:2305:41 'constructor(p0: String!, p1: Int): FileObserver' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptPluginRuntime.kt:2560:79 'val id: Long' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptSendButtonHook.kt:230:43 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/ScriptSendButtonHook.kt:251:31 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/CodexWebServer.kt:65:9 Expression is unused.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleFallbackResources.kt:16:5 'constructor(p0: AssetManager!, p1: DisplayMetrics!, p2: Configuration!): Resources' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleFallbackResources.kt:59:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleFallbackResources.kt:61:19 'fun getColor(p0: Int): Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleFallbackResources.kt:63:34 'fun getColor(p0: Int): Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleFallbackResources.kt:73:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleFallbackResources.kt:75:19 'fun getColorStateList(p0: Int): ColorStateList' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleFallbackResources.kt:77:34 'fun getColorStateList(p0: Int): ColorStateList' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleResourceMenuFallback.kt:43:46 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleResourceMenuFallback.kt:44:46 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleResourceMenuFallback.kt:102:47 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ModuleResources.kt:89:25 'constructor(p0: AssetManager!, p1: DisplayMetrics!, p2: Configuration!): Resources' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ProotTerminalView.kt:416:25 'fun toggleSoftInput(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ProotTerminalView.kt:417:69 'static field SHOW_FORCED: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ScriptPluginAgentClient.kt:217:43 Unnecessary safe call on a non-null receiver of type 'ScriptPluginAgentWorkspaceTools.Workspace'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ScriptPluginAgentClient.kt:217:82 Unnecessary safe call on a non-null receiver of type 'ScriptPluginAgentWorkspaceTools.Workspace'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ScriptPluginAgentLocalReverseTools.kt:1270:33 'fun get(p0: String!): Any?' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ScriptPluginAgentLocalReverseTools.kt:1414:69 Elvis operator (?:) always returns the left operand of non-nullable type 'String'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ScriptPluginAgentLocalReverseTools.kt:1492:48 Elvis operator (?:) always returns the left operand of non-nullable type 'String'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ScriptPluginAgentLocalReverseTools.kt:1530:53 Unnecessary safe call on a non-null receiver of type 'Any'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/agent/ScriptPluginAgentWriter.kt:59:17 Expression is unused.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/market/PluginMarketClient.kt:408:9 Expression is unused.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/market/PluginMarketClient.kt:492:22 'when' expression over a subject of type 'Any?' is not exhaustive. Add a 'null' or 'else' branch.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/script/market/PluginMarketClient.kt:507:16 'when' expression over a subject of type 'Any?' is not exhaustive. Add a 'null' or 'else' branch.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/selectedmessages/OfficialMassSendSender.kt:608:63 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/selectedmessages/SelectedMessageModuleSender.kt:152:72 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/selectedmessages/SelectedMessageModuleSender.kt:193:58 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/selectedmessages/SelectedMessageModuleSender.kt:317:66 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/selectedmessages/SelectedMessageModuleSender.kt:344:62 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/selectedmessages/SelectedMessagesFeature.kt:129:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/selectedmessages/SelectedMessagesFeature.kt:144:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/selectedmessages/SelectedMessagesFeature.kt:600:65 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/shortvideo/FinderFeedDetailResolver.kt:128:51 Elvis operator (?:) always returns the left operand of non-nullable type 'Constructor<*>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/shortvideo/FinderFeedDetailResolver.kt:129:45 Elvis operator (?:) always returns the left operand of non-nullable type 'Method'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/shortvideo/FinderMediaDownloadFeature.kt:262:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/shortvideo/FinderMediaDownloadFeature.kt:323:19 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:167:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:183:34 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:270:44 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:478:43 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:500:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:1155:109 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:1249:97 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:1306:58 'static field SHOW_IMPLICIT: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:1391:91 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:1441:115 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/swipequote/SwipeQuoteFeature.kt:1512:91 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/tablet/WeChatTabletFeature.kt:129:48 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/textspeech/TextSpeechRuntime.kt:963:38 'static field FLAG_HANDLES_MEDIA_BUTTONS: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/textspeech/TextSpeechRuntime.kt:964:42 'static field FLAG_HANDLES_TRANSPORT_CONTROLS: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/textspeech/TextSpeechSettings.kt:188:84 Unnecessary safe call on a non-null receiver of type 'CharSequence'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/textvoice/TextVoiceRuntime.kt:264:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/textvoice/TextVoiceRuntime.kt:275:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/textvoice/TextVoiceRuntime.kt:372:44 This class is not recommended for use in Kotlin. Use 'kotlin.collections.List' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:449:14 'fun setBackgroundDrawable(p0: Drawable!): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1556:26 'static field SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1557:18 'static field SYSTEM_UI_FLAG_LAYOUT_STABLE: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1558:18 'static field SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1559:50 'static field SYSTEM_UI_FLAG_LIGHT_STATUS_BAR: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1560:29 'var systemUiVisibility: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1562:33 'var systemUiVisibility: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1569:57 'fun setDecorFitsSystemWindows(p0: Boolean): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1570:28 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1570:72 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1571:28 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1571:76 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1762:40 'fun setBackgroundDrawable(p0: Drawable!): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeSpec.kt:215:47 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ThemeSnapshot'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:430:50 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:442:32 Unchecked cast of 'Any?' to 'MutableCollection<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:563:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:583:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:612:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:665:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:693:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:698:72 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:725:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:728:37 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:729:35 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:740:64 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:782:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:789:72 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:916:105 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:925:105 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:1170:109 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:1499:109 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:1516:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:1851:24 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voiceforward/VoiceForwardFeature.kt:1887:107 'val id: Long' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voicepreview/VoicePreviewFeature.kt:140:31 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voicepreview/VoicePreviewFeature.kt:154:30 Unnecessary safe call on a non-null receiver of type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/voicepreview/VoicePreviewFeature.kt:295:67 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/zombiecheck/ZombieCheckFeature.kt:85:43 Elvis operator (?:) always returns the left operand of non-nullable type 'Array<Any?>'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/zombiecheck/ZombieCheckFeature.kt:328:58 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/zombiecheck/ZombieCheckFeature.kt:329:52 This class is not recommended for use in Kotlin. Use 'kotlin.Byte' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/zombiecheck/ZombieCheckFeature.kt:330:54 This class is not recommended for use in Kotlin. Use 'kotlin.Short' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/zombiecheck/ZombieCheckFeature.kt:331:58 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/zombiecheck/ZombieCheckFeature.kt:332:52 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/zombiecheck/ZombieCheckFeature.kt:333:54 This class is not recommended for use in Kotlin. Use 'kotlin.Float' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/zombiecheck/ZombieCheckFeature.kt:334:56 This class is not recommended for use in Kotlin. Use 'kotlin.Double' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/zombiecheck/ZombieCheckRuntime.kt:579:30 'constructor(p0: Context!): Notification.Builder' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/EmbeddedComposeRuntime.kt:38:31 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/EmbeddedComposeRuntime.kt:44:15 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:1632:42 'fun get(p0: String!): Any?' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:8854:60 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:8872:60 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:8921:60 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:8938:60 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:8960:60 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:12422:50 Unnecessary non-null assertion (!!) on a non-null receiver of type 'AutoReplyFriendAutomationKeys'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:12441:104 Unnecessary non-null assertion (!!) on a non-null receiver of type '() -> Unit'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:29161:72 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:34606:80 Cast is redundant.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:35198:73 'static field SOFT_INPUT_ADJUST_RESIZE: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:39307:5 'fun ClickableText(text: AnnotatedString, modifier: Modifier = ..., style: TextStyle = ..., softWrap: Boolean = ..., overflow: TextOverflow = ..., maxLines: Int = ..., onTextLayout: (TextLayoutResult) -> Unit = ..., onClick: (Int) -> Unit): Unit' is deprecated. Use Text or BasicText and pass an AnnotatedString that contains a LinkAnnotation. Check LinkAnnotation's documentation for more details and samples.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:43328:39 Elvis operator (?:) always returns the left operand of non-nullable type 'Int'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:43329:41 Elvis operator (?:) always returns the left operand of non-nullable type 'Int'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:43330:41 Elvis operator (?:) always returns the left operand of non-nullable type 'Int'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:43366:51 Elvis operator (?:) always returns the left operand of non-nullable type 'Int'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:43367:53 Elvis operator (?:) always returns the left operand of non-nullable type 'Int'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/MiuixSettingsPage.kt:43368:53 Elvis operator (?:) always returns the left operand of non-nullable type 'Int'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/ui/miuix/VoiceForwardMiuixDialog.kt:948:90 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Int'.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/utils/AeonLabMediaDownloader.kt:33:24 'val externalMediaDirs: Array<(out) File!>!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/utils/KavaReflector.kt:287:64 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/utils/KavaReflector.kt:288:58 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/utils/KavaReflector.kt:289:64 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/utils/KavaReflector.kt:290:62 This class is not recommended for use in Kotlin. Use 'kotlin.Double' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/utils/KavaReflector.kt:291:60 This class is not recommended for use in Kotlin. Use 'kotlin.Float' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/utils/KavaReflector.kt:292:60 This class is not recommended for use in Kotlin. Use 'kotlin.Short' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/utils/KavaReflector.kt:293:58 This class is not recommended for use in Kotlin. Use 'kotlin.Byte' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/utils/KavaReflector.kt:294:68 This class is not recommended for use in Kotlin. Use 'kotlin.Char' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/xposed/compat/XposedHelpers.kt:147:60 This class is not recommended for use in Kotlin. Use 'kotlin.Boolean' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/xposed/compat/XposedHelpers.kt:148:54 This class is not recommended for use in Kotlin. Use 'kotlin.Byte' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/xposed/compat/XposedHelpers.kt:149:64 This class is not recommended for use in Kotlin. Use 'kotlin.Char' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/xposed/compat/XposedHelpers.kt:150:56 This class is not recommended for use in Kotlin. Use 'kotlin.Short' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/xposed/compat/XposedHelpers.kt:151:60 This class is not recommended for use in Kotlin. Use 'kotlin.Int' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/xposed/compat/XposedHelpers.kt:152:54 This class is not recommended for use in Kotlin. Use 'kotlin.Long' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/xposed/compat/XposedHelpers.kt:153:56 This class is not recommended for use in Kotlin. Use 'kotlin.Float' instead.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/xposed/compat/XposedHelpers.kt:154:58 This class is not recommended for use in Kotlin. Use 'kotlin.Double' instead.
+
+> Task :app:javaPreCompileRelease
+
+> Task :app:compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:compileReleaseNavigationResources
+> Task :app:mergeReleaseResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:processReleaseManifestForPackage
+> Task :app:processReleaseResources
+> Task :app:dexBuilderRelease
+> Task :app:desugarReleaseFileDependencies
+> Task :app:mergeReleaseStartupProfile
+> Task :app:mergeExtDexRelease
+> Task :app:mergeDexRelease
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseGlobalSynthetics
+> Task :app:compileReleaseArtProfile
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:processReleaseJavaRes
+> Task :app:mergeReleaseJavaResource
+> Task :app:optimizeReleaseResources
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+> Task :app:copyToDist
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1794659894996.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 4m 2s
+46 actionable tasks: 39 executed, 7 from cache
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html
