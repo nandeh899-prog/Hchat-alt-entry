@@ -657,6 +657,43 @@ private class ThemeRuntime(private val context: FeatureContext) {
         else -> d.javaClass.simpleName
     }
 
+    private var lastDecorStripAt = 0L
+
+    /** 5.5.86：ActionBarContainer alpha=0 且内部字段已清透明后灰条仍可见 —— 灰条绘制者另有其人。
+     *  decor 顶部 220px 内全量转储（不筛 bg、不筛类名），把它点名。 */
+    private fun decorStripProbe(decor: ViewGroup, now: Long) {
+        if (now - lastDecorStripAt < topDumpIntervalMs) return
+        lastDecorStripAt = now
+        runCatching {
+            fun topAbs(v: View): Int {
+                var t = 0
+                var cur: View = v
+                var guard = 0
+                while (guard++ < 20) {
+                    t += cur.top
+                    cur = cur.parent as? View ?: break
+                }
+                return t
+            }
+            val rows = ArrayList<Pair<Int, String>>()
+            fun walk(v: View, d: Int) {
+                if (rows.size >= 400 || d > 18) return
+                val w = v.width.coerceAtLeast(v.measuredWidth)
+                val h = v.height.coerceAtLeast(v.measuredHeight)
+                val t = topAbs(v)
+                if (t < 220 && w > 300 && h > 10) {
+                    val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
+                    rows.add(Pair(t, "top=$t ${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)}$img alpha=${v.alpha} vis=${v.visibility}"))
+                }
+                if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1)
+            }
+            walk(decor, 0)
+            rows.sortBy { it.first }
+            HLog.i("$TAG decor顶部全量转储: ${rows.size} 条")
+            rows.take(40).forEach { HLog.i("$TAG   decor顶部: ${it.second}") }
+        }.onFailure { HLog.e("$TAG decor顶部转储异常: ${it.message}", it) }
+    }
+
     /** 5.5.84： ActionBarContainer 内部字段按「所有 Drawable 类型字段」反射（mBackground 等名字取不到，
      *  微信重打包后字段名不同），并完整转储其子树——灰色圆角标题卡大概率是它的子视图。 */
     private fun actionBarProbe(decor: ViewGroup, now: Long) {
@@ -707,17 +744,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val effTop = panel.top + panel.translationY.toInt()
             if (effTop < -400 || panel.visibility != View.VISIBLE) return
             val rows = ArrayList<String>()
-            fun walk(v: View, d: Int) {
+            fun walk(v: View, d: Int, base: Int) {
                 if (rows.size >= 90 || d > 14) return
                 val w = v.width.coerceAtLeast(v.measuredWidth)
                 val h = v.height.coerceAtLeast(v.measuredHeight)
+                val at = base + v.top
                 if (w > 60 && h > 30) {
                     val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
-                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)}$img alpha=${v.alpha} vis=${v.visibility}")
+                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} top=$at bg=${descDrawable(v.background)}$img alpha=${v.alpha} vis=${v.visibility}")
                 }
-                if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1)
+                if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1, at)
             }
-            walk(panel, 0)
+            walk(panel, 0, effTop - panel.top)
             val sig = rows.joinToString("|")
             if (sig == lastPanelSignature) return
             lastPanelSignature = sig
@@ -1636,10 +1674,16 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (tab == null) tab = findBottomTab(decor, logCandidates = false)
             if (tab != null) {
                 lastTab = WeakReference(tab)
-                if (tab.visibility != View.GONE) {
-                    HLog.i("$TAG 底栏被微信恢复显示，重新隐藏: ${tab.javaClass.name}#${idName(tab)}")
-                    hideView(tab)
-                    tabHiddenByUs = true
+                if (snapshot.tabHideNative) {
+                    if (tab.visibility != View.GONE) {
+                        HLog.i("$TAG 隐藏原生底栏=开，隐藏底栏容器: ${tab.javaClass.name}#${idName(tab)}")
+                        hideView(tab)
+                        tabHiddenByUs = true
+                    }
+                } else if (tabHiddenByUs) {
+                    runCatching { showView(tab) }
+                    tabHiddenByUs = false
+                    HLog.i("$TAG 隐藏原生底栏=关，恢复原生底栏显示: ${tab.javaClass.name}#${idName(tab)}")
                 }
             }
         } else {
@@ -1676,6 +1720,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 applyInternalActionBarColor(bar, parsed ?: Color.TRANSPARENT)
             }
             titleBarProbe(decor, now)
+            decorStripProbe(decor, now)
             actionBarProbe(decor, now)
             panelProbe(decor, now)
             if (now - lastScrimAt >= SCRIM_INTERVAL_MS) {
