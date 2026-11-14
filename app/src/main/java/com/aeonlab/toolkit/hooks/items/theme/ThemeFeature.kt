@@ -1768,14 +1768,16 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val parsed = ThemeSettings.parseColor(snapshot.actionBarBackgroundColor)
                 applyInternalActionBarColor(bar, parsed ?: Color.TRANSPARENT)
             }
-            enforceFirstScreen(decor)
-            neutralizeTaskBarBottomView(decor)
-            ensureConversationOverdrawHook(decor)
-            overlayWindowForensics(decor)
-            titleBarProbe(decor, now)
-            decorStripProbe(decor, now)
-            actionBarProbe(decor, now)
-            panelProbe(decor, now)
+            // 19:37 日志判据：此处各步骤独立包 runCatching，异常与计数全部落日志，
+            // 用于定住「探针在打、其后步骤零日志」究竟是哪一行在吞执行流。
+            runStep(now, "enforceFirstScreen") { enforceFirstScreen(decor) }
+            runStep(now, "neutralizeTaskBarBottomView") { neutralizeTaskBarBottomView(decor) }
+            runStep(now, "ensureConversationOverdrawHook") { ensureConversationOverdrawHook(decor) }
+            runStep(now, "overlayWindowForensics") { overlayWindowForensics(decor) }
+            runStep(now, "titleBarProbe") { titleBarProbe(decor, now) }
+            runStep(now, "decorStripProbe") { decorStripProbe(decor, now) }
+            runStep(now, "actionBarProbe") { actionBarProbe(decor, now) }
+            runStep(now, "panelProbe") { panelProbe(decor, now) }
             if (now - lastScrimAt >= SCRIM_INTERVAL_MS) {
                 lastScrimAt = now
                 pageScrim.entries.toList().forEach { (page, spec) ->
@@ -2200,6 +2202,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun neutralizeTaskBarBottomView(decor: ViewGroup) {
         val found = ArrayList<View>()
         collectBySimpleName(decor, "TaskBarBottomView", found)
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastTaskBarCountLogAt >= topDumpIntervalMs) {
+            lastTaskBarCountLogAt = now
+            HLog.i("$TAG 任务栏底视图收集: ${found.size} 个（decor=${decor.javaClass.simpleName} ${decor.width}x${decor.height}）")
+        }
         for (v in found) {
             if (!taskBarViewsHandled.add(v)) continue
             v.setWillNotDraw(true)
@@ -2212,6 +2219,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  ②灰栈 0 条：TaskBarBottomView 禁绘持续有效；③「列表自绘覆盖钩子已挂」0 条且无失败日志：静默 return，本轮补诊断。
      *  做法：反射枚举 WindowManagerGlobal.mViews 全部窗口根，打根类名/尺寸/窗口参数/背景，标注含 TaskBarBottomView 的根，
      *  并对该根子树 w≥800 且 top≤300 的纯白 Color/GradientDrawable 清透明。 */
+    @Volatile private var lastTaskBarCountLogAt = 0L
     @Volatile private var lastWindowDumpAt = 0L
     private val overlayWhiteCleared = Collections.newSetFromMap(WeakHashMap<View, Boolean>())
     private val hookedDecorViews: MutableSet<View> = Collections.newSetFromMap(WeakHashMap())
@@ -2228,6 +2236,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
             })
             HLog.i("$TAG 窗口收集器已挂: Window.getDecorView")
         }.onFailure { HLog.e("$TAG 窗口收集器挂载失败: ${it.message}", it) }
+    }
+
+    private val stepErrorAt: MutableMap<String, Long> = Collections.synchronizedMap(HashMap())
+
+    private fun runStep(now: Long, name: String, block: () -> Unit) {
+        runCatching { block() }.onFailure {
+            val last = stepErrorAt[name]
+            if (last == null || now - last >= topDumpIntervalMs) {
+                stepErrorAt[name] = now
+                HLog.e("$TAG enforce步骤异常: $name: ${it.javaClass.name}: ${it.message}")
+            }
+        }
     }
 
     private fun overlayWindowForensics(decor: ViewGroup) {
@@ -2303,12 +2323,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  hook onDraw，在其自绘之上、子 View 之下，按壁纸位图对应切片原位回铺顶部 300px / 底部 149px，
      *  行滚动内容在子层不受影响。若白块绘制者另有其人，白色取证通道（同轮加）会点名。 */
     @Volatile private var conversationOverdrawHooked = false
+    @Volatile private var lastConvCountLogAt = 0L
     @Volatile private var conversationOverdrawLoggedEmpty = false
 
     private fun ensureConversationOverdrawHook(decor: ViewGroup) {
         if (conversationOverdrawHooked) return
         val found = ArrayList<View>()
         collectBySimpleName(decor, "ConversationListView", found)
+        val nowTs = SystemClock.elapsedRealtime()
+        if (nowTs - lastConvCountLogAt >= topDumpIntervalMs) {
+            lastConvCountLogAt = nowTs
+            HLog.i("$TAG 列表自绘钩子收集: ${found.size} 个（decor=${decor.javaClass.simpleName} ${decor.width}x${decor.height}）")
+        }
         if (found.isEmpty()) {
             if (!conversationOverdrawLoggedEmpty) {
                 conversationOverdrawLoggedEmpty = true
