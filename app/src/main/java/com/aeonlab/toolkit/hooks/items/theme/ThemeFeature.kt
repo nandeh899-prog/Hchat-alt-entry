@@ -560,6 +560,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *    本版只加「灰条探针」定期如实记录 ActionBar 内部字段与 jlt 父链，不改行为。
      */
     private var lastBarProbeAt = 0L
+    private var lastBarFieldsProbeAt = 0L
+    private var lastPanelProbeAt = 0L
+    private var lastPanelSignature: String? = null
 
     /** 5.5.83 灰条探针：三版假设（标题卡容器、GradientColorBackgroundView）均被日志证伪后，
      *  只定期如实记录 ActionBar 内部字段与 jlt 父链，等待截图对时裁决谁在画 0..149 的灰。 */
@@ -609,6 +612,75 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
             HLog.i("$TAG 灰条探针: ${parts.joinToString(" | ")}")
         }.onFailure { HLog.e("$TAG 灰条探针异常: ${it.message}", it) }
+    }
+
+    /** 5.5.84： ActionBarContainer 内部字段按「所有 Drawable 类型字段」反射（mBackground 等名字取不到，
+     *  微信重打包后字段名不同），并完整转储其子树——灰色圆角标题卡大概率是它的子视图。 */
+    private fun actionBarProbe(decor: ViewGroup, now: Long) {
+        if (now - lastBarFieldsProbeAt < 10_000L) return
+        lastBarFieldsProbeAt = now
+        runCatching {
+            val bar = findViewByClassName(decor, "ActionBarContainer") ?: return
+            val sb = StringBuilder()
+            var cls: Class<*>? = bar.javaClass
+            var guard = 0
+            while (cls != null && guard++ < 6) {
+                for (f in cls.declaredFields) {
+                    runCatching {
+                        f.isAccessible = true
+                        val value = f.get(bar)
+                        if (value is android.graphics.drawable.Drawable) {
+                            sb.append(' ').append(f.name).append('=').append(descDrawable(value))
+                        }
+                    }
+                }
+                cls = cls.superclass
+            }
+            HLog.i("$TAG ActionBar字段探针: ActionBarContainer#${idName(bar)} alpha=${bar.alpha}$sb")
+            val rows = ArrayList<String>()
+            fun walk(v: View, d: Int) {
+                if (rows.size >= 40 || d > 10) return
+                val w = v.width.coerceAtLeast(v.measuredWidth)
+                val h = v.height.coerceAtLeast(v.measuredHeight)
+                if (w > 60 && h > 30) {
+                    val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
+                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)}$img vis=${v.visibility}")
+                }
+                if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1)
+            }
+            walk(bar, 0)
+            HLog.i("$TAG ActionBar子树转储: ${rows.size} 条")
+            rows.forEach { HLog.i("$TAG   ActionBar: $it") }
+        }.onFailure { HLog.e("$TAG ActionBar探针异常: ${it.message}", it) }
+    }
+
+    /** 5.5.84： 面板探针——TaskBarContainer 顶部接近可视（用户下拉中/已下拉）时，转储其子树的
+     *  底色/内容图/可见性，按签名去重：状态不变不重复打。裁决深色卡与图标是谁清的、还是没画。 */
+    private fun panelProbe(decor: ViewGroup, now: Long) {
+        if (now - lastPanelProbeAt < 2_000L) return
+        lastPanelProbeAt = now
+        runCatching {
+            val panel = findViewByClassName(decor, "TaskBarContainer") ?: return
+            val effTop = panel.top + panel.translationY.toInt()
+            if (effTop < -400 || panel.visibility != View.VISIBLE) return
+            val rows = ArrayList<String>()
+            fun walk(v: View, d: Int) {
+                if (rows.size >= 90 || d > 14) return
+                val w = v.width.coerceAtLeast(v.measuredWidth)
+                val h = v.height.coerceAtLeast(v.measuredHeight)
+                if (w > 60 && h > 30) {
+                    val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
+                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)}$img vis=${v.visibility}")
+                }
+                if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1)
+            }
+            walk(panel, 0)
+            val sig = rows.joinToString("|")
+            if (sig == lastPanelSignature) return
+            lastPanelSignature = sig
+            HLog.i("$TAG 面板探针(打开态 effTop=$effTop): ${rows.size} 条")
+            rows.forEach { HLog.i("$TAG   面板: $it") }
+        }.onFailure { HLog.e("$TAG 面板探针异常: ${it.message}", it) }
     }
 
     private val gradientViewsHandled: MutableSet<View> =
@@ -1538,6 +1610,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             }
             titleBarProbe(decor, now)
+            actionBarProbe(decor, now)
+            panelProbe(decor, now)
             if (now - lastScrimAt >= SCRIM_INTERVAL_MS) {
                 lastScrimAt = now
                 pageScrim.entries.toList().forEach { (page, spec) ->
