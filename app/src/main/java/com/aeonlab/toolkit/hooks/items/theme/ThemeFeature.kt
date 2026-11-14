@@ -461,6 +461,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val detail = log && dumpedPages.add(page)
         dumpTopRegion(page, detail)
         scrimTree(page, page, pageWidth, pageHeight, scrim, gapPx, false, counters, sample, detail, isHome)
+        runCatching { headerHousekeeping(page, pageWidth, pageHeight, detail) }
+            .onFailure { HLog.e("$TAG 头部清理异常: ${it.message}", it) }
         val scrimmedTotal = counters[0] + counters[1] + counters[2] + counters[3]
         if (scrimmedTotal > 0) scrimmedPages.add(page)
         if (log) {
@@ -532,6 +534,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val desc = when {
                     bg == null -> "null"
                     bg is ColorDrawable -> "${bg.javaClass.simpleName}#${Integer.toHexString(bg.color)}"
+                    bg is android.graphics.drawable.GradientDrawable -> "${bg.javaClass.simpleName}#${
+                        (0 until 1).map { 0 }.let { try { Integer.toHexString(bg.color?.defaultColor ?: 0) } catch (e: Throwable) { "?" } }
+                    }"
                     else -> "${bg.javaClass.simpleName} a=${bg.alpha}"
                 }
                 val img = (view as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
@@ -545,6 +550,50 @@ private class ThemeRuntime(private val context: FeatureContext) {
         walk(page, 0)
         HLog.i("$TAG 顶部区域转储(页面 ${page.javaClass.simpleName}): ${lines.size} 条")
         lines.forEach { HLog.i("$TAG   顶部: $it") }
+    }
+
+    /**
+     * 5.5.82：两处日志点名的候选。
+     * 1) 我页白块：09:12 转储点名 ImageView#gxn 1240x549 top=0 bg=ColorDrawable#ffffffff（两次转储均在）。
+     *    规则：顶部 20px 内、宽≥80% 页宽、高≥300px、底色为不透明白 ColorDrawable → 清透明并登记 clearedViews。
+     * 2) 首页灰条：decor 全树仅剩自绘视图能画灰（GradientColorBackgroundView bg=null 1240x2772 两枚，
+     *    其余带底色视图已全透明/已被我们铺图）。禁其自绘（setWillNotDraw），日志可证伪。
+     */
+    private val gradientViewsHandled: MutableSet<View> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
+
+    private fun headerHousekeeping(page: View, pageWidth: Int, pageHeight: Int, log: Boolean) {
+        if (pageWidth <= 0 || pageHeight <= 0) return
+        fun topOf(v: View): Int {
+            var t = 0
+            var cur: View? = v
+            while (cur != null && cur !== page) {
+                t += cur.top
+                cur = cur.parent as? View
+            }
+            return t
+        }
+        fun walk(v: View) {
+            val name = v.javaClass.simpleName
+            if (name == "GradientColorBackgroundView" && v.width > 0 && v.height > 0 && !gradientViewsHandled.add(v)) {
+                runCatching {
+                    v.setWillNotDraw(true)
+                    HLog.i("$TAG 渐变背景视图已禁绘制: ${name}#${idName(v)} ${v.width}x${v.height}")
+                }
+            }
+            val bg = v.background
+            if (bg is ColorDrawable && bg.color == -0x1 &&
+                v.width >= pageWidth * 0.8f && v.height >= 300 && topOf(v) <= 20
+            ) {
+                if (!clearedViews.add(v)) return
+                runCatching {
+                    v.setBackgroundColor(Color.TRANSPARENT)
+                    HLog.i("$TAG 大块白色底已清透明: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height}")
+                }
+            }
+            if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
+        }
+        walk(page)
     }
 
     private fun scrimTree(
@@ -936,7 +985,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val h = v.height.coerceAtLeast(v.measuredHeight)
                 if (h > 40 && w > 200 && v.background != null) {
                     val b = v.background
-                    val col = if (b is ColorDrawable) Integer.toHexString(b.color) else b.javaClass.simpleName
+                    val col = if (b is ColorDrawable) Integer.toHexString(b.color)
+                    else if (b is android.graphics.drawable.GradientDrawable) try { Integer.toHexString(b.color?.defaultColor ?: 0) } catch (e: Throwable) { "?" }
+                    else b.javaClass.simpleName
                     val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) "img=无" else "img=有" } ?: ""
                     rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=$col$img")
                 }
