@@ -1673,21 +1673,20 @@ private class ThemeRuntime(private val context: FeatureContext) {
             retryUnscrimmedPages()
         }
         var tab = lastTab?.get()
-            if (tab != null && !tab.isAttachedToWindow) tab = null
-            if (tab == null) tab = findBottomTab(decor, logCandidates = false)
-            if (tab != null) {
-                lastTab = WeakReference(tab)
-                if (snapshot.tabHideNative) {
-                    if (tab.visibility != View.GONE) {
-                        HLog.i("$TAG 隐藏原生底栏=开，隐藏底栏容器: ${tab.javaClass.name}#${idName(tab)}")
-                        hideView(tab)
-                        tabHiddenByUs = true
-                    }
-                } else if (tabHiddenByUs) {
-                    runCatching { showView(tab) }
-                    tabHiddenByUs = false
-                    HLog.i("$TAG 隐藏原生底栏=关，恢复原生底栏显示: ${tab.javaClass.name}#${idName(tab)}")
+        if (tab != null && !tab.isAttachedToWindow) tab = null
+        if (tab == null) tab = findBottomTab(decor, logCandidates = false)
+        if (tab != null) {
+            lastTab = WeakReference(tab)
+            if (snapshot.tabHideNative) {
+                if (tab.visibility != View.GONE) {
+                    HLog.i("$TAG 隐藏原生底栏=开，隐藏底栏容器: ${tab.javaClass.name}#${idName(tab)}")
+                    hideView(tab)
+                    tabHiddenByUs = true
                 }
+            } else if (tabHiddenByUs) {
+                runCatching { showView(tab) }
+                tabHiddenByUs = false
+                HLog.i("$TAG 隐藏原生底栏=关，恢复原生底栏显示: ${tab.javaClass.name}#${idName(tab)}")
             }
         }
         if (snapshot.backgroundEnabled) {
