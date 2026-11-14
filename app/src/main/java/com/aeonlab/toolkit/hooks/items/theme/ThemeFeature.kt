@@ -254,6 +254,22 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         val barColor = ThemeSettings.parseColor(snapshot.actionBarBackgroundColor)
         applyInternalActionBarColor(bar, barColor ?: Color.TRANSPARENT)
+        // 5.5.88：500ms 重压挡不住微信逐帧重设内部字段（截图仍能捕到灰/紫）——挂 PreDraw 每帧重压。
+        if (bar.tag != BAR_PREDRAW_TAG) {
+            bar.tag = BAR_PREDRAW_TAG
+            bar.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    runCatching {
+                        if (bar.alpha != 0f && bar.visibility == View.VISIBLE) {
+                            val c = ThemeSettings.parseColor(ThemeSettings.snapshot(context.hostContext()).actionBarBackgroundColor)
+                            applyInternalActionBarColor(bar, c ?: Color.TRANSPARENT)
+                        }
+                    }
+                    return true
+                }
+            })
+            HLog.i("$TAG 标题栏内部底色已挂 PreDraw 每帧重压")
+        }
         if (barColor == null) {
             // 5.5.60 起标题栏按真机截图置透明，让背景图从状态栏一直连到列表
             if (!replacedBackgrounds.containsKey(bar)) replacedBackgrounds[bar] = bar.background
@@ -501,6 +517,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }.getOrDefault(0)
 
     /** 是否位于滚动容器内部（列表行/条目的底色由行遮罩统一处理，不能在这里整块清或铺图）。 */
+    /** 5.5.88：小程序任务栏（下拉面板）深色卡 #26223a 被行遮罩/清底规则破坏——其子树一律跳过。 */
+    private fun insideTaskBar(view: View, page: View): Boolean {
+        var cur: View? = view.parent as? View
+        var depth = 0
+        while (cur != null && cur !== page && depth < 24) {
+            if (cur.javaClass.simpleName == "TaskBarContainer") return true
+            cur = cur.parent as? View
+            depth++
+        }
+        return false
+    }
+
     private fun insideScrollingContainer(view: View, page: View): Boolean {
         var cur: View? = view.parent as? View
         var depth = 0
@@ -784,6 +812,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         fun walk(v: View) {
             val name = v.javaClass.simpleName
+            // 5.5.88：AppBrandDesktopContainerView 面板打开时 top=0 全屏盖在图标区上层（14:35 日志实锤），
+            // 它的壁纸底色让图标「看不见但可点」——清透明并禁止再铺图。
+            if (name == "AppBrandDesktopContainerView") {
+                if (clearedViews.add(v)) {
+                    runCatching {
+                        v.setBackgroundColor(Color.TRANSPARENT)
+                        HLog.i("$TAG 小程序桌面容器底色已清透明: ${name}#${idName(v)} ${v.width}x${v.height}")
+                    }
+                }
+                return
+            }
+            if (v !== page && insideTaskBar(v, page)) return
             if (name == "GradientColorBackgroundView" && v.width > 0 && v.height > 0 && gradientViewsHandled.add(v)) {
                 runCatching {
                     v.setWillNotDraw(true)
@@ -836,6 +876,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         isHome: Boolean
     ) {
         var scrimmed = underScrim
+        if (view !== page && insideTaskBar(view, page)) return
         if (view !== page && !pageDrawables.containsKey(view)) {
             val width = view.width.coerceAtLeast(view.measuredWidth)
             val height = view.height.coerceAtLeast(view.measuredHeight)
@@ -1049,6 +1090,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (view is ViewGroup) {
             val width = view.width.coerceAtLeast(view.measuredWidth)
             val height = view.height.coerceAtLeast(view.measuredHeight)
+            if (view.javaClass.simpleName == "AppBrandDesktopContainerView") return
             if (width >= pageWidth * 0.85f && height >= pageHeight * 0.45f) out.add(view)
             for (index in 0 until view.childCount) {
                 val child = view.getChildAt(index)
@@ -1184,7 +1226,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val id = runCatching { activity.resources.getIdentifier(name, "id", HOST_PACKAGE) }.getOrDefault(0)
             if (id != 0) runCatching { decor.findViewById<View>(id) }.getOrNull()?.let { targets.add(it) }
         }
-        listOf("ActionBarOverlayLayout", "ContentFrameLayout", "ActionBarContainer", "FitSystemWindowLayoutView").forEach { className ->
+        runCatching { decor.findViewById<View>(android.R.id.statusBarBackground) }.getOrNull()?.let {
+            targets.add(it)
+            HLog.i("$TAG 状态栏层灰底待清: ${it.javaClass.simpleName}#${idName(it)} ${it.width}x${it.height} bg=${descDrawable(it.background)}")
+        }
+        // 5.5.88：14:35 日志里全 decor 仅剩的两处 #ededed 灰底——statusBarBackground（此前按框架 id 清，但
+        // getIdentifier 查的是宿主包返回 0，从未清过）与 FirstScreenFrameLayout#g6w（唯一幸存灰底，判别实验）。
+        listOf("ActionBarOverlayLayout", "ContentFrameLayout", "ActionBarContainer", "FitSystemWindowLayoutView", "FirstScreenFrameLayout").forEach { className ->
             findViewByClassName(decor, className)?.let { targets.add(it) }
         }
         var cleared = 0
@@ -2085,6 +2133,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     private companion object {
         const val TAG = "[AeonLab:Theme]"
+        const val BAR_PREDRAW_TAG = "hchat_bar_predraw"
         const val HOST_PACKAGE = "com.tencent.mm"
         const val LAUNCHER_UI_CLASS = "com.tencent.mm.ui.LauncherUI"
         const val BOTTOM_TAB_CLASS = "com.tencent.mm.ui.LauncherUIBottomTabView"
