@@ -253,6 +253,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { bar.alpha = originalViewAlphas.remove(bar) ?: 1f }
         }
         val barColor = ThemeSettings.parseColor(snapshot.actionBarBackgroundColor)
+        applyInternalActionBarColor(bar, barColor ?: Color.TRANSPARENT)
         if (barColor == null) {
             // 5.5.60 起标题栏按真机截图置透明，让背景图从状态栏一直连到列表
             if (!replacedBackgrounds.containsKey(bar)) replacedBackgrounds[bar] = bar.background
@@ -614,6 +615,40 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }.onFailure { HLog.e("$TAG 灰条探针异常: ${it.message}", it) }
     }
 
+    @Volatile private var tabHiddenByUs = false
+    private var lastInternalBarSig: String? = null
+
+    /** 5.5.85：ActionBarContainer 的灰/紫底不在 view.background，而在它 onDraw 画的内部字段
+     *  （探针实测：首页 h=#ffededed、面板页 h=#ff7a7396、另有 i=#ff111111，字段名被混淆）。
+     *  把所有不透明 ColorDrawable 字段统一替换成目标色（未指定=透明），enforce 每轮重压。 */
+    private fun applyInternalActionBarColor(bar: View, color: Int) {
+        runCatching {
+            val replaced = ArrayList<String>()
+            var cls: Class<*>? = bar.javaClass
+            var guard = 0
+            while (cls != null && guard++ < 6) {
+                for (f in cls.declaredFields) {
+                    runCatching {
+                        f.isAccessible = true
+                        val cur = f.get(bar)
+                        if (cur is ColorDrawable && Color.alpha(cur.color) != 0) {
+                            f.set(bar, ColorDrawable(color))
+                            replaced.add("${f.name}=#${Integer.toHexString(cur.color)}")
+                        }
+                    }
+                }
+                cls = cls.superclass
+            }
+            if (replaced.isNotEmpty()) {
+                val sig = "${Integer.toHexString(color)}|${replaced.joinToString("/")}"
+                if (sig != lastInternalBarSig) {
+                    lastInternalBarSig = sig
+                    HLog.i("$TAG 标题栏内部底色已替换 ${replaced.size} 处 → #${Integer.toHexString(color)} [${replaced.joinToString("/")}]")
+                }
+            }
+        }.onFailure { HLog.e("$TAG 标题栏内部底色替换失败: ${it.message}", it) }
+    }
+
     private fun descDrawable(d: android.graphics.drawable.Drawable?): String = when (d) {
         null -> "null"
         is ColorDrawable -> "ColorDrawable#${Integer.toHexString(d.color)}"
@@ -652,7 +687,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val h = v.height.coerceAtLeast(v.measuredHeight)
                 if (w > 60 && h > 30) {
                     val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
-                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)}$img vis=${v.visibility}")
+                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)}$img alpha=${v.alpha} vis=${v.visibility}")
                 }
                 if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1)
             }
@@ -678,7 +713,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val h = v.height.coerceAtLeast(v.measuredHeight)
                 if (w > 60 && h > 30) {
                     val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
-                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)}$img vis=${v.visibility}")
+                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)}$img alpha=${v.alpha} vis=${v.visibility}")
                 }
                 if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1)
             }
@@ -727,6 +762,17 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 runCatching {
                     v.setBackgroundColor(Color.TRANSPARENT)
                     HLog.i("$TAG 大块白色底已清透明: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height}")
+                }
+            }
+            val db = v.background
+            if (v.height in 1..8 && v.width >= pageWidth * 0.5f &&
+                db is ColorDrawable && Color.alpha(db.color) > 0
+            ) {
+                if (clearedViews.add(v)) {
+                    runCatching {
+                        v.setBackgroundColor(Color.TRANSPARENT)
+                        HLog.i("$TAG 细分隔线已清透明: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} #${Integer.toHexString(db.color)}")
+                    }
                 }
             }
             if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
@@ -1593,7 +1639,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 if (tab.visibility != View.GONE) {
                     HLog.i("$TAG 底栏被微信恢复显示，重新隐藏: ${tab.javaClass.name}#${idName(tab)}")
                     hideView(tab)
+                    tabHiddenByUs = true
                 }
+            }
+        } else {
+            val tab = lastTab?.get()
+            if (tab != null && tabHiddenByUs && tab.visibility == View.GONE) {
+                runCatching { tab.visibility = View.VISIBLE }
+                tabHiddenByUs = false
+                HLog.i("$TAG 隐藏原生底栏=关，恢复原生底栏显示: ${tab.javaClass.name}#${idName(tab)}")
             }
         }
         if (snapshot.backgroundEnabled) {
@@ -1616,6 +1670,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     runCatching { dumpTopRegion(page, true) }
                         .onFailure { HLog.e("$TAG 顶部转储异常: ${it.message}", it) }
                 }
+            }
+            findViewByClassName(decor, "ActionBarContainer")?.let { bar ->
+                val parsed = ThemeSettings.parseColor(snapshot.actionBarBackgroundColor)
+                applyInternalActionBarColor(bar, parsed ?: Color.TRANSPARENT)
             }
             titleBarProbe(decor, now)
             actionBarProbe(decor, now)
