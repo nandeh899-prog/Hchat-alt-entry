@@ -1785,11 +1785,23 @@ private class ThemeRuntime(private val context: FeatureContext) {
             // 用于定住「探针在打、其后步骤零日志」究竟是哪一行在吞执行流。
             runStep(now, "neutralizeWhiteNinePatch") { neutralizeWhiteNinePatch(decor) }
             runStep(now, "glLayerProbe") {
-                if (now - lastGlLayerLogAt >= topDumpIntervalMs) {
-                    lastGlLayerLogAt = now
-                    val gl = ArrayList<View>()
-                    collectBySimpleName(decor, "DynamicBackgroundGLSurfaceView", gl)
-                    if (gl.isNotEmpty()) {
+                val gl = ArrayList<View>()
+                collectBySimpleName(decor, "DynamicBackgroundGLSurfaceView", gl)
+                if (gl.isNotEmpty()) {
+                    for (g in gl) {
+                        // 06:39 实锤：GL surface 由 SurfaceFlinger 合成在窗口后面，窗口透区（顶部0~288）
+                        // 透出微信默认白色聊天背景，壁纸位图盖住处不可见——画布探针/背景采样全 0 的原因。
+                        // 判别实验：直接隐藏，白块应随之消失；若聊天页等背景异常再回退加开关。
+                        if (g.tag != GL_HIDDEN_TAG) {
+                            runCatching {
+                                g.tag = GL_HIDDEN_TAG
+                                g.visibility = View.GONE
+                                HLog.i("$TAG GL动态背景层已隐藏(判别实验): ${g.javaClass.simpleName}#${idName(g)} ${g.width}x${g.height}")
+                            }.onFailure { HLog.e("$TAG GL动态背景层隐藏失败: ${it.message}", it) }
+                        }
+                    }
+                    if (now - lastGlLayerLogAt >= topDumpIntervalMs) {
+                        lastGlLayerLogAt = now
                         for (g in gl) {
                             HLog.i("$TAG GL动态背景层: ${g.javaClass.simpleName}#${idName(g)} ${g.width}x${g.height} vis=${g.visibility} alpha=${g.alpha} willNotDraw=${g.willNotDraw()}")
                         }
@@ -2004,6 +2016,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private val WHITE_NINEPATCH_TAG = Any()
+    private val GL_HIDDEN_TAG = Any()
 
     /** 21:31 日志实锤：主页顶部白块= NinePatchDrawable 背景（View.drawBackground native 绘制，
      *  画布钩子看不到）。尺寸 1240x100（状态区）/1240x174（标题卡区）/1240x2772（列表项 .9 白色边条）。
