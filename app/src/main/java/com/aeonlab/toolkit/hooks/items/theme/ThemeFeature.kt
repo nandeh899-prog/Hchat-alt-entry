@@ -1789,28 +1789,45 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun installGreyPainterProbe() {
         val grey = 0xffededed.toInt()
         val purple = 0xff7a7396.toInt()
-        fun hookOne(method: String) {
-            runCatching {
-                XposedBridge.hookAllMethods(Canvas::class.java, method, object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val color = when {
-                            param.args.lastOrNull() is Paint -> (param.args.last() as Paint).color
-                            method == "drawColor" && param.args.isNotEmpty() -> param.args[0] as? Int ?: return
-                            else -> return
+        val canvasClasses = ArrayList<Class<*>>()
+        canvasClasses.add(Canvas::class.java)
+        runCatching { canvasClasses.add(Class.forName("android.graphics.BaseCanvas")) }
+        runCatching { canvasClasses.add(Class.forName("android.graphics.RecordingCanvas")) }
+        // 16:46 日志实证：只挂 Canvas 时取证 0 命中——硬件渲染走 RecordingCanvas/BaseCanvas 的 override，
+        // Canvas 本类声明根本不被调用。三个类都挂，方法扩到 drawRect/drawRoundRect/drawPath/drawPaint/drawColor。
+        val drawMethods = listOf("drawRect", "drawRoundRect", "drawPath", "drawPaint", "drawColor")
+        for (clz in canvasClasses) {
+            for (method in drawMethods) {
+                runCatching {
+                    XposedBridge.hookAllMethods(clz, method, object : XC_MethodHook() {
+                        override fun beforeHookedMethod(param: MethodHookParam) {
+                            val color = when {
+                                param.args.lastOrNull() is Paint -> (param.args.last() as Paint).color
+                                method == "drawColor" && param.args.isNotEmpty() -> param.args[0] as? Int ?: return
+                                else -> return
+                            }
+                            if (color != grey && color != purple) return
+                            reportPainter(color, "${clz.simpleName}.$method")
                         }
-                        if (color != grey && color != purple) return
-                        reportPainter(color)
-                    }
-                })
-                HLog.i("$TAG 灰条绘制者取证已挂: Canvas.$method")
-            }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 Canvas.$method: ${it.message}", it) }
+                    })
+                    HLog.i("$TAG 灰条绘制者取证已挂: ${clz.name}.$method")
+                }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 ${clz.name}.$method: ${it.message}", it) }
+            }
         }
-        hookOne("drawRect")
-        hookOne("drawRoundRect")
-        hookOne("drawColor")
+        // 上色取证：谁把画笔设成灰条同色，直接抓（覆盖 drawBitmap/九宫格等不走 drawRect 的通道）。
+        runCatching {
+            XposedBridge.hookAllMethods(Paint::class.java, "setColor", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val color = param.args.firstOrNull() as? Int ?: return
+                    if (color != grey && color != purple) return
+                    reportPainter(color, "Paint.setColor")
+                }
+            })
+            HLog.i("$TAG 灰条绘制者取证已挂: Paint.setColor")
+        }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 Paint.setColor: ${it.message}", it) }
     }
 
-    private fun reportPainter(color: Int) {
+    private fun reportPainter(color: Int, source: String) {
         val st = Throwable().stackTrace
         var top: String? = null
         val chain = ArrayList<String>()
@@ -1821,7 +1838,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (chain.size < 8) chain.add(item)
             if (top == null && cn.startsWith("com.tencent.")) top = item
         }
-        val sig = color.toString() + "|" + (top ?: chain.firstOrNull() ?: "?")
+        val sig = "$source|$color|" + (top ?: chain.firstOrNull() ?: "?")
         val now = SystemClock.elapsedRealtime()
         synchronized(painterProbeSigs) {
             val last = painterProbeSigs[sig]
@@ -1829,7 +1846,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             painterProbeSigs[sig] = now
             if (painterProbeSigs.size > 64) painterProbeSigs.clear()
         }
-        HLog.i("$TAG 灰条绘制者取证: color=#${Integer.toHexString(color)} 调用栈=${chain.joinToString(" <- ")}")
+        HLog.i("$TAG 灰条绘制者取证: color=#${Integer.toHexString(color)} 来源=$source 调用栈=${chain.joinToString(" <- ")}")
     }
 
     /**
