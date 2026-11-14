@@ -1783,6 +1783,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
             // 19:37 日志判据：此处各步骤独立包 runCatching，异常与计数全部落日志，
             // 用于定住「探针在打、其后步骤零日志」究竟是哪一行在吞执行流。
+            runStep(now, "neutralizeWhiteNinePatch") { neutralizeWhiteNinePatch(decor) }
             runStep(now, "glLayerProbe") {
                 if (now - lastGlLayerLogAt >= topDumpIntervalMs) {
                     lastGlLayerLogAt = now
@@ -1999,6 +2000,62 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             })
             HLog.i("$TAG 首屏容器灰底已挂 PreDraw 每帧重压+禁自绘: ${fs.javaClass.simpleName}#${idName(fs)}")
+        }
+    }
+
+    private val WHITE_NINEPATCH_TAG = Any()
+
+    /** 21:31 日志实锤：主页顶部白块= NinePatchDrawable 背景（View.drawBackground native 绘制，
+     *  画布钩子看不到）。尺寸 1240x100（状态区）/1240x174（标题卡区）/1240x2772（列表项 .9 白色边条）。
+     *  顶部 300px 内、宽≥800、背景为白/灰采样命中的 NinePatchDrawable 一律清透明。 */
+    private var lastWhiteNinePatchLogAt = 0L
+
+    private fun neutralizeWhiteNinePatch(decor: ViewGroup) {
+        val stack = ArrayList<View>()
+        stack.add(decor)
+        while (stack.isNotEmpty()) {
+            val v = stack.removeAt(stack.size - 1)
+            if (v.getTag(WHITE_NINEPATCH_TAG) == null) {
+                var absTop = 0
+                runCatching {
+                    var cur: View = v
+                    var guard = 0
+                    while (guard++ < 20) {
+                        val p = cur.parent as? View ?: break
+                        absTop += cur.top
+                        cur = p
+                    }
+                }
+                val d = runCatching { v.background }.getOrNull()
+                if (absTop <= 300 && v.width >= 800 && d is android.graphics.drawable.NinePatchDrawable) {
+                    val bmp = runCatching {
+                        val m = d.javaClass.getMethod("getBitmap")
+                        m.isAccessible = true
+                        m.invoke(d) as? android.graphics.Bitmap
+                    }.getOrNull()
+                    val hit = if (bmp != null && bmp.width > 0 && bmp.height > 0) runCatching {
+                        listOf(
+                            bmp.getPixel(0, 0),
+                            bmp.getPixel(bmp.width - 1, 0),
+                            bmp.getPixel(0, bmp.height / 2)
+                        ).firstOrNull { c ->
+                            Color.alpha(c) == 255 && Color.red(c) >= 224 && Color.green(c) >= 224 && Color.blue(c) >= 224
+                        }
+                    }.getOrNull() else null
+                    if (hit != null) {
+                        runCatching {
+                            v.background = ColorDrawable(Color.TRANSPARENT)
+                            v.setTag(WHITE_NINEPATCH_TAG, true)
+                            val now = SystemClock.uptimeMillis()
+                            if (now - lastWhiteNinePatchLogAt >= 1000L) {
+                                lastWhiteNinePatchLogAt = now
+                                HLog.i("$TAG 顶部白底九宫格已清: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} top=$absTop sample=${Integer.toHexString(hit)}")
+                            }
+                        }
+                    }
+                }
+            }
+            if (v is ViewGroup) for (i in 0 until v.childCount) stack.add(v.getChildAt(i))
         }
     }
 
