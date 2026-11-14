@@ -1783,6 +1783,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
             // 19:37 日志判据：此处各步骤独立包 runCatching，异常与计数全部落日志，
             // 用于定住「探针在打、其后步骤零日志」究竟是哪一行在吞执行流。
+            runStep(now, "glLayerProbe") {
+                if (now - lastGlLayerLogAt >= topDumpIntervalMs) {
+                    lastGlLayerLogAt = now
+                    val gl = ArrayList<View>()
+                    collectBySimpleName(decor, "DynamicBackgroundGLSurfaceView", gl)
+                    if (gl.isNotEmpty()) {
+                        for (g in gl) {
+                            HLog.i("$TAG GL动态背景层: ${g.javaClass.simpleName}#${idName(g)} ${g.width}x${g.height} vis=${g.visibility} alpha=${g.alpha} willNotDraw=${g.willNotDraw()}")
+                        }
+                    }
+                }
+            }
             runStep(now, "enforceFirstScreen") { enforceFirstScreen(decor) }
             runStep(now, "neutralizeTaskBarBottomView") { neutralizeTaskBarBottomView(decor) }
             runStep(now, "ensureConversationOverdrawHook") { ensureConversationOverdrawHook(decor) }
@@ -1889,6 +1901,40 @@ private class ThemeRuntime(private val context: FeatureContext) {
             })
             HLog.i("$TAG 灰条绘制者取证已挂: NinePatchDrawable.draw")
         }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 NinePatchDrawable.draw: ${it.message}", it) }
+        // 5.5.98：20:5x 主页白块纯白矩形、画笔/位图/九宫格三通道全 0——剩余盲区=Paint 带 Shader
+        //（渐变白走 setShader，setColor 不写白色）。谁把白/灰渐变装上画笔就点名。
+        runCatching {
+            XposedBridge.hookAllMethods(Paint::class.java, "setShader", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val shader = param.args.firstOrNull() ?: return
+                    var hit: Int? = null
+                    var kind = ""
+                    if (shader is android.graphics.LinearGradient) {
+                        kind = "LinearGradient"
+                        runCatching {
+                            val f = android.graphics.LinearGradient::class.java.getDeclaredField("mColors")
+                            f.isAccessible = true
+                            val cols = f.get(shader) as? IntArray
+                            hit = cols?.firstOrNull { c ->
+                                Color.alpha(c) == 255 && Color.red(c) >= 224 && Color.green(c) >= 224 && Color.blue(c) >= 224
+                            }
+                        }
+                    } else if (shader is android.graphics.BitmapShader) {
+                        kind = "BitmapShader"
+                        runCatching {
+                            val f = android.graphics.BitmapShader::class.java.getDeclaredField("mBitmap")
+                            f.isAccessible = true
+                            val bmp = f.get(shader) as? android.graphics.Bitmap
+                            hit = bmp?.getPixel(0, 0)?.takeIf { c ->
+                                Color.alpha(c) == 255 && Color.red(c) >= 224 && Color.green(c) >= 224 && Color.blue(c) >= 224
+                            }
+                        }
+                    }
+                    if (hit != null) reportPainter(hit!!, "Paint.setShader $kind")
+                }
+            })
+            HLog.i("$TAG 灰条绘制者取证已挂: Paint.setShader")
+        }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 Paint.setShader: ${it.message}", it) }
         // 上色取证：谁把画笔设成灰条同色，直接抓（覆盖 drawBitmap/九宫格等不走 drawRect 的通道）。
         runCatching {
             XposedBridge.hookAllMethods(Paint::class.java, "setColor", object : XC_MethodHook() {
@@ -2281,6 +2327,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  ②灰栈 0 条：TaskBarBottomView 禁绘持续有效；③「列表自绘覆盖钩子已挂」0 条且无失败日志：静默 return，本轮补诊断。
      *  做法：反射枚举 WindowManagerGlobal.mViews 全部窗口根，打根类名/尺寸/窗口参数/背景，标注含 TaskBarBottomView 的根，
      *  并对该根子树 w≥800 且 top≤300 的纯白 Color/GradientDrawable 清透明。 */
+    @Volatile private var lastGlLayerLogAt = 0L
     @Volatile private var lastTaskBarCountLogAt = 0L
     @Volatile private var lastWindowDumpAt = 0L
     private val overlayWhiteCleared = Collections.newSetFromMap(WeakHashMap<View, Boolean>())
@@ -2416,20 +2463,50 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     val w = v.width
                     val h = v.height
                     if (w <= 0 || h <= 0) return
-                    val bmp = (v.background as? BitmapDrawable)?.bitmap ?: return
+                    // 20:5x dump 实证：面板页列表 bg=null，旧代码在此 return，紫条回铺从未执行。
+                    // bg 不是壁纸位图时回退用窗口根（DecorView 铺图）壁纸，按视图绝对位置切片。
+                    val ownBmp = (v.background as? BitmapDrawable)?.bitmap
+                    val rootBmp = runCatching { (v.rootView.background as? BitmapDrawable)?.bitmap }.getOrNull()
+                    val bmp = ownBmp ?: rootBmp ?: return
                     if (bmp.width <= 0 || bmp.height <= 0) return
                     runCatching {
                         val paintNull: android.graphics.Paint? = null
                         val topBand = 300
-                        if (h > topBand) {
-                            val srcTop = android.graphics.Rect(0, 0, bmp.width, bmp.height * topBand / h)
-                            canvas.drawBitmap(bmp, srcTop, android.graphics.Rect(0, 0, w, topBand), paintNull)
-                        }
                         val bottomBand = 149
-                        if (h > bottomBand + topBand) {
-                            val bandH = bmp.height * bottomBand / h
-                            val srcBottom = android.graphics.Rect(0, bmp.height - bandH, bmp.width, bmp.height)
-                            canvas.drawBitmap(bmp, srcBottom, android.graphics.Rect(0, h - bottomBand, w, h), paintNull)
+                        var absTop = 0
+                        runCatching {
+                            var cur: View = v
+                            var guard = 0
+                            while (guard++ < 20) {
+                                val p = cur.parent as? View ?: break
+                                absTop += cur.top
+                                cur = p
+                            }
+                        }
+                        if (ownBmp != null) {
+                            // 自带背景位图=按视图自身高度映射（原行为，主页已验证）
+                            if (h > topBand) {
+                                val srcTop = android.graphics.Rect(0, 0, bmp.width, bmp.height * topBand / h)
+                                canvas.drawBitmap(bmp, srcTop, android.graphics.Rect(0, 0, w, topBand), paintNull)
+                            }
+                            if (h > bottomBand + topBand) {
+                                val bandH = bmp.height * bottomBand / h
+                                val srcBottom = android.graphics.Rect(0, bmp.height - bandH, bmp.width, bmp.height)
+                                canvas.drawBitmap(bmp, srcBottom, android.graphics.Rect(0, h - bottomBand, w, h), paintNull)
+                            }
+                        } else {
+                            // 回退：壁纸拉伸到窗口根高度，按绝对位置切
+                            val rootH = runCatching { v.rootView.height }.getOrDefault(h).coerceAtLeast(1)
+                            if (h > topBand) {
+                                val s0 = (absTop.coerceAtLeast(0)) * bmp.height / rootH
+                                val s1 = ((absTop + topBand).coerceAtMost(rootH)) * bmp.height / rootH
+                                canvas.drawBitmap(bmp, android.graphics.Rect(0, s0, bmp.width, s1), android.graphics.Rect(0, 0, w, topBand), paintNull)
+                            }
+                            if (h > bottomBand + topBand) {
+                                val s2 = ((absTop + h - bottomBand).coerceAtLeast(0)) * bmp.height / rootH
+                                val s3 = ((absTop + h).coerceAtMost(rootH)) * bmp.height / rootH
+                                canvas.drawBitmap(bmp, android.graphics.Rect(0, s2, bmp.width, s3), android.graphics.Rect(0, h - bottomBand, w, h), paintNull)
+                            }
                         }
                     }
                 }
