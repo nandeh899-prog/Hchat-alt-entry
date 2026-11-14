@@ -1841,6 +1841,35 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 16:46 日志实证：只挂 Canvas 时取证 0 命中——硬件渲染走 RecordingCanvas/BaseCanvas 的 override，
         // Canvas 本类声明根本不被调用。三个类都挂，方法扩到 drawRect/drawRoundRect/drawPath/drawPaint/drawColor。
         val drawMethods = listOf("drawRect", "drawRoundRect", "drawPath", "drawPaint", "drawColor")
+        // 07:22 复测：GL 已隐藏(vis=8)白块原样——GL 嫌疑证伪。排查到 drawRGB/drawARGB 是独立方法名
+        // 未挂（drawColor 不覆盖它们），微信 GradientColorBackgroundView（bg=null 自绘渐变头）嫌疑最大。
+        val rgbMethods = listOf("drawRGB", "drawARGB")
+        for (clz in canvasClasses) {
+            for (method in rgbMethods) {
+                runCatching {
+                    XposedBridge.hookAllMethods(clz, method, object : XC_MethodHook() {
+                        override fun beforeHookedMethod(param: MethodHookParam) {
+                            val color = when (method) {
+                                "drawRGB" -> {
+                                    val r = param.args.getOrNull(0) as? Int ?: return
+                                    val g = param.args.getOrNull(1) as? Int ?: return
+                                    val b = param.args.getOrNull(2) as? Int ?: return
+                                    (0xff shl 24) or (r.coerceIn(0, 255) shl 16) or (g.coerceIn(0, 255) shl 8) or b.coerceIn(0, 255)
+                                }
+                                else -> param.args.getOrNull(0) as? Int ?: return
+                            }
+                            if (color != grey && color != purple) {
+                                if (color != white) return
+                                val cvs = param.thisObject as? Canvas ?: return
+                                if (cvs.width < 800 || cvs.height < 100) return
+                            }
+                            reportPainter(color, "${clz.simpleName}.$method")
+                        }
+                    })
+                    HLog.i("$TAG 灰条绘制者取证已挂: ${clz.name}.$method")
+                }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 ${clz.name}.$method: ${it.message}", it) }
+            }
+        }
         for (clz in canvasClasses) {
             for (method in drawMethods) {
                 runCatching {
