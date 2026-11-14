@@ -691,6 +691,19 @@ private class ThemeRuntime(private val context: FeatureContext) {
         is ColorDrawable -> "ColorDrawable#${Integer.toHexString(d.color)}"
         is android.graphics.drawable.GradientDrawable ->
             "GradientDrawable#" + runCatching { Integer.toHexString(d.color?.defaultColor ?: -1) }.getOrDefault("?")
+        is android.graphics.drawable.BitmapDrawable -> {
+            val bmp = d.bitmap
+            if (bmp == null) "BitmapDrawable#null"
+            else "BitmapDrawable#" + runCatching {
+                val cols = listOf(
+                    bmp.getPixel(0, 0),
+                    bmp.getPixel(bmp.width - 1, 0),
+                    bmp.getPixel(0, bmp.height - 1),
+                    bmp.getPixel(bmp.width / 2, bmp.height / 2)
+                )
+                cols.joinToString("/") { Integer.toHexString(it) }
+            }.getOrDefault("?") + " ${bmp.width}x${bmp.height}"
+        }
         else -> d.javaClass.simpleName
     }
 
@@ -1818,7 +1831,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                                 // 17:33 截图主页顶部 0~285 纯白块，疑为列表/标题窗口自绘头部。
                                 if (color != white) return
                                 val cvs = param.thisObject as? Canvas ?: return
-                                if (cvs.width < 800 || cvs.height < 200) return
+                                if (cvs.width < 800 || cvs.height < 100) return
                             }
                             reportPainter(color, "${clz.simpleName}.$method")
                         }
@@ -1827,6 +1840,51 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 ${clz.name}.$method: ${it.message}", it) }
             }
         }
+        // 5.5.97：20:20 dump 无白色背景、白栈仍 0——白色不走画笔，剩余盲区=drawBitmap 位图与
+        // NinePatchDrawable（native 绘制，Java Canvas 通道抓不到）。位图通道按采样像素色值点名。
+        runCatching {
+            XposedBridge.hookAllMethods(Canvas::class.java, "drawBitmap", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val cvs = param.thisObject as? Canvas ?: return
+                    if (cvs.width < 800) return
+                    val bmp = param.args.firstOrNull() as? android.graphics.Bitmap ?: return
+                    if (bmp.width <= 0 || bmp.height <= 0) return
+                    val hit = runCatching {
+                        listOf(
+                            bmp.getPixel(0, 0),
+                            bmp.getPixel(bmp.width - 1, 0),
+                            bmp.getPixel(0, bmp.height - 1),
+                            bmp.getPixel(bmp.width / 2, bmp.height / 2)
+                        ).firstOrNull { c ->
+                            Color.alpha(c) == 255 && Color.red(c) >= 224 && Color.green(c) >= 224 && Color.blue(c) >= 224
+                        }
+                    }.getOrNull() ?: return
+                    reportPainter(hit, "Canvas.drawBitmap ${bmp.width}x${bmp.height}")
+                }
+            })
+            HLog.i("$TAG 灰条绘制者取证已挂: Canvas.drawBitmap")
+        }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 Canvas.drawBitmap: ${it.message}", it) }
+        runCatching {
+            XposedBridge.hookAllMethods(android.graphics.drawable.NinePatchDrawable::class.java, "draw", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val d = param.thisObject as? android.graphics.drawable.NinePatchDrawable ?: return
+                    val r = d.bounds
+                    if (r.width() < 800) return
+                    val bmp = runCatching { d.bitmap }.getOrNull()
+                    val hit = if (bmp != null && bmp.width > 0) runCatching {
+                        listOf(
+                            bmp.getPixel(0, 0),
+                            bmp.getPixel(bmp.width - 1, 0),
+                            bmp.getPixel(bmp.width / 2, bmp.height / 2)
+                        ).firstOrNull { c ->
+                            Color.alpha(c) == 255 && Color.red(c) >= 224 && Color.green(c) >= 224 && Color.blue(c) >= 224
+                        }
+                    }.getOrNull() else null
+                    reportPainter(hit ?: 0xffffffff.toInt(), "NinePatchDrawable.draw ${r.width()}x${r.height()}")
+                }
+            })
+            HLog.i("$TAG 灰条绘制者取证已挂: NinePatchDrawable.draw")
+        }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 NinePatchDrawable.draw: ${it.message}", it) }
         // 上色取证：谁把画笔设成灰条同色，直接抓（覆盖 drawBitmap/九宫格等不走 drawRect 的通道）。
         runCatching {
             XposedBridge.hookAllMethods(Paint::class.java, "setColor", object : XC_MethodHook() {
@@ -2269,7 +2327,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
             HLog.e("$TAG 窗口根转储反射失败: ${it.javaClass.simpleName}: ${it.message}")
         }
         reflected.getOrNull()?.let { roots.addAll(it) }
+        val reflectedCount = reflected.getOrNull()?.size ?: -1
         roots.addAll(hookedDecorViews.filter { it.isAttachedToWindow })
+        HLog.i("$TAG 窗口根转储: roots=${roots.size} 反射=$reflectedCount 收集器=${hookedDecorViews.size}")
         for (root in roots) {
             if (root === decor || root === decor.rootView) continue
             val barList = ArrayList<View>()
