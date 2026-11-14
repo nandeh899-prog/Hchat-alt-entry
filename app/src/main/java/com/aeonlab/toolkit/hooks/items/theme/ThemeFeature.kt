@@ -148,6 +148,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     @Volatile private var rowMaskAlpha = -1
     @Volatile private var lastAppliedRowStrength = -1
     private var lastTopDumpAt = 0L
+    private var lastFirstScreenRepaintLogAt = 0L
     private val periodicTicked: MutableSet<Activity> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Activity, Boolean>()))
 
@@ -1762,6 +1763,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val parsed = ThemeSettings.parseColor(snapshot.actionBarBackgroundColor)
                 applyInternalActionBarColor(bar, parsed ?: Color.TRANSPARENT)
             }
+            enforceFirstScreen(decor)
             titleBarProbe(decor, now)
             decorStripProbe(decor, now)
             actionBarProbe(decor, now)
@@ -1773,6 +1775,37 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         .onFailure { HLog.e("$TAG 内容分层重扫失败: ${it.message}", it) }
                 }
             }
+        }
+    }
+
+    /**
+     * 5.5.89：15:14 日志行为证据——statusBarBackground 清后 280/285 次采样透明（排除），而
+     * FirstScreenFrameLayout#g6w 清一次后 32/33 次转储都是 #ededed：微信在持续把它刷回，
+     * 它是全 decor 唯一反复变灰的视图且位置正对标题灰条。挂 PreDraw 每帧重清 + 禁自绘。
+     * 可证伪：若灰条仍在且转储里 g6w 始终透明，则灰底走 dispatchDraw 自绘（下一轮换 alpha 方案）。
+     */
+    private fun enforceFirstScreen(decor: ViewGroup) {
+        val fs = findViewByClassName(decor, "FirstScreenFrameLayout") ?: return
+        if (fs.tag == FIRST_SCREEN_TAG) return
+        fs.tag = FIRST_SCREEN_TAG
+        runCatching { fs.setWillNotDraw(true) }
+        runCatching {
+            if (!clearedViews.add(fs)) return
+            fs.setBackgroundColor(Color.TRANSPARENT)
+            fs.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    val bg = fs.background
+                    if (bg is ColorDrawable && Color.alpha(bg.color) == 0) return true
+                    runCatching { fs.setBackgroundColor(Color.TRANSPARENT) }
+                    val now = SystemClock.uptimeMillis()
+                    if (now - lastFirstScreenRepaintLogAt >= 3000L) {
+                        lastFirstScreenRepaintLogAt = now
+                        HLog.i("$TAG 宿主刷回首屏灰底（当前=${descDrawable(bg)}），PreDraw 已重清: ${fs.javaClass.simpleName}#${idName(fs)}")
+                    }
+                    return true
+                }
+            })
+            HLog.i("$TAG 首屏容器灰底已挂 PreDraw 每帧重压+禁自绘: ${fs.javaClass.simpleName}#${idName(fs)}")
         }
     }
 
@@ -2134,6 +2167,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private companion object {
         const val TAG = "[AeonLab:Theme]"
         const val BAR_PREDRAW_TAG = "hchat_bar_predraw"
+        const val FIRST_SCREEN_TAG = "hchat_first_screen_predraw"
         const val HOST_PACKAGE = "com.tencent.mm"
         const val LAUNCHER_UI_CLASS = "com.tencent.mm.ui.LauncherUI"
         const val BOTTOM_TAB_CLASS = "com.tencent.mm.ui.LauncherUIBottomTabView"
