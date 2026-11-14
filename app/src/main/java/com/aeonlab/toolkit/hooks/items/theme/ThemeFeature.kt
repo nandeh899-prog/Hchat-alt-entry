@@ -2258,7 +2258,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val bg = runCatching { root.background }.getOrNull()
             val color = when (bg) {
                 is ColorDrawable -> bg.color
-                is android.graphics.drawable.GradientDrawable -> runCatching { bg.color }.getOrNull()
+                is android.graphics.drawable.GradientDrawable -> runCatching { bg.color?.defaultColor ?: 0 }.getOrNull()
                 else -> null
             }
             if (color != null && Color.alpha(color) == 255 && color != Color.TRANSPARENT &&
