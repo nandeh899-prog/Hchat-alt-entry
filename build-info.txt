@@ -1,0 +1,6 @@
+run_id=43574652402
+run_number=62
+ref=fix/5.5.90-574-theme
+sha=17fc3573a2302b55f5f57452a67233a81bc5997f
+version_name=5.5.90 version_code=574 suffix=.coexist
+variant=release without R8 (HCAT_MINIFY=false)
