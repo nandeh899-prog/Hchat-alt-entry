@@ -1,0 +1,6 @@
+run_id=43595363245
+run_number=71
+ref=fix/5.5.97-581-theme
+sha=c059a4bb3b95cf8ae91215e5f90ee180744715f3
+version_name=5.5.97 version_code=581 suffix=.coexist
+variant=release without R8 (HCAT_MINIFY=false)
