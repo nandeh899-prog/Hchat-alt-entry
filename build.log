@@ -1,0 +1,842 @@
+openjdk version "21.0.13" 2026-10-20 LTS
+OpenJDK Runtime Environment Temurin-21.0.13+9 (build 21.0.13+9-LTS)
+OpenJDK 64-Bit Server VM Temurin-21.0.13+9 (build 21.0.13+9-LTS, mixed mode, sharing)
+Downloading https://services.gradle.org/distributions/gradle-9.7.1-bin.zip
+................................................................................................................................................
+Unzipping /home/runner/.gradle/wrapper/dists/gradle-9.7.1-bin/1w1c7tv4s851m17nbqdsro2tv/gradle-9.7.1-bin.zip to /home/runner/.gradle/wrapper/dists/gradle-9.7.1-bin/1w1c7tv4s851m17nbqdsro2tv
+Set executable permissions for: /home/runner/.gradle/wrapper/dists/gradle-9.7.1-bin/1w1c7tv4s851m17nbqdsro2tv/gradle-9.7.1/bin/gradle
+
+Welcome to Gradle 9.7.1!
+
+Here are the highlights of this release:
+ - Isolated Projects graduates to incubating
+ - Broader Configuration Cache compatibility
+ - Resilient Sync helps you fix broken builds
+ - More source locations in problem reports
+
+For more details see https://docs.gradle.org/9.7.1/release-notes.html
+
+Starting a Gradle Daemon (subsequent builds will be faster)
+
+> Configure project :app
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/build.gradle.kts:124:28: 'val runtime: String' is deprecated. Specify dependency directly.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/build.gradle.kts:125:28: 'val foundation: String' is deprecated. Specify dependency directly.
+w: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/build.gradle.kts:126:28: 'val ui: String' is deprecated. Specify dependency directly.
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libaeonlab_crash.so, libandroidx.graphics.path.so, libdexkit.so, liblink2symlink.so, libloader.so, libproot.so, libsilk_codec.so, libtermux.so. Run with --info option to learn more.
+
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:generateReleaseBuildConfig
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:processReleaseNavigationResources
+> Task :app:parseReleaseLocalResources
+> Task :app:generateReleaseRFile
+> Task :app:compileReleaseKotlin
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:163:48 Unresolved reference 'LAUNCHER_UI_CLASS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:165:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:165:31 Unresolved reference 'LAUNCHER_UI_CLASS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:171:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:171:27 Unresolved reference 'LAUNCHER_UI_CLASS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:178:58 Unresolved reference 'LAUNCHER_UI_CLASS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:180:47 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:184:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:188:18 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:188:39 Unresolved reference 'LAUNCHER_UI_CLASS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:198:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:206:43 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:216:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:221:15 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:239:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:242:18 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:250:26 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:261:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:271:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:284:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:284:38 Unresolved reference 'BOTTOM_TAB_CLASS_NAMES'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:289:15 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:295:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:310:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:321:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:338:30 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:358:31 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:364:26 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:370:19 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:387:26 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:392:23 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:399:23 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:461:22 Unresolved reference 'ROW_GAP_DP'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:469:35 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:474:19 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:477:27 Unresolved reference 'ROW_GAP_DP'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:481:39 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:555:18 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:556:34 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:617:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:618:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:649:30 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:652:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:695:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:696:47 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:697:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:722:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:735:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:736:37 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:737:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:766:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:767:37 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:768:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:790:30 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:806:30 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:816:34 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:876:41 Unresolved reference 'HOME_IMAGE_TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:932:152 Unresolved reference 'ROW_GAP_DP'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:956:74 Unresolved reference 'HOME_ROW_ALPHA'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:956:94 Unresolved reference 'CONTENT_ROW_ALPHA'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:969:51 Unresolved reference 'HOME_IMAGE_TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:973:31 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:977:21 Unresolved reference 'HOME_IMAGE_TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:993:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1008:19 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1043:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1055:34 Unresolved reference 'HOME_IMAGE_TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1073:31 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1104:30 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1115:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1118:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1127:18 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1155:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1177:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1179:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1184:81 Unresolved reference 'HOST_PACKAGE'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1223:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1224:37 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1227:15 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1239:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1244:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1250:18 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1289:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1307:16 Unresolved reference 'SPLASH_DURATION_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1309:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1321:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1342:18 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1349:9 Unresolved reference 'FIRST_FRAME_DELAYS_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1349:41 Cannot infer type for value parameter 'delay'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1354:40 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1357:18 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1357:33 Unresolved reference 'FIRST_FRAME_DELAYS_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1361:43 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1378:43 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1379:47 Unresolved reference 'PERIODIC_TICK_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1382:39 Unresolved reference 'PERIODIC_TICK_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1383:18 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1383:43 Unresolved reference 'PERIODIC_TICK_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1399:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1407:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1411:23 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1418:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1426:30 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1429:40 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1434:44 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1435:20 Unresolved reference 'LIFECYCLE_BUMP_DELAY_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1451:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1462:40 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1464:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1469:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1475:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1479:32 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1497:19 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1520:39 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1554:19 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1568:32 Unresolved reference 'FRAME_PUMP_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1569:18 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1569:35 Unresolved reference 'FRAME_PUMP_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1576:43 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1593:33 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1614:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1648:38 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1658:36 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1665:45 Unresolved reference 'ENFORCE_INTERVAL_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1682:34 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1689:30 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1693:9 Syntax error: Expecting member declaration.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1693:12 Syntax error: Expecting member declaration.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1693:13 Syntax error: Expecting member declaration.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1693:21 Syntax error: Expecting member declaration.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1693:22 Syntax error: Expecting member declaration.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1693:39 Syntax error: Expecting member declaration.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1693:41 Syntax error: Expecting member declaration.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1693:41 Function declaration must have a name.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1697:47 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1698:25 Unresolved reference 'now'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1698:48 'operator' modifier is required on 'fun <T> Comparable<T>.compareTo(other: T): Int'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1699:44 Unresolved reference 'now'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1701:31 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1707:17 Unresolved reference 'now'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1707:37 'operator' modifier is required on 'fun <T> Comparable<T>.compareTo(other: T): Int'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1708:33 Unresolved reference 'now'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1711:47 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1714:33 Unresolved reference 'decor'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1715:55 Unresolved reference 'snapshot'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1718:27 Unresolved reference 'decor'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1718:34 Unresolved reference 'now'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1719:29 Unresolved reference 'decor'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1719:36 Unresolved reference 'now'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1720:28 Unresolved reference 'decor'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1720:35 Unresolved reference 'now'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1721:24 Unresolved reference 'decor'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1721:31 Unresolved reference 'now'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1722:17 Unresolved reference 'now'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1722:35 'operator' modifier is required on 'fun String.compareTo(other: String, ignoreCase: Boolean = ...): Int'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1722:38 Unresolved reference 'SCRIM_INTERVAL_MS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1723:31 Unresolved reference 'now'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1726:47 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1733:9 Unresolved reference 'hiddenViews'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1733:40 Cannot infer type for value parameter 'view'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1734:32 Unresolved reference 'visibility'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1735:28 Unresolved reference 'originalHeights'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1735:44 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1735:44 'fun <T> MutableList<T>.remove(index: Int): T' is deprecated. Use removeAt(index) instead.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1738:39 Unresolved reference 'layoutParams'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1740:32 Unresolved reference 'height' on receiver of type 'Any'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1741:30 Unresolved reference 'layoutParams'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1746:9 Unresolved reference 'hiddenViews'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1747:9 Unresolved reference 'replacedBackgrounds'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1747:56 Cannot infer type for implicit value parameter 'it'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1747:56 Operator call 'component1()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component1(): T
+fun ByteArray.component1(): Byte
+fun ShortArray.component1(): Short
+fun IntArray.component1(): Int
+fun LongArray.component1(): Long
+fun FloatArray.component1(): Float
+fun DoubleArray.component1(): Double
+fun BooleanArray.component1(): Boolean
+fun CharArray.component1(): Char
+fun <T> List<T>.component1(): T
+fun <K, V> Map.Entry<K, V>.component1(): K
+fun UIntArray.component1(): UInt
+fun ULongArray.component1(): ULong
+fun UByteArray.component1(): UByte
+fun UShortArray.component1(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1747:56 Operator call 'component2()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component2(): T
+fun ByteArray.component2(): Byte
+fun ShortArray.component2(): Short
+fun IntArray.component2(): Int
+fun LongArray.component2(): Long
+fun FloatArray.component2(): Float
+fun DoubleArray.component2(): Double
+fun BooleanArray.component2(): Boolean
+fun CharArray.component2(): Char
+fun <T> List<T>.component2(): T
+fun <K, V> Map.Entry<K, V>.component2(): V
+fun UIntArray.component2(): UInt
+fun ULongArray.component2(): ULong
+fun UByteArray.component2(): UByte
+fun UShortArray.component2(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1748:32 Unresolved reference 'background'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1750:9 Unresolved reference 'replacedBackgrounds'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1751:9 Unresolved reference 'pageDrawables'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1751:47 Cannot infer type for value parameter 'page'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1752:32 Unresolved reference 'background'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1754:9 Unresolved reference 'pageDrawables'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1755:9 Unresolved reference 'pageScrim'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1756:9 Unresolved reference 'originalAlphas'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1756:34 Cannot infer type for implicit value parameter 'it'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1756:34 Operator call 'component1()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component1(): T
+fun ByteArray.component1(): Byte
+fun ShortArray.component1(): Short
+fun IntArray.component1(): Int
+fun LongArray.component1(): Long
+fun FloatArray.component1(): Float
+fun DoubleArray.component1(): Double
+fun BooleanArray.component1(): Boolean
+fun CharArray.component1(): Char
+fun <T> List<T>.component1(): T
+fun <K, V> Map.Entry<K, V>.component1(): K
+fun UIntArray.component1(): UInt
+fun ULongArray.component1(): ULong
+fun UByteArray.component1(): UByte
+fun UShortArray.component1(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1756:34 Operator call 'component2()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component2(): T
+fun ByteArray.component2(): Byte
+fun ShortArray.component2(): Short
+fun IntArray.component2(): Int
+fun LongArray.component2(): Long
+fun FloatArray.component2(): Float
+fun DoubleArray.component2(): Double
+fun BooleanArray.component2(): Boolean
+fun CharArray.component2(): Char
+fun <T> List<T>.component2(): T
+fun <K, V> Map.Entry<K, V>.component2(): V
+fun UIntArray.component2(): UInt
+fun ULongArray.component2(): ULong
+fun UByteArray.component2(): UByte
+fun UShortArray.component2(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1757:32 Unresolved reference 'background'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1759:9 Unresolved reference 'originalAlphas'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1760:9 Unresolved reference 'originalViewAlphas'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1760:38 Cannot infer type for implicit value parameter 'it'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1760:38 Operator call 'component1()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component1(): T
+fun ByteArray.component1(): Byte
+fun ShortArray.component1(): Short
+fun IntArray.component1(): Int
+fun LongArray.component1(): Long
+fun FloatArray.component1(): Float
+fun DoubleArray.component1(): Double
+fun BooleanArray.component1(): Boolean
+fun CharArray.component1(): Char
+fun <T> List<T>.component1(): T
+fun <K, V> Map.Entry<K, V>.component1(): K
+fun UIntArray.component1(): UInt
+fun ULongArray.component1(): ULong
+fun UByteArray.component1(): UByte
+fun UShortArray.component1(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1760:38 Operator call 'component2()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component2(): T
+fun ByteArray.component2(): Byte
+fun ShortArray.component2(): Short
+fun IntArray.component2(): Int
+fun LongArray.component2(): Long
+fun FloatArray.component2(): Float
+fun DoubleArray.component2(): Double
+fun BooleanArray.component2(): Boolean
+fun CharArray.component2(): Char
+fun <T> List<T>.component2(): T
+fun <K, V> Map.Entry<K, V>.component2(): V
+fun UIntArray.component2(): UInt
+fun ULongArray.component2(): ULong
+fun UByteArray.component2(): UByte
+fun UShortArray.component2(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1761:32 Unresolved reference 'alpha'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1763:9 Unresolved reference 'originalViewAlphas'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1764:9 Unresolved reference 'originalCacheColorHints'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1764:43 Cannot infer type for implicit value parameter 'it'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1764:43 Operator call 'component1()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component1(): T
+fun ByteArray.component1(): Byte
+fun ShortArray.component1(): Short
+fun IntArray.component1(): Int
+fun LongArray.component1(): Long
+fun FloatArray.component1(): Float
+fun DoubleArray.component1(): Double
+fun BooleanArray.component1(): Boolean
+fun CharArray.component1(): Char
+fun <T> List<T>.component1(): T
+fun <K, V> Map.Entry<K, V>.component1(): K
+fun UIntArray.component1(): UInt
+fun ULongArray.component1(): ULong
+fun UByteArray.component1(): UByte
+fun UShortArray.component1(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1764:43 Operator call 'component2()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component2(): T
+fun ByteArray.component2(): Byte
+fun ShortArray.component2(): Short
+fun IntArray.component2(): Int
+fun LongArray.component2(): Long
+fun FloatArray.component2(): Float
+fun DoubleArray.component2(): Double
+fun BooleanArray.component2(): Boolean
+fun CharArray.component2(): Char
+fun <T> List<T>.component2(): T
+fun <K, V> Map.Entry<K, V>.component2(): V
+fun UIntArray.component2(): UInt
+fun ULongArray.component2(): ULong
+fun UByteArray.component2(): UByte
+fun UShortArray.component2(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1765:32 Unresolved reference 'cacheColorHint'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1767:9 Unresolved reference 'originalCacheColorHints'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1768:9 Unresolved reference 'originalWillNotDraw'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1768:39 Cannot infer type for implicit value parameter 'it'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1768:39 Operator call 'component1()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component1(): T
+fun ByteArray.component1(): Byte
+fun ShortArray.component1(): Short
+fun IntArray.component1(): Int
+fun LongArray.component1(): Long
+fun FloatArray.component1(): Float
+fun DoubleArray.component1(): Double
+fun BooleanArray.component1(): Boolean
+fun CharArray.component1(): Char
+fun <T> List<T>.component1(): T
+fun <K, V> Map.Entry<K, V>.component1(): K
+fun UIntArray.component1(): UInt
+fun ULongArray.component1(): ULong
+fun UByteArray.component1(): UByte
+fun UShortArray.component1(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1768:39 Operator call 'component2()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component2(): T
+fun ByteArray.component2(): Byte
+fun ShortArray.component2(): Short
+fun IntArray.component2(): Int
+fun LongArray.component2(): Long
+fun FloatArray.component2(): Float
+fun DoubleArray.component2(): Double
+fun BooleanArray.component2(): Boolean
+fun CharArray.component2(): Char
+fun <T> List<T>.component2(): T
+fun <K, V> Map.Entry<K, V>.component2(): V
+fun UIntArray.component2(): UInt
+fun ULongArray.component2(): ULong
+fun UByteArray.component2(): UByte
+fun UShortArray.component2(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1769:13 Cannot infer type for type parameter 'R'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1769:32 Unresolved reference 'setWillNotDraw'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1771:9 Unresolved reference 'originalWillNotDraw'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1772:9 Unresolved reference 'homeImageHosts'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1772:51 Cannot infer type for implicit value parameter 'it'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1772:51 Operator call 'component1()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component1(): T
+fun ByteArray.component1(): Byte
+fun ShortArray.component1(): Short
+fun IntArray.component1(): Int
+fun LongArray.component1(): Long
+fun FloatArray.component1(): Float
+fun DoubleArray.component1(): Double
+fun BooleanArray.component1(): Boolean
+fun CharArray.component1(): Char
+fun <T> List<T>.component1(): T
+fun <K, V> Map.Entry<K, V>.component1(): K
+fun UIntArray.component1(): UInt
+fun ULongArray.component1(): ULong
+fun UByteArray.component1(): UByte
+fun UShortArray.component1(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1772:51 Operator call 'component2()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component2(): T
+fun ByteArray.component2(): Byte
+fun ShortArray.component2(): Short
+fun IntArray.component2(): Int
+fun LongArray.component2(): Long
+fun FloatArray.component2(): Float
+fun DoubleArray.component2(): Double
+fun BooleanArray.component2(): Boolean
+fun CharArray.component2(): Char
+fun <T> List<T>.component2(): T
+fun <K, V> Map.Entry<K, V>.component2(): V
+fun UIntArray.component2(): UInt
+fun ULongArray.component2(): ULong
+fun UByteArray.component2(): UByte
+fun UShortArray.component2(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1773:32 Unresolved reference 'background'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1775:9 Unresolved reference 'homeImageHosts'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1776:9 Unresolved reference 'homeImageDrawables'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1777:9 Unresolved reference 'originalVisibilities'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1777:40 Cannot infer type for implicit value parameter 'it'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1777:40 Operator call 'component1()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component1(): T
+fun ByteArray.component1(): Byte
+fun ShortArray.component1(): Short
+fun IntArray.component1(): Int
+fun LongArray.component1(): Long
+fun FloatArray.component1(): Float
+fun DoubleArray.component1(): Double
+fun BooleanArray.component1(): Boolean
+fun CharArray.component1(): Char
+fun <T> List<T>.component1(): T
+fun <K, V> Map.Entry<K, V>.component1(): K
+fun UIntArray.component1(): UInt
+fun ULongArray.component1(): ULong
+fun UByteArray.component1(): UByte
+fun UShortArray.component1(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1777:40 Operator call 'component2()' is ambiguous for destructuring of type '??? (Unknown type for value parameter <destruct>)'. Applicable candidates:
+fun <T> Array<out T>.component2(): T
+fun ByteArray.component2(): Byte
+fun ShortArray.component2(): Short
+fun IntArray.component2(): Int
+fun LongArray.component2(): Long
+fun FloatArray.component2(): Float
+fun DoubleArray.component2(): Double
+fun BooleanArray.component2(): Boolean
+fun CharArray.component2(): Char
+fun <T> List<T>.component2(): T
+fun <K, V> Map.Entry<K, V>.component2(): V
+fun UIntArray.component2(): UInt
+fun ULongArray.component2(): ULong
+fun UByteArray.component2(): UByte
+fun UShortArray.component2(): UShort
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1778:32 Unresolved reference 'visibility'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1780:9 Unresolved reference 'originalVisibilities'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1781:9 Unresolved reference 'lastTab'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1785:24 Method 'iterator()' is ambiguous for this expression. Applicable candidates:
+fun <T> Enumeration<T>.iterator(): Iterator<T>
+fun <T> Iterator<T>.iterator(): Iterator<T>
+fun <K, V> Map<out K, V>.iterator(): Iterator<Map.Entry<K, V>>
+fun <K, V> MutableMap<K, V>.iterator(): MutableIterator<MutableMap.MutableEntry<K, V>>
+fun CharSequence.iterator(): CharIterator
+fun BufferedInputStream.iterator(): ByteIterator
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1785:24 Unresolved reference 'ACTION_BAR_ID_NAMES'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1787:64 Unresolved reference 'HOST_PACKAGE'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1793:27 Method 'iterator()' is ambiguous for this expression. Applicable candidates:
+fun <T> Enumeration<T>.iterator(): Iterator<T>
+fun <T> Iterator<T>.iterator(): Iterator<T>
+fun <K, V> Map<out K, V>.iterator(): Iterator<Map.Entry<K, V>>
+fun <K, V> MutableMap<K, V>.iterator(): MutableIterator<MutableMap.MutableEntry<K, V>>
+fun CharSequence.iterator(): CharIterator
+fun BufferedInputStream.iterator(): ByteIterator
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1793:27 Unresolved reference 'ACTION_BAR_CLASS_NAMES'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1809:36 Unresolved reference 'BOTTOM_TAB_CLASS_NAMES'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1815:23 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1832:21 Unresolved reference 'MAX_DEPTH'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1853:91 Unresolved reference 'BOTTOM_TAB_LABELS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1926:23 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1940:9 Unresolved reference 'mainHandler'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1941:9 Unresolved reference 'mainHandler'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1942:9 Unresolved reference 'mainHandler'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1946:45 Unresolved reference 'launchers'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1946:70 Unresolved reference 'it'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1948:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1951:13 Unresolved reference 'not' for operator '!'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1951:47 Unresolved reference 'LAUNCHER_UI_CLASS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1952:22 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1955:9 Cannot infer type for type parameter 'R'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1955:23 Unresolved reference 'applyTheme'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1956:14 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1956:35 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1977:54 Unresolved reference 'LAUNCHER_UI_CLASS'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1985:77 Function invocation 'context(...)' expected.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1985:77 None of the following candidates is applicable:
+
+fun <T, R> context(with: T, block: context(T) () -> R): R:
+  No value passed for parameter 'with'.
+
+fun <A, B, R> context(a: A, b: B, block: context(A, B) () -> R): R:
+  No value passed for parameter 'a'.
+  No value passed for parameter 'b'.
+
+fun <A, B, C, R> context(a: A, b: B, c: C, block: context(A, B, C) () -> R): R:
+  No value passed for parameter 'a'.
+  No value passed for parameter 'b'.
+  No value passed for parameter 'c'.
+
+fun <A, B, C, D, R> context(a: A, b: B, c: C, d: D, block: context(A, B, C, D) () -> R): R:
+  No value passed for parameter 'a'.
+  No value passed for parameter 'b'.
+  No value passed for parameter 'c'.
+  No value passed for parameter 'd'.
+
+fun <A, B, C, D, E, R> context(a: A, b: B, c: C, d: D, e: E, block: context(A, B, C, D, E) () -> R): R:
+  No value passed for parameter 'a'.
+  No value passed for parameter 'b'.
+  No value passed for parameter 'c'.
+  No value passed for parameter 'd'.
+  No value passed for parameter 'e'.
+
+fun <A, B, C, D, E, F, R> context(a: A, b: B, c: C, d: D, e: E, f: F, block: context(A, B, C, D, E, F) () -> R): R:
+  No value passed for parameter 'a'.
+  No value passed for parameter 'b'.
+  No value passed for parameter 'c'.
+  No value passed for parameter 'd'.
+  No value passed for parameter 'e'.
+  No value passed for parameter 'f'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1985:77 No value passed for parameter 'block'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1985:85 Unresolved reference 'hostContext'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1990:9 Function invocation 'context(...)' expected.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1990:9 None of the following candidates is applicable:
+
+fun <T, R> context(with: T, block: context(T) () -> R): R:
+  No value passed for parameter 'with'.
+
+fun <A, B, R> context(a: A, b: B, block: context(A, B) () -> R): R:
+  No value passed for parameter 'a'.
+  No value passed for parameter 'b'.
+
+fun <A, B, C, R> context(a: A, b: B, c: C, block: context(A, B, C) () -> R): R:
+  No value passed for parameter 'a'.
+  No value passed for parameter 'b'.
+  No value passed for parameter 'c'.
+
+fun <A, B, C, D, R> context(a: A, b: B, c: C, d: D, block: context(A, B, C, D) () -> R): R:
+  No value passed for parameter 'a'.
+  No value passed for parameter 'b'.
+  No value passed for parameter 'c'.
+  No value passed for parameter 'd'.
+
+fun <A, B, C, D, E, R> context(a: A, b: B, c: C, d: D, e: E, block: context(A, B, C, D, E) () -> R): R:
+  No value passed for parameter 'a'.
+  No value passed for parameter 'b'.
+  No value passed for parameter 'c'.
+  No value passed for parameter 'd'.
+  No value passed for parameter 'e'.
+
+fun <A, B, C, D, E, F, R> context(a: A, b: B, c: C, d: D, e: E, f: F, block: context(A, B, C, D, E, F) () -> R): R:
+  No value passed for parameter 'a'.
+  No value passed for parameter 'b'.
+  No value passed for parameter 'c'.
+  No value passed for parameter 'd'.
+  No value passed for parameter 'e'.
+  No value passed for parameter 'f'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1990:9 No value passed for parameter 'block'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1990:17 Unresolved reference 'hostContext'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1991:29 Unresolved reference 'HOST_PACKAGE'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1999:9 Unresolved reference 'bitmapCache'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1999:42 Unresolved reference 'isRecycled' on receiver of type 'MatchGroup'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:1999:61 Return type mismatch: expected 'Bitmap?', actual 'MatchGroup'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2001:9 Unresolved reference 'bitmapCache'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2008:19 Unresolved reference 'lastDumpAt'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2008:30 'operator' modifier is required on 'fun <T> Comparable<T>.compareTo(other: T): Int'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2009:9 Unresolved reference 'lastDumpAt'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2012:31 Unresolved reference 'DUMP_MAX_LINES'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2012:57 Unresolved reference 'DUMP_MAX_DEPTH'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2025:18 Unresolved reference 'TAG'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2063:21 Unresolved reference 'MAX_DEPTH'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2073:21 Unresolved reference 'MAX_DEPTH'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2087:13 Modifier 'companion' is not applicable inside 'file'.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2087:29 Syntax error: Name expected.
+e: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt:2111:1 Syntax error: Expecting a top level declaration.
+
+> Task :app:compileReleaseKotlin FAILED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1794636819047.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/Hchat-alt-entry/Hchat-alt-entry/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileReleaseKotlin' (registered by plugin 'com.android.internal.application').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Kotlin compiler: UNRESOLVED_REFERENCE
+       Kotlin compiler error
+         Unresolved reference 'LAUNCHER_UI_CLASS'.
+         Location: /home/runner/work/Hchat-alt-entry/Hchat-alt-entry/app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt line 163
+
+* Try:
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+* Exception is:
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileReleaseKotlin' (registered by plugin 'com.android.internal.application').
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:135)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:133)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:121)
+	at org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskExecuter.java:41)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.DefaultNodeExecutor.executeLocalTaskNode(DefaultNodeExecutor.java:55)
+	at org.gradle.execution.plan.DefaultNodeExecutor.execute(DefaultNodeExecutor.java:34)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:355)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:343)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:339)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:84)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:339)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:328)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:146)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:131)
+	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$0(DefaultBuildLifecycleController.java:323)
+	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:324)
+	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$0(StateTransitionController.java:235)
+	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:45)
+	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:235)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:314)
+	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$runAndReleaseLocks$0(DefaultWorkerLeaseService.java:302)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:43)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAndReleaseLocks(DefaultWorkerLeaseService.java:300)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:296)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:288)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:131)
+	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:182)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:199)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:84)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:199)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:65)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+	at org.gradle.workers.internal.DefaultWorkerExecutor$WorkItemExecution.waitForCompletion(DefaultWorkerExecutor.java:273)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$2(DefaultAsyncWorkTracker.java:132)
+	at org.gradle.internal.Factories$1.create(Factories.java:30)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withoutLocksBlocking$0(DefaultWorkerLeaseService.java:412)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:43)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocksBlocking(DefaultWorkerLeaseService.java:407)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.blocking(DefaultWorkerLeaseService.java:257)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.blocking(DefaultWorkerLeaseService.java:239)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$1(DefaultAsyncWorkTracker.java:128)
+	at org.gradle.internal.Factories$1.create(Factories.java:30)
+	at org.gradle.internal.resources.AbstractResourceLockRegistry.whileDisallowingLockChanges(AbstractResourceLockRegistry.java:51)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.whileDisallowingProjectLockChanges(DefaultWorkerLeaseService.java:262)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:127)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:93)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForAll(DefaultAsyncWorkTracker.java:79)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForCompletion(DefaultAsyncWorkTracker.java:67)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:267)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:30)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:27)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:48)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:244)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:227)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:210)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:176)
+	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:167)
+	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:47)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:137)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:134)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:134)
+	at org.gradle.internal.execution.steps.ExecuteStep$Mutable.execute(ExecuteStep.java:80)
+	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:51)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:29)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.executeMutable(RemovePreviousOutputsStep.java:67)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.executeMutable(RemovePreviousOutputsStep.java:39)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:42)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:24)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:28)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeAndStoreInCache(BuildCacheStep.java:145)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$3(BuildCacheStep.java:104)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$1(BuildCacheStep.java:104)
+	at org.gradle.internal.Try$Success.map(Try.java:170)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithCache(BuildCacheStep.java:88)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$0(BuildCacheStep.java:75)
+	at org.gradle.internal.Either$Left.fold(Either.java:116)
+	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:74)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:49)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.executeMutable(StoreExecutionStateStep.java:46)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.executeMutable(StoreExecutionStateStep.java:35)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+	at org.gradle.internal.execution.steps.ResolveMutableCachingStateStep.executeDelegate(ResolveMutableCachingStateStep.java:70)
+	at org.gradle.internal.execution.steps.ResolveMutableCachingStateStep.executeDelegate(ResolveMutableCachingStateStep.java:32)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:69)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:37)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.executeMutable(ResolveChangesStep.java:63)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.executeMutable(ResolveChangesStep.java:34)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.ValidateStep$Mutable.executeDelegate(ValidateStep.java:79)
+	at org.gradle.internal.execution.steps.ValidateStep$Mutable.executeDelegate(ValidateStep.java:65)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:105)
+	at org.gradle.internal.execution.steps.ValidateStep$Mutable.execute(ValidateStep.java:65)
+	at org.gradle.internal.execution.steps.CaptureMutableStateBeforeExecutionStep.executeMutable(CaptureMutableStateBeforeExecutionStep.java:86)
+	at org.gradle.internal.execution.steps.CaptureMutableStateBeforeExecutionStep.execute(CaptureMutableStateBeforeExecutionStep.java:65)
+	at org.gradle.internal.execution.steps.CaptureMutableStateBeforeExecutionStep.execute(CaptureMutableStateBeforeExecutionStep.java:45)
+	at org.gradle.internal.execution.steps.SkipEmptyMutableWorkStep.executeWithNonEmptySources(SkipEmptyMutableWorkStep.java:210)
+	at org.gradle.internal.execution.steps.SkipEmptyMutableWorkStep.executeMutable(SkipEmptyMutableWorkStep.java:90)
+	at org.gradle.internal.execution.steps.SkipEmptyMutableWorkStep.executeMutable(SkipEmptyMutableWorkStep.java:53)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.executeMutable(LoadPreviousExecutionStateStep.java:36)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.executeMutable(LoadPreviousExecutionStateStep.java:23)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.executeMutable(HandleStaleOutputsStep.java:77)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.executeMutable(HandleStaleOutputsStep.java:43)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$executeMutable$0(AssignMutableWorkspaceStep.java:34)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:305)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.executeMutable(AssignMutableWorkspaceStep.java:30)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.executeMutable(AssignMutableWorkspaceStep.java:21)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:56)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:38)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:68)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:132)
+	... 61 more
+Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Unresolved reference 'LAUNCHER_UI_CLASS'.
+	at org.jetbrains.kotlin.gradle.plugin.diagnostics.DefaultCompilerDiagnosticsProblemsReporter.reportCompilerMessage(CompilerDiagnosticsProblemsReporter.kt:63)
+	at org.jetbrains.kotlin.compilerRunner.btapi.ProblemsApiCompilerMessageRenderer.replayTo(ProblemsApiCompilerMessageRenderer.kt:88)
+	at org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork.execute(BuildToolsApiCompilationWork.kt:251)
+	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:68)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:64)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:61)
+	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:103)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:61)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:58)
+	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$1(DefaultWorkerExecutor.java:169)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:191)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$600(DefaultConditionalExecutionQueue.java:112)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:168)
+	at org.gradle.internal.Factories$1.create(Factories.java:30)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$runAndReleaseLocks$0(DefaultWorkerLeaseService.java:302)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:43)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAndReleaseLocks(DefaultWorkerLeaseService.java:300)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:296)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:288)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:131)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:137)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:163)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:125)
+	... 2 more
+
+
+BUILD FAILED in 2m 13s
+12 actionable tasks: 12 executed
