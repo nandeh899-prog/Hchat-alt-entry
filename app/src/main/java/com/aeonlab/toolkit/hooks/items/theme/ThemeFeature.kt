@@ -1768,6 +1768,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 applyInternalActionBarColor(bar, parsed ?: Color.TRANSPARENT)
             }
             enforceFirstScreen(decor)
+            neutralizeTaskBarBottomView(decor)
             titleBarProbe(decor, now)
             decorStripProbe(decor, now)
             actionBarProbe(decor, now)
@@ -2174,6 +2175,37 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         walk(decor, 0)
         HLog.i("$TAG 视图树快照:\n" + lines.joinToString("\n"))
+    }
+
+    /**
+     * 5.5.92：17:11 取证栈点名——灰条绘制者是 TaskBarBottomView.onDraw：
+     * Paint.setColor(#ffededed) + drawPath（圆角矩形），面板页同一视图画 #7a7396。
+     * 它不走 view.background，此前五轮清底/替换全部无效。禁自绘（标题文字/图标是子 View，不受影响；
+     * 若文字也画在 onDraw 里会一起消失——可证伪）。主页状态栏区的纯白与灰条同源，禁绘后一并由真机判别。
+     */
+    private val taskBarViewsHandled: MutableSet<View> =
+        Collections.newSetFromMap(WeakHashMap<View, Boolean>())
+
+    private fun neutralizeTaskBarBottomView(decor: ViewGroup) {
+        val found = ArrayList<View>()
+        collectBySimpleName(decor, "TaskBarBottomView", found)
+        for (v in found) {
+            if (!taskBarViewsHandled.add(v)) continue
+            runCatching {
+                v.setWillNotDraw(true)
+                HLog.i("$TAG 任务栏底视图已禁绘制: ${v.javaClass.name}#${idName(v)} ${v.width}x${v.height} top=${v.top} alpha=${v.alpha} vis=${v.visibility}")
+            }
+        }
+    }
+
+    private fun collectBySimpleName(root: View, simpleName: String, out: MutableList<View>) {
+        if (root.javaClass.simpleName == simpleName) out.add(root)
+        if (root is ViewGroup) {
+            for (index in 0 until root.childCount) {
+                val child = root.getChildAt(index) ?: continue
+                collectBySimpleName(child, simpleName, out)
+            }
+        }
     }
 
     private fun findViewByClassName(root: View, simpleName: String): View? {
