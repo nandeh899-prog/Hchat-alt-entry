@@ -139,13 +139,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Activity, Boolean>()))
     private val topDumpedAt: MutableMap<View, Long> =
         java.util.Collections.synchronizedMap(java.util.WeakHashMap())
-    private val titleDumped = java.util.Collections.synchronizedSet(java.util.HashSet<View>())
+    private val titleDumpedAt: MutableMap<View, Long> =
+        java.util.Collections.synchronizedMap(java.util.WeakHashMap())
     private val topDumpIntervalMs = 60_000L
     private var framePumpUntil = 0L
     private var lastClearReassertLogAt = 0L
     private var lastLayoutBumpAt = 0L
     @Volatile private var rowMaskAlpha = -1
     @Volatile private var lastAppliedRowStrength = -1
+    private var lastTopDumpAt = 0L
     private val periodicTicked: MutableSet<Activity> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Activity, Boolean>()))
 
@@ -532,9 +534,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     bg is ColorDrawable -> "${bg.javaClass.simpleName}#${Integer.toHexString(bg.color)}"
                     else -> "${bg.javaClass.simpleName} a=${bg.alpha}"
                 }
+                val img = (view as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
                 lines.add(
                     "${"·".repeat(depth)}${view.javaClass.simpleName}#${idName(view)} ${w}x${h}" +
-                        " top=$top bg=$desc vis=${view.visibility}"
+                        " top=$top bg=$desc$img vis=${view.visibility}"
                 )
             }
             if (view is ViewGroup) for (i in 0 until view.childCount) walk(view.getChildAt(i), depth + 1)
@@ -919,7 +922,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
             cleared++
             names.add("${view.javaClass.simpleName}#${idName(view)}")
         }
-        if (cleared == 0 && titleDumped.add(decor)) {
+        if (cleared == 0 && runCatching {
+            val t = android.os.SystemClock.elapsedRealtime()
+            val last = titleDumpedAt[decor]
+            if (last != null && t - last < topDumpIntervalMs) return@runCatching false
+            titleDumpedAt[decor] = t
+            true
+        }.getOrDefault(false)) {
             val rows = ArrayList<String>()
             fun walk(v: View, d: Int) {
                 if (rows.size >= 30 || d > 14) return
@@ -928,7 +937,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 if (h > 40 && w > 200 && v.background != null) {
                     val b = v.background
                     val col = if (b is ColorDrawable) Integer.toHexString(b.color) else b.javaClass.simpleName
-                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=$col")
+                    val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) "img=无" else "img=有" } ?: ""
+                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=$col$img")
                 }
                 if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1)
             }
@@ -1411,6 +1421,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             }
             repaintHomeHosts(log = true)
+            if (now - lastTopDumpAt >= topDumpIntervalMs) {
+                lastTopDumpAt = now
+                pageScrim.keys.toList().forEach { page ->
+                    runCatching { dumpTopRegion(page, true) }
+                        .onFailure { HLog.e("$TAG 顶部转储异常: ${it.message}", it) }
+                }
+            }
             if (now - lastScrimAt >= SCRIM_INTERVAL_MS) {
                 lastScrimAt = now
                 pageScrim.entries.toList().forEach { (page, spec) ->
