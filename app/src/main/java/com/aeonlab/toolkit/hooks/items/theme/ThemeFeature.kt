@@ -1870,7 +1870,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     val d = param.thisObject as? android.graphics.drawable.NinePatchDrawable ?: return
                     val r = d.bounds
                     if (r.width() < 800) return
-                    val bmp = runCatching { d.bitmap }.getOrNull()
+                    val bmp = runCatching {
+                        val m = d.javaClass.getMethod("getBitmap")
+                        m.isAccessible = true
+                        m.invoke(d) as? android.graphics.Bitmap
+                    }.getOrNull()
                     val hit = if (bmp != null && bmp.width > 0) runCatching {
                         listOf(
                             bmp.getPixel(0, 0),
