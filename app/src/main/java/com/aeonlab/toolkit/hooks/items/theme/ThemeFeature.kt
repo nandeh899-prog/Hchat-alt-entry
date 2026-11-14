@@ -614,6 +614,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }.onFailure { HLog.e("$TAG 灰条探针异常: ${it.message}", it) }
     }
 
+    private fun descDrawable(d: android.graphics.drawable.Drawable?): String = when (d) {
+        null -> "null"
+        is ColorDrawable -> "ColorDrawable#${Integer.toHexString(d.color)}"
+        is android.graphics.drawable.GradientDrawable ->
+            "GradientDrawable#" + runCatching { Integer.toHexString(d.color?.defaultColor ?: -1) }.getOrDefault("?")
+        else -> d.javaClass.simpleName
+    }
+
     /** 5.5.84： ActionBarContainer 内部字段按「所有 Drawable 类型字段」反射（mBackground 等名字取不到，
      *  微信重打包后字段名不同），并完整转储其子树——灰色圆角标题卡大概率是它的子视图。 */
     private fun actionBarProbe(decor: ViewGroup, now: Long) {
