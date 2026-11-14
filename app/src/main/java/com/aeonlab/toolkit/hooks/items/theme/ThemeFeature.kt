@@ -556,9 +556,61 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 5.5.82：两处日志点名的候选。
      * 1) 我页白块：09:12 转储点名 ImageView#gxn 1240x549 top=0 bg=ColorDrawable#ffffffff（两次转储均在）。
      *    规则：顶部 20px 内、宽≥80% 页宽、高≥300px、底色为不透明白 ColorDrawable → 清透明并登记 clearedViews。
-     * 2) 首页灰条：decor 全树仅剩自绘视图能画灰（GradientColorBackgroundView bg=null 1240x2772 两枚，
-     *    其余带底色视图已全透明/已被我们铺图）。禁其自绘（setWillNotDraw），日志可证伪。
+     * 2) 首页灰条：5.5.82 的 GradientColorBackgroundView 禁自绘在真机 0 命中且灰条仍在，假设已证伪；
+     *    本版只加「灰条探针」定期如实记录 ActionBar 内部字段与 jlt 父链，不改行为。
      */
+    private var lastBarProbeAt = 0L
+
+    /** 5.5.83 灰条探针：三版假设（标题卡容器、GradientColorBackgroundView）均被日志证伪后，
+     *  只定期如实记录 ActionBar 内部字段与 jlt 父链，等待截图对时裁决谁在画 0..149 的灰。 */
+    private fun titleBarProbe(decor: ViewGroup, now: Long) {
+        if (now - lastBarProbeAt < topDumpIntervalMs) return
+        lastBarProbeAt = now
+        runCatching {
+            fun descD(d: android.graphics.drawable.Drawable?): String = when (d) {
+                null -> "null"
+                is ColorDrawable -> "ColorDrawable#${Integer.toHexString(d.color)}"
+                is android.graphics.drawable.GradientDrawable ->
+                    "GradientDrawable#" + runCatching { Integer.toHexString(d.color?.defaultColor ?: -1) }.getOrDefault("?")
+                else -> d.javaClass.simpleName
+            }
+            fun descV(v: View): String = "bg=${descD(v.background)} alpha=${v.alpha}"
+            val parts = ArrayList<String>()
+            findViewByClassName(decor, "LayoutListenerView")?.let { page ->
+                var cur: View = page
+                val chain = ArrayList<String>()
+                var guard = 0
+                while (guard++ < 8) {
+                    val p = cur.parent as? View ?: break
+                    chain.add("${p.javaClass.simpleName}#${idName(p)} ${p.width}x${p.height} ${descV(p)}")
+                    if (p === decor) break
+                    cur = p
+                }
+                parts.add("jlt父链=[${chain.joinToString(" > ")}]")
+            }
+            listOf(
+                "ActionBarContainer", "ActionBarOverlayLayout", "ContentFrameLayout",
+                "FitSystemWindowLayoutView", "FirstScreenFrameLayout", "ConversationListView"
+            ).forEach { name ->
+                findViewByClassName(decor, name)?.let { v ->
+                    var extra = ""
+                    if (name == "ActionBarContainer") {
+                        extra = ""
+                        listOf("mBackground", "mStackedBackground", "mSplitBackground").forEach { f ->
+                            runCatching {
+                                val fl = v.javaClass.getDeclaredField(f)
+                                fl.isAccessible = true
+                                extra += " $f=${descD(fl.get(v) as? android.graphics.drawable.Drawable)}"
+                            }.onFailure { extra += " $f=取不到" }
+                        }
+                    }
+                    parts.add("$name#${idName(v)} ${v.width}x${v.height} ${descV(v)}$extra")
+                }
+            }
+            HLog.i("$TAG 灰条探针: ${parts.joinToString(" | ")}")
+        }.onFailure { HLog.e("$TAG 灰条探针异常: ${it.message}", it) }
+    }
+
     private val gradientViewsHandled: MutableSet<View> =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<View, Boolean>()))
 
@@ -582,8 +634,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             }
             val bg = v.background
-            if (bg is ColorDrawable && bg.color == -0x1 &&
-                v.width >= pageWidth * 0.8f && v.height >= 300 && topOf(v) <= 20
+            val bgWhite = when (bg) {
+                is ColorDrawable -> bg.color == -0x1
+                is android.graphics.drawable.GradientDrawable ->
+                    runCatching { bg.color?.defaultColor == -0x1 }.getOrDefault(false)
+                else -> false
+            }
+            if (bgWhite &&
+                v.width >= pageWidth * 0.8f && v.height >= 200 && topOf(v) <= 740
             ) {
                 if (!clearedViews.add(v)) return
                 runCatching {
@@ -1479,6 +1537,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         .onFailure { HLog.e("$TAG 顶部转储异常: ${it.message}", it) }
                 }
             }
+            titleBarProbe(decor, now)
             if (now - lastScrimAt >= SCRIM_INTERVAL_MS) {
                 lastScrimAt = now
                 pageScrim.entries.toList().forEach { (page, spec) ->
