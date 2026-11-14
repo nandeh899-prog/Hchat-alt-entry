@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.View
+import android.view.Window
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.ImageView
@@ -1834,6 +1835,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             })
             HLog.i("$TAG 灰条绘制者取证已挂: Paint.setColor")
+        installWindowDecorCollector()
         }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 Paint.setColor: ${it.message}", it) }
     }
 
@@ -2212,18 +2214,42 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  并对该根子树 w≥800 且 top≤300 的纯白 Color/GradientDrawable 清透明。 */
     @Volatile private var lastWindowDumpAt = 0L
     private val overlayWhiteCleared = Collections.newSetFromMap(WeakHashMap<View, Boolean>())
+    private val hookedDecorViews: MutableSet<View> = Collections.newSetFromMap(WeakHashMap())
+
+    /** 公开 API 收集器：每次 Window.getDecorView 都把返回的 DecorView 弱引用收集起来，
+     *  作为 WindowManagerGlobal.mViews 反射被拦截时的窗口根来源。 */
+    private fun installWindowDecorCollector() {
+        runCatching {
+            XposedBridge.hookAllMethods(Window::class.java, "getDecorView", object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val d = param.result as? View ?: return
+                    hookedDecorViews.add(d)
+                }
+            })
+            HLog.i("$TAG 窗口收集器已挂: Window.getDecorView")
+        }.onFailure { HLog.e("$TAG 窗口收集器挂载失败: ${it.message}", it) }
+    }
 
     private fun overlayWindowForensics(decor: ViewGroup) {
         val now = SystemClock.elapsedRealtime()
         if (now - lastWindowDumpAt < topDumpIntervalMs) return
         lastWindowDumpAt = now
-        val roots = runCatching {
+        // 18:49-18:51 全窗口实证：5.5.94 四条新日志零出现且 enforce 后段探针正常打日志——
+        // WindowManagerGlobal.mViews 反射疑似被隐藏 API 拦截，getOrNull ?: return 全程静默。
+        // 改双通道：反射失败显式打日志；另挂公开 API Window.getDecorView 收集所有窗口根。
+        val roots = LinkedHashSet<View>()
+        val reflected = runCatching {
             val cls = Class.forName("android.view.WindowManagerGlobal")
             val inst = cls.getMethod("getInstance").invoke(null)
             val f = cls.getDeclaredField("mViews").apply { isAccessible = true }
             @Suppress("UNCHECKED_CAST")
-            (f.get(inst) as? List<View>)?.toList() ?: emptyList()
-        }.getOrNull() ?: return
+            (f.get(inst) as? List<View>)?.toList() ?: emptyList<View>()
+        }
+        reflected.onFailure {
+            HLog.e("$TAG 窗口根转储反射失败: ${it.javaClass.simpleName}: ${it.message}")
+        }
+        reflected.getOrNull()?.let { roots.addAll(it) }
+        roots.addAll(hookedDecorViews.filter { it.isAttachedToWindow })
         for (root in roots) {
             if (root === decor || root === decor.rootView) continue
             val barList = ArrayList<View>()
