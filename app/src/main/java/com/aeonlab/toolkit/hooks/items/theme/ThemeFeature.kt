@@ -2027,30 +2027,34 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     }
                 }
                 val d = runCatching { v.background }.getOrNull()
-                if (absTop <= 300 && v.width >= 800 && d is android.graphics.drawable.NinePatchDrawable) {
-                    val bmp = runCatching {
-                        val m = d.javaClass.getMethod("getBitmap")
+                // 5.5.100：22:00 日志显示采样守卫一轮 0 命中（.9 角点/左中大概率是透明，白只在边条中段）。
+                // 顶部 300px 内宽≥800 的 NinePatchDrawable 背景（含 InsetDrawable 解包）不再看采样，一律清透明。
+                var nine: android.graphics.drawable.NinePatchDrawable? = d as? android.graphics.drawable.NinePatchDrawable
+                var wrap = ""
+                if (nine == null && d is android.graphics.drawable.InsetDrawable) {
+                    nine = runCatching { d.drawable as? android.graphics.drawable.NinePatchDrawable }.getOrNull()
+                    if (nine != null) wrap = "Inset包"
+                }
+                val now2 = SystemClock.uptimeMillis()
+                if (absTop <= 300 && v.width >= 800 && d != null && nine == null && now2 - lastWhiteNinePatchLogAt >= topDumpIntervalMs) {
+                    // 60 秒一次的顶部候选清单：非 .9 的背景类型也点名，便于核对漏网
+                    HLog.i("$TAG 顶部非九宫格背景: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} top=$absTop bg=${descDrawable(d)}")
+                }
+                if (absTop <= 300 && v.width >= 800 && nine != null) {
+                    val samples = runCatching {
+                        val m = nine.javaClass.getMethod("getBitmap")
                         m.isAccessible = true
-                        m.invoke(d) as? android.graphics.Bitmap
-                    }.getOrNull()
-                    val hit = if (bmp != null && bmp.width > 0 && bmp.height > 0) runCatching {
-                        listOf(
-                            bmp.getPixel(0, 0),
-                            bmp.getPixel(bmp.width - 1, 0),
-                            bmp.getPixel(0, bmp.height / 2)
-                        ).firstOrNull { c ->
-                            Color.alpha(c) == 255 && Color.red(c) >= 224 && Color.green(c) >= 224 && Color.blue(c) >= 224
-                        }
-                    }.getOrNull() else null
-                    if (hit != null) {
-                        runCatching {
-                            v.background = ColorDrawable(Color.TRANSPARENT)
-                            v.tag = WHITE_NINEPATCH_TAG
-                            val now = SystemClock.uptimeMillis()
-                            if (now - lastWhiteNinePatchLogAt >= 1000L) {
-                                lastWhiteNinePatchLogAt = now
-                                HLog.i("$TAG 顶部白底九宫格已清: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} top=$absTop sample=${Integer.toHexString(hit)}")
-                            }
+                        val bmp = m.invoke(nine) as? android.graphics.Bitmap
+                        if (bmp != null && bmp.width > 0 && bmp.height > 0) {
+                            listOf(bmp.getPixel(0, 0), bmp.getPixel(bmp.width - 1, 0), bmp.getPixel(0, bmp.height / 2)).joinToString("/") { Integer.toHexString(it) }
+                        } else "无位图"
+                    }.getOrDefault("采样失败")
+                    runCatching {
+                        v.background = ColorDrawable(Color.TRANSPARENT)
+                        v.tag = WHITE_NINEPATCH_TAG
+                        if (now2 - lastWhiteNinePatchLogAt >= 1000L) {
+                            lastWhiteNinePatchLogAt = now2
+                            HLog.i("$TAG 顶部白底九宫格已清$wrap: ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} top=$absTop samples=$samples")
                         }
                     }
                 }
