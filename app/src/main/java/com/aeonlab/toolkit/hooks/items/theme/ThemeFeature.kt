@@ -2234,7 +2234,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val params = lp as? android.view.WindowManager.LayoutParams
             val bg = runCatching { root.background }.getOrNull()
             HLog.i("$TAG 窗口根转储: ${root.javaClass.name}#${idName(root)} ${root.width}x${root.height} top=${root.top} alpha=${root.alpha} vis=${root.visibility} " +
-                "bg=${bg?.javaClass?.simpleName ?: "null"} 窗口type=${params?.type ?: "?"} flags=${params?.flags ?: "?"} format=${params?.format ?: "?"} " +
+                "bg=${bg?.javaClass?.simpleName ?: "null"} 窗口type=${params?.type?.toString() ?: "?"} flags=${params?.flags?.toString() ?: "?"} format=${params?.format?.toString() ?: "?"} " +
                 "含TaskBarBottomView=${barList.size} 含ConversationListView=${convList.size}")
             // 覆盖层白底清理：含 TaskBarBottomView 的窗口里，宽≥800、顶部 300px 内的纯白 Color/GradientDrawable
             if (barList.isNotEmpty()) {
