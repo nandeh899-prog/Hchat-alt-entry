@@ -1770,6 +1770,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             enforceFirstScreen(decor)
             neutralizeTaskBarBottomView(decor)
             ensureConversationOverdrawHook(decor)
+            overlayWindowForensics(decor)
             titleBarProbe(decor, now)
             decorStripProbe(decor, now)
             actionBarProbe(decor, now)
@@ -2199,9 +2200,74 @@ private class ThemeRuntime(private val context: FeatureContext) {
         collectBySimpleName(decor, "TaskBarBottomView", found)
         for (v in found) {
             if (!taskBarViewsHandled.add(v)) continue
-            runCatching {
-                v.setWillNotDraw(true)
-                HLog.i("$TAG 任务栏底视图已禁绘制: ${v.javaClass.name}#${idName(v)} ${v.width}x${v.height} top=${v.top} alpha=${v.alpha} vis=${v.visibility}")
+            v.setWillNotDraw(true)
+            HLog.i("$TAG 任务栏底视图已禁绘制: ${v.javaClass.name}#${idName(v)} ${v.width}x${v.height} top=${v.top} alpha=${v.alpha} vis=${v.visibility}")
+        }
+    }
+
+    /** 5.5.94：18:16 日志三大证据——①白栈 0 条：主页顶部白块不走 Canvas 画笔（drawRect/drawPath/Paint.setColor
+     *  全挂全取证仍 0），结合滑动截图（白块随滑动整体顶出屏幕）判定白块属于一个独立覆盖层窗口的 view 背景/位图；
+     *  ②灰栈 0 条：TaskBarBottomView 禁绘持续有效；③「列表自绘覆盖钩子已挂」0 条且无失败日志：静默 return，本轮补诊断。
+     *  做法：反射枚举 WindowManagerGlobal.mViews 全部窗口根，打根类名/尺寸/窗口参数/背景，标注含 TaskBarBottomView 的根，
+     *  并对该根子树 w≥800 且 top≤300 的纯白 Color/GradientDrawable 清透明。 */
+    @Volatile private var lastWindowDumpAt = 0L
+    private val overlayWhiteCleared = Collections.newSetFromMap(WeakHashMap<View, Boolean>())
+
+    private fun overlayWindowForensics(decor: ViewGroup) {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastWindowDumpAt < topDumpIntervalMs) return
+        lastWindowDumpAt = now
+        val roots = runCatching {
+            val cls = Class.forName("android.view.WindowManagerGlobal")
+            val inst = cls.getMethod("getInstance").invoke(null)
+            val f = cls.getDeclaredField("mViews").apply { isAccessible = true }
+            @Suppress("UNCHECKED_CAST")
+            (f.get(inst) as? List<View>)?.toList() ?: emptyList()
+        }.getOrNull() ?: return
+        for (root in roots) {
+            if (root === decor || root === decor.rootView) continue
+            val barList = ArrayList<View>()
+            collectBySimpleName(root, "TaskBarBottomView", barList)
+            val convList = ArrayList<View>()
+            collectBySimpleName(root, "ConversationListView", convList)
+            val lp = root.layoutParams
+            val params = lp as? android.view.WindowManager.LayoutParams
+            val bg = runCatching { root.background }.getOrNull()
+            HLog.i("$TAG 窗口根转储: ${root.javaClass.name}#${idName(root)} ${root.width}x${root.height} top=${root.top} alpha=${root.alpha} vis=${root.visibility} " +
+                "bg=${bg?.javaClass?.simpleName ?: "null"} 窗口type=${params?.type ?: "?"} flags=${params?.flags ?: "?"} format=${params?.format ?: "?"} " +
+                "含TaskBarBottomView=${barList.size} 含ConversationListView=${convList.size}")
+            // 覆盖层白底清理：含 TaskBarBottomView 的窗口里，宽≥800、顶部 300px 内的纯白 Color/GradientDrawable
+            if (barList.isNotEmpty()) {
+                val whites = ArrayList<View>()
+                collectWhiteTopViews(root, whites)
+                for (v in whites) {
+                    if (!overlayWhiteCleared.add(v)) continue
+                    runCatching {
+                        v.setBackgroundColor(Color.TRANSPARENT)
+                        HLog.i("$TAG 覆盖层白底已清透明: ${v.javaClass.name}#${idName(v)} ${v.width}x${v.height} top=${v.top}")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun collectWhiteTopViews(root: View, out: MutableList<View>) {
+        val w = root.width
+        val top = root.top
+        if (w >= 800 && top <= 300) {
+            val bg = runCatching { root.background }.getOrNull()
+            val color = when (bg) {
+                is ColorDrawable -> bg.color
+                is android.graphics.drawable.GradientDrawable -> runCatching { bg.color }.getOrNull()
+                else -> null
+            }
+            if (color != null && Color.alpha(color) == 255 && color != Color.TRANSPARENT &&
+                Color.red(color) >= 224 && Color.green(color) >= 224 && Color.blue(color) >= 224
+            ) out.add(root)
+        }
+        if (root is ViewGroup) {
+            for (i in 0 until root.childCount) {
+                collectWhiteTopViews(root.getChildAt(i) ?: continue, out)
             }
         }
     }
@@ -2211,11 +2277,19 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  hook onDraw，在其自绘之上、子 View 之下，按壁纸位图对应切片原位回铺顶部 300px / 底部 149px，
      *  行滚动内容在子层不受影响。若白块绘制者另有其人，白色取证通道（同轮加）会点名。 */
     @Volatile private var conversationOverdrawHooked = false
+    @Volatile private var conversationOverdrawLoggedEmpty = false
 
     private fun ensureConversationOverdrawHook(decor: ViewGroup) {
         if (conversationOverdrawHooked) return
         val found = ArrayList<View>()
         collectBySimpleName(decor, "ConversationListView", found)
+        if (found.isEmpty()) {
+            if (!conversationOverdrawLoggedEmpty) {
+                conversationOverdrawLoggedEmpty = true
+                HLog.i("$TAG 列表自绘覆盖钩子: 本轮 decor 未收集到 ConversationListView（decor=${decor.javaClass.name} ${decor.width}x${decor.height}）")
+            }
+            return
+        }
         val inst = found.firstOrNull() ?: return
         val clz = inst.javaClass
         runCatching {
