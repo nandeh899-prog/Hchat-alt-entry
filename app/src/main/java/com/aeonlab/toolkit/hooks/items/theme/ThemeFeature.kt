@@ -1769,6 +1769,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
             enforceFirstScreen(decor)
             neutralizeTaskBarBottomView(decor)
+            ensureConversationOverdrawHook(decor)
             titleBarProbe(decor, now)
             decorStripProbe(decor, now)
             actionBarProbe(decor, now)
@@ -1790,6 +1791,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun installGreyPainterProbe() {
         val grey = 0xffededed.toInt()
         val purple = 0xff7a7396.toInt()
+        val white = 0xffffffff.toInt()
         val canvasClasses = ArrayList<Class<*>>()
         canvasClasses.add(Canvas::class.java)
         runCatching { canvasClasses.add(Class.forName("android.graphics.BaseCanvas")) }
@@ -1807,7 +1809,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
                                 method == "drawColor" && param.args.isNotEmpty() -> param.args[0] as? Int ?: return
                                 else -> return
                             }
-                            if (color != grey && color != purple) return
+                            if (color != grey && color != purple) {
+                                // 白色通道：只收大画布（宽≥800 且高≥200），避免行/小控件白底刷屏；
+                                // 17:33 截图主页顶部 0~285 纯白块，疑为列表/标题窗口自绘头部。
+                                if (color != white) return
+                                val cvs = param.thisObject as? Canvas ?: return
+                                if (cvs.width < 800 || cvs.height < 200) return
+                            }
                             reportPainter(color, "${clz.simpleName}.$method")
                         }
                     })
@@ -2196,6 +2204,55 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 HLog.i("$TAG 任务栏底视图已禁绘制: ${v.javaClass.name}#${idName(v)} ${v.width}x${v.height} top=${v.top} alpha=${v.alpha} vis=${v.visibility}")
             }
         }
+    }
+
+    /** 5.5.93：17:32 取证栈实证面板底部紫条由 ConversationListView.onDraw 自绘（Treerliet 包装器画 #7a7396）；
+     *  主页顶部白块疑为同一机制（列表自绘头部，灰条 TaskBarBottomView 禁绘后露出）。对策不是猜：
+     *  hook onDraw，在其自绘之上、子 View 之下，按壁纸位图对应切片原位回铺顶部 300px / 底部 149px，
+     *  行滚动内容在子层不受影响。若白块绘制者另有其人，白色取证通道（同轮加）会点名。 */
+    @Volatile private var conversationOverdrawHooked = false
+
+    private fun ensureConversationOverdrawHook(decor: ViewGroup) {
+        if (conversationOverdrawHooked) return
+        val found = ArrayList<View>()
+        collectBySimpleName(decor, "ConversationListView", found)
+        val inst = found.firstOrNull() ?: return
+        val clz = inst.javaClass
+        runCatching {
+            val cb = object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val v = param.thisObject as? View ?: return
+                    val canvas = param.args.firstOrNull() as? Canvas ?: return
+                    val w = v.width
+                    val h = v.height
+                    if (w <= 0 || h <= 0) return
+                    val bmp = (v.background as? BitmapDrawable)?.bitmap ?: return
+                    if (bmp.width <= 0 || bmp.height <= 0) return
+                    runCatching {
+                        val paintNull: android.graphics.Paint? = null
+                        val topBand = 300
+                        if (h > topBand) {
+                            val srcTop = android.graphics.Rect(0, 0, bmp.width, bmp.height * topBand / h)
+                            canvas.drawBitmap(bmp, srcTop, android.graphics.Rect(0, 0, w, topBand), paintNull)
+                        }
+                        val bottomBand = 149
+                        if (h > bottomBand + topBand) {
+                            val bandH = bmp.height * bottomBand / h
+                            val srcBottom = android.graphics.Rect(0, bmp.height - bandH, bmp.width, bmp.height)
+                            canvas.drawBitmap(bmp, srcBottom, android.graphics.Rect(0, h - bottomBand, w, h), paintNull)
+                        }
+                    }
+                }
+            }
+            var hooked = 0
+            for (m in clz.declaredMethods) {
+                if (m.name != "onDraw") continue
+                XposedBridge.hookMethod(m, cb)
+                hooked++
+            }
+            conversationOverdrawHooked = true
+            HLog.i("$TAG 列表自绘覆盖钩子已挂: ${clz.name}.onDraw ×$hooked（顶部300px/底部149px 壁纸切片回铺）")
+        }.onFailure { HLog.e("$TAG 列表自绘覆盖钩子挂载失败: ${it.message}", it) }
     }
 
     private fun collectBySimpleName(root: View, simpleName: String, out: MutableList<View>) {
