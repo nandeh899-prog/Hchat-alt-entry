@@ -278,7 +278,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun applyBottomTab(decor: ViewGroup, snapshot: ThemeSnapshot) {
-        if (!snapshot.tabEnabled) return
+        if (!snapshot.tabEnabled && !snapshot.tabHideNative) return
         val tab = findBottomTab(decor, logCandidates = true)
         if (tab == null) {
             HLog.e("$TAG 没找到底栏容器（类名 $BOTTOM_TAB_CLASS_NAMES 与「微信/通讯录/发现/我」标签祖先全未命中），底栏主题项本轮未生效；视图树见上一条快照")
@@ -294,9 +294,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (snapshot.tabHideNative) {
             HLog.i("$TAG 隐藏原生底栏=开，隐藏底栏容器: ${tab.javaClass.name}#${idName(tab)}")
             hideView(tab)
+            tabHiddenByUs = true
             return
         }
         showView(tab)
+        tabHiddenByUs = false
+        if (!snapshot.tabEnabled) return
         if (snapshot.tabBackgroundColor.isBlank()) {
             if (!replacedBackgrounds.containsKey(tab)) replacedBackgrounds[tab] = tab.background
             tab.setBackgroundColor(Color.TRANSPARENT)
@@ -683,14 +686,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val t = topAbs(v)
                 if (t < 220 && w > 300 && h > 10) {
                     val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
-                    rows.add(Pair(t, "top=$t ${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)}$img alpha=${v.alpha} vis=${v.visibility}"))
+                    rows.add(Pair(t, "top=$t ${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)} fg=${descDrawable(v.foreground)}$img alpha=${v.alpha} vis=${v.visibility}"))
                 }
                 if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1)
             }
             walk(decor, 0)
             rows.sortBy { it.first }
             HLog.i("$TAG decor顶部全量转储: ${rows.size} 条")
-            rows.take(40).forEach { HLog.i("$TAG   decor顶部: ${it.second}") }
+            rows.take(120).forEach { HLog.i("$TAG   decor顶部: ${it.second}") }
         }.onFailure { HLog.e("$TAG decor顶部转储异常: ${it.message}", it) }
     }
 
@@ -724,7 +727,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val h = v.height.coerceAtLeast(v.measuredHeight)
                 if (w > 60 && h > 30) {
                     val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
-                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)}$img alpha=${v.alpha} vis=${v.visibility}")
+                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} bg=${descDrawable(v.background)} fg=${descDrawable(v.foreground)}$img alpha=${v.alpha} vis=${v.visibility}")
                 }
                 if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1)
             }
@@ -745,17 +748,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (effTop < -400 || panel.visibility != View.VISIBLE) return
             val rows = ArrayList<String>()
             fun walk(v: View, d: Int, base: Int) {
-                if (rows.size >= 90 || d > 14) return
+                if (rows.size >= 120 || d > 14) return
                 val w = v.width.coerceAtLeast(v.measuredWidth)
                 val h = v.height.coerceAtLeast(v.measuredHeight)
                 val at = base + v.top
                 if (w > 60 && h > 30) {
                     val img = (v as? android.widget.ImageView)?.let { iv -> if (iv.drawable == null) " img=无" else " img=有" } ?: ""
-                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} top=$at bg=${descDrawable(v.background)}$img alpha=${v.alpha} vis=${v.visibility}")
+                    rows.add("${"·".repeat(d)}${v.javaClass.simpleName}#${idName(v)} ${w}x${h} top=$at bg=${descDrawable(v.background)} fg=${descDrawable(v.foreground)}$img alpha=${v.alpha} vis=${v.visibility}")
                 }
                 if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), d + 1, at)
             }
-            walk(panel, 0, effTop - panel.top)
+            val root = panel.parent as? View ?: panel
+            walk(root, 0, effTop - panel.top - (root.takeIf { it !== panel }?.top ?: 0))
             val sig = rows.joinToString("|")
             if (sig == lastPanelSignature) return
             lastPanelSignature = sig
@@ -1668,8 +1672,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             reassertRowScrims()
             retryUnscrimmedPages()
         }
-        if (snapshot.tabEnabled) {
-            var tab = lastTab?.get()
+        var tab = lastTab?.get()
             if (tab != null && !tab.isAttachedToWindow) tab = null
             if (tab == null) tab = findBottomTab(decor, logCandidates = false)
             if (tab != null) {
@@ -1685,13 +1688,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     tabHiddenByUs = false
                     HLog.i("$TAG 隐藏原生底栏=关，恢复原生底栏显示: ${tab.javaClass.name}#${idName(tab)}")
                 }
-            }
-        } else {
-            val tab = lastTab?.get()
-            if (tab != null && tabHiddenByUs && tab.visibility == View.GONE) {
-                runCatching { tab.visibility = View.VISIBLE }
-                tabHiddenByUs = false
-                HLog.i("$TAG 隐藏原生底栏=关，恢复原生底栏显示: ${tab.javaClass.name}#${idName(tab)}")
             }
         }
         if (snapshot.backgroundEnabled) {

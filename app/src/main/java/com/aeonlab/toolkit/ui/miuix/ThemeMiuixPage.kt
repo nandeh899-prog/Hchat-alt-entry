@@ -199,15 +199,15 @@ internal fun ThemeMiuixPage(
                         ) { checked ->
                             persist(snapshot.copy(tabEnabled = checked))
                         }
+                        InsetDivider()
+                        SwitchRow(
+                            checked = snapshot.tabHideNative,
+                            title = "隐藏原生底栏",
+                            summary = "与底栏主题互相独立，不开底栏主题也能隐藏"
+                        ) { checked ->
+                            persist(snapshot.copy(tabHideNative = checked))
+                        }
                         if (snapshot.tabEnabled) {
-                            InsetDivider()
-                            SwitchRow(
-                                checked = snapshot.tabHideNative,
-                                title = "隐藏原生底栏",
-                                summary = "完全隐藏微信底栏（可从侧滑/返回操作切页）"
-                            ) { checked ->
-                                persist(snapshot.copy(tabHideNative = checked))
-                            }
                             InsetDivider()
                             ColorPickerRow(
                                 title = "底栏背景色",
