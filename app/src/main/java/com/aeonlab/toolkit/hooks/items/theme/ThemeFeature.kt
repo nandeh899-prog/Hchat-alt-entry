@@ -575,7 +575,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         fun walk(v: View) {
             val name = v.javaClass.simpleName
-            if (name == "GradientColorBackgroundView" && v.width > 0 && v.height > 0 && !gradientViewsHandled.add(v)) {
+            if (name == "GradientColorBackgroundView" && v.width > 0 && v.height > 0 && gradientViewsHandled.add(v)) {
                 runCatching {
                     v.setWillNotDraw(true)
                     HLog.i("$TAG 渐变背景视图已禁绘制: ${name}#${idName(v)} ${v.width}x${v.height}")
