@@ -1,0 +1,72 @@
+package com.aeonlab.toolkit.hooks.items.theme
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
+import android.view.ViewGroup
+
+/**
+ * 617：随 ViewPager 划动连续平移的壁纸底衬。
+ *
+ * 616 的做法是「每层各画一张窗口锚定图」，切页时靠一层层重录，落定那一刻才换成下页的图，
+ * 于是肉眼看到的是「图突然换成另一张、跳一下」（13:06 用户的结论）。
+ * 这里是反过来：**一张 canvas、按页分格**。第 i 格画第 i 页的图，整层按 host.scrollX 平移，
+ * 划到哪儿就露出哪一格的哪一段，落定前后是同一份 Bitmap、同一套 cover 矩阵，不存在换图。
+ *
+ * 每格的 cover 仍以**窗口**（pager 自身）宽高为基准，不按格子重算，所以各页之间的缩放一致。
+ */
+class PagerStripWallpaperDrawable(private val host: ViewGroup) : Drawable() {
+
+    private val slots = arrayOfNulls<Bitmap>(8)
+    private val overlays = IntArray(8)
+    private val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.DITHER_FLAG)
+    private val matrix = Matrix()
+
+    fun setSlot(index: Int, bitmap: Bitmap?, overlay: Int = 0) {
+        if (index !in slots.indices) return
+        slots[index] = bitmap
+        overlays[index] = overlay
+        invalidateSelf()
+    }
+
+    fun slotBitmap(index: Int): Bitmap? = if (index in slots.indices) slots[index] else null
+
+    fun filledCount(): Int = slots.count { it != null }
+
+    override fun draw(canvas: Canvas) {
+        val w = host.width
+        val h = host.height
+        if (w <= 0 || h <= 0) return
+        val sx = host.scrollX.toFloat()
+        for (i in slots.indices) {
+            val bmp = slots[i] ?: continue
+            if (bmp.width <= 0 || bmp.height <= 0) continue
+            val cellLeft = i * w - sx
+            if (cellLeft + w <= 0f || cellLeft >= w.toFloat()) continue
+            canvas.save()
+            canvas.clipRect(cellLeft, 0f, cellLeft + w, h.toFloat())
+            val scale = maxOf(w.toFloat() / bmp.width.toFloat(), h.toFloat() / bmp.height.toFloat())
+            matrix.reset()
+            matrix.setScale(scale, scale)
+            matrix.postTranslate((w - bmp.width * scale) / 2f + cellLeft, (h - bmp.height * scale) / 2f)
+            canvas.drawBitmap(bmp, matrix, paint)
+            val ov = overlays[i]
+            if (ov != 0) {
+                val a = paint.alpha
+                paint.alpha = 255
+                paint.color = ov
+                canvas.drawRect(cellLeft, 0f, cellLeft + w, h.toFloat(), paint)
+                paint.alpha = a
+            }
+            canvas.restore()
+        }
+    }
+
+    override fun setAlpha(alpha: Int) {}
+    override fun setColorFilter(colorFilter: ColorFilter?) {}
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
