@@ -1688,6 +1688,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     private fun maybeShowSplash(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
         if (splashShown) return
+        if (!snapshot.pageSplash) return
         val path = snapshot.backgroundSplash
         if (path.isBlank()) return
         val image = bitmap(path) ?: run {

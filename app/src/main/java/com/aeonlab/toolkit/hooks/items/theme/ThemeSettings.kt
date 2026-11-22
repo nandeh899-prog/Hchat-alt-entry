@@ -66,6 +66,7 @@ object ThemeSettings {
     const val KEY_PAGE_CONTACTS = "theme_page_contacts"
     const val KEY_PAGE_DISCOVER = "theme_page_discover"
     const val KEY_PAGE_ME = "theme_page_me"
+    const val KEY_PAGE_SPLASH = "theme_page_splash"
 
     /** 主题包里的背景「叠色」与「模糊半径」，按槽位存成 JSON（微X 主题的 c / b 两个字段）。 */
     const val KEY_BG_OVERLAY = "theme_background_overlay"
@@ -108,6 +109,7 @@ object ThemeSettings {
             pageContacts = sp.getBoolean(KEY_PAGE_CONTACTS, true),
             pageDiscover = sp.getBoolean(KEY_PAGE_DISCOVER, true),
             pageMe = sp.getBoolean(KEY_PAGE_ME, true),
+            pageSplash = sp.getBoolean(KEY_PAGE_SPLASH, true),
             backgroundOverlay = readStringMap(sp, KEY_BG_OVERLAY),
             backgroundBlur = readIntMap(sp, KEY_BG_BLUR)
         )
@@ -141,6 +143,7 @@ object ThemeSettings {
             .putBoolean(KEY_PAGE_CONTACTS, snapshot.pageContacts)
             .putBoolean(KEY_PAGE_DISCOVER, snapshot.pageDiscover)
             .putBoolean(KEY_PAGE_ME, snapshot.pageMe)
+            .putBoolean(KEY_PAGE_SPLASH, snapshot.pageSplash)
             .putString(KEY_BG_OVERLAY, encodeStringMap(snapshot.backgroundOverlay))
             .putString(KEY_BG_BLUR, encodeIntMap(snapshot.backgroundBlur))
         TAB_ICON_KEYS.forEachIndexed { index, key ->
@@ -237,6 +240,7 @@ data class ThemeSnapshot(
     val pageContacts: Boolean = true,
     val pageDiscover: Boolean = true,
     val pageMe: Boolean = true,
+    val pageSplash: Boolean = true,
     val backgroundOverlay: Map<String, String> = emptyMap(),
     val backgroundBlur: Map<String, Int> = emptyMap(),
     val rowMaskStrength: Int = 0

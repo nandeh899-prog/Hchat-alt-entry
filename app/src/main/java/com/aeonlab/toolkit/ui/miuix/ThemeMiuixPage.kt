@@ -2,8 +2,10 @@ package com.aeonlab.toolkit.ui.miuix
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.graphics.BitmapFactory
 import android.content.Context
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,11 +52,16 @@ internal fun ThemeMiuixPage(
     val scrollBehavior = MiuixScrollBehavior()
     val activity = context as? Activity
 
-    fun persist(next: ThemeSnapshot) {
-        ThemeSettings.write(context, next)
+    // 每次都基于「最新落盘的设置」改，避免用界面里捕获的旧 snapshot 覆盖掉上一次的改动
+    //（667 四个页面开关只生效最后一个，就是这个原因）。
+    fun update(block: (ThemeSnapshot) -> ThemeSnapshot) {
+        val fresh = ThemeSettings.snapshot(context)
+        ThemeSettings.write(context, block(fresh))
         snapshot = ThemeSettings.snapshot(context)
         ThemeLibrary.syncApplied(context)
     }
+
+    fun persist(next: ThemeSnapshot) = update { next }
 
     fun importBytes(bytes: ByteArray, sourceName: String) {
         val outcome = if (bytes.size >= 2 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()) {
@@ -115,7 +122,7 @@ internal fun ThemeMiuixPage(
                         title = "启用美化主题",
                         summary = "关闭后不再改微信界面，已改的设置会保留"
                     ) { checked ->
-                        persist(snapshot.copy(enabled = checked))
+                        update { it.copy(enabled = checked) }
                     }
                     InsetDivider()
                     ActionRow(title = "导出主题", summary = exportSummary(snapshot)) {
@@ -233,7 +240,7 @@ internal fun ThemeMiuixPage(
                                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                                 valueRange = 0f..100f,
                                 steps = 99,
-                                onValueChangeFinished = { persist(snapshot.copy(rowMaskStrength = strength)) }
+                                onValueChangeFinished = { update { it.copy(rowMaskStrength = strength) } }
                             )
                         }
                     }
@@ -248,7 +255,7 @@ internal fun ThemeMiuixPage(
                             title = "启用底栏主题",
                             summary = "底栏背景色、文字色与图标"
                         ) { checked ->
-                            persist(snapshot.copy(tabEnabled = checked))
+                            update { it.copy(tabEnabled = checked) }
                         }
                         InsetDivider()
                         SwitchRow(
@@ -256,7 +263,7 @@ internal fun ThemeMiuixPage(
                             title = "隐藏原生底栏",
                             summary = "与底栏主题互相独立，不开底栏主题也能隐藏"
                         ) { checked ->
-                            persist(snapshot.copy(tabHideNative = checked))
+                            update { it.copy(tabHideNative = checked) }
                         }
                         if (snapshot.tabEnabled) {
                             InsetDivider()
@@ -265,9 +272,9 @@ internal fun ThemeMiuixPage(
                                 summary = "留空跟随微信原生",
                                 value = snapshot.tabBackgroundColor,
                                 allowGradient = false,
-                                onReset = { persist(snapshot.copy(tabBackgroundColor = "")) }
+                                onReset = { update { it.copy(tabBackgroundColor = "") } }
                             ) { value ->
-                                persist(snapshot.copy(tabBackgroundColor = value.trim().take(9)))
+                                update { it.copy(tabBackgroundColor = value.trim().take(9) })
                             }
                             InsetDivider()
                             ColorPickerRow(
@@ -275,9 +282,9 @@ internal fun ThemeMiuixPage(
                                 summary = "未选中项的文字颜色",
                                 value = snapshot.tabTextColor,
                                 allowGradient = false,
-                                onReset = { persist(snapshot.copy(tabTextColor = "")) }
+                                onReset = { update { it.copy(tabTextColor = "") } }
                             ) { value ->
-                                persist(snapshot.copy(tabTextColor = value.trim().take(9)))
+                                update { it.copy(tabTextColor = value.trim().take(9) })
                             }
                             InsetDivider()
                             ColorPickerRow(
@@ -285,9 +292,9 @@ internal fun ThemeMiuixPage(
                                 summary = "当前页签的文字颜色",
                                 value = snapshot.tabSelectedTextColor,
                                 allowGradient = false,
-                                onReset = { persist(snapshot.copy(tabSelectedTextColor = "")) }
+                                onReset = { update { it.copy(tabSelectedTextColor = "") } }
                             ) { value ->
-                                persist(snapshot.copy(tabSelectedTextColor = value.trim().take(9)))
+                                update { it.copy(tabSelectedTextColor = value.trim().take(9) })
                             }
                         }
                     }
@@ -308,7 +315,7 @@ internal fun ThemeMiuixPage(
                                         val old = icons[index]
                                         icons[index] = path
                                         ThemeImageStore.delete(context, old)
-                                        persist(snapshot.copy(tabIcons = icons))
+                                        update { it.copy(tabIcons = icons) }
                                     }
                                 }
                             }
@@ -325,7 +332,7 @@ internal fun ThemeMiuixPage(
                             summary = "与「圆角头像」共用同一套头像 Hook，开关会同步过去"
                         ) { checked ->
                             ThemeSync.applyRoundAvatar(context, checked)
-                            persist(snapshot.copy(roundAvatar = checked))
+                            update { it.copy(roundAvatar = checked) }
                         }
                     }
                 }
@@ -338,7 +345,7 @@ internal fun ThemeMiuixPage(
                             title = "隐藏 ActionBar",
                             summary = "隐藏微信首页标题栏"
                         ) { checked ->
-                            persist(snapshot.copy(actionBarHide = checked))
+                            update { it.copy(actionBarHide = checked) }
                         }
                         InsetDivider()
                         ColorPickerRow(
@@ -346,9 +353,9 @@ internal fun ThemeMiuixPage(
                             summary = "ActionBar 背景色，留空跟随原生",
                             value = snapshot.actionBarBackgroundColor,
                             allowGradient = false,
-                            onReset = { persist(snapshot.copy(actionBarBackgroundColor = "")) }
+                            onReset = { update { it.copy(actionBarBackgroundColor = "") } }
                         ) { value ->
-                            persist(snapshot.copy(actionBarBackgroundColor = value.trim().take(9)))
+                            update { it.copy(actionBarBackgroundColor = value.trim().take(9) })
                         }
                         InsetDivider()
                         ColorPickerRow(
@@ -356,9 +363,9 @@ internal fun ThemeMiuixPage(
                             summary = "标题栏第一段文字颜色",
                             value = snapshot.actionBarTitleColor,
                             allowGradient = false,
-                            onReset = { persist(snapshot.copy(actionBarTitleColor = "")) }
+                            onReset = { update { it.copy(actionBarTitleColor = "") } }
                         ) { value ->
-                            persist(snapshot.copy(actionBarTitleColor = value.trim().take(9)))
+                            update { it.copy(actionBarTitleColor = value.trim().take(9) })
                         }
                         InsetDivider()
                         ColorPickerRow(
@@ -366,9 +373,9 @@ internal fun ThemeMiuixPage(
                             summary = "标题栏其余文字颜色",
                             value = snapshot.actionBarSubtitleColor,
                             allowGradient = false,
-                            onReset = { persist(snapshot.copy(actionBarSubtitleColor = "")) }
+                            onReset = { update { it.copy(actionBarSubtitleColor = "") } }
                         ) { value ->
-                            persist(snapshot.copy(actionBarSubtitleColor = value.trim().take(9)))
+                            update { it.copy(actionBarSubtitleColor = value.trim().take(9) })
                         }
                     }
                 }
@@ -381,40 +388,33 @@ internal fun ThemeMiuixPage(
                             title = "启用页面背景",
                             summary = "微信 / 通讯录 / 发现 / 我 四个页面各用一张图"
                         ) { checked ->
-                            persist(snapshot.copy(backgroundEnabled = checked))
+                            update { it.copy(backgroundEnabled = checked) }
                         }
                         if (snapshot.backgroundEnabled) {
-                            InsetDivider()
-                            SwitchRow(
-                                checked = snapshot.pageHome,
-                                title = "主页（微信）显示壁纸",
-                                summary = "关掉＝这一页回到未启用主题时的原样；改动后重进微信生效"
-                            ) { checked -> persist(snapshot.copy(pageHome = checked)) }
-                            InsetDivider()
-                            SwitchRow(
-                                checked = snapshot.pageContacts,
-                                title = "通讯录显示壁纸",
-                                summary = "关掉＝这一页回到未启用主题时的原样；改动后重进微信生效"
-                            ) { checked -> persist(snapshot.copy(pageContacts = checked)) }
-                            InsetDivider()
-                            SwitchRow(
-                                checked = snapshot.pageDiscover,
-                                title = "发现显示壁纸",
-                                summary = "关掉＝这一页回到未启用主题时的原样；改动后重进微信生效"
-                            ) { checked -> persist(snapshot.copy(pageDiscover = checked)) }
-                            InsetDivider()
-                            SwitchRow(
-                                checked = snapshot.pageMe,
-                                title = "我显示壁纸",
-                                summary = "关掉＝这一页回到未启用主题时的原样；改动后重进微信生效"
-                            ) { checked -> persist(snapshot.copy(pageMe = checked)) }
-                            backgroundSlots.forEach { slot ->
+                            pageEntries.forEach { entry ->
                                 InsetDivider()
-                                ActionRow(title = slot.second, summary = imageSummary(slot.third(snapshot))) {
-                                    pickImage(context, slot.first) { path ->
-                                        ThemeImageStore.delete(context, slot.third(snapshot))
-                                        persist(slot.fourth(snapshot, path))
-                                    }
+                                ActionRow(title = entry.title, summary = pageSummary(snapshot, entry)) {
+                                    val path = entry.path(snapshot)
+                                    val onLabel = if (entry.slot == ThemeImageStore.SLOT_SPLASH) "显示启动图" else "在这一页显示壁纸"
+                                    AlertDialog.Builder(context)
+                                        .setTitle(entry.title)
+                                        .setMultiChoiceItems(
+                                            arrayOf(onLabel),
+                                            booleanArrayOf(entry.enabled(snapshot))
+                                        ) { _, _, checked ->
+                                            update { current -> entry.withEnabled(current, checked) }
+                                        }
+                                        .setPositiveButton("换背景图") { _, _ ->
+                                            pickImage(context, entry.slot) { picked ->
+                                                ThemeImageStore.delete(context, entry.path(snapshot))
+                                                update { current -> entry.withPath(current, picked) }
+                                            }
+                                        }
+                                        .setNeutralButton("预览") { _, _ ->
+                                            showPreview(context, entry.title, entry.path(snapshot))
+                                        }
+                                        .setNegativeButton("关闭", null)
+                                        .show()
                                 }
                             }
                         }
@@ -557,6 +557,73 @@ private fun showConfirmDialog(context: Context, title: String, message: String, 
             .setMessage(message)
             .setPositiveButton("删除") { _, _ -> onConfirm() }
             .setNegativeButton("取消", null)
+            .show()
+    }
+}
+
+private class PageEntry(
+    val title: String,
+    val slot: String,
+    val path: (ThemeSnapshot) -> String,
+    val withPath: (ThemeSnapshot, String) -> ThemeSnapshot,
+    val enabled: (ThemeSnapshot) -> Boolean,
+    val withEnabled: (ThemeSnapshot, Boolean) -> ThemeSnapshot
+)
+
+private val pageEntries = listOf(
+    PageEntry(
+        "启动图", ThemeImageStore.SLOT_SPLASH,
+        { it.backgroundSplash }, { s, p -> s.copy(backgroundSplash = p) },
+        { it.pageSplash }, { s, v -> s.copy(pageSplash = v) }
+    ),
+    PageEntry(
+        "主页（微信）", ThemeImageStore.SLOT_HOME,
+        { it.backgroundHome }, { s, p -> s.copy(backgroundHome = p) },
+        { it.pageHome }, { s, v -> s.copy(pageHome = v) }
+    ),
+    PageEntry(
+        "通讯录", ThemeImageStore.SLOT_CONTACTS,
+        { it.backgroundContacts }, { s, p -> s.copy(backgroundContacts = p) },
+        { it.pageContacts }, { s, v -> s.copy(pageContacts = v) }
+    ),
+    PageEntry(
+        "发现", ThemeImageStore.SLOT_DISCOVER,
+        { it.backgroundDiscover }, { s, p -> s.copy(backgroundDiscover = p) },
+        { it.pageDiscover }, { s, v -> s.copy(pageDiscover = v) }
+    ),
+    PageEntry(
+        "我", ThemeImageStore.SLOT_ME,
+        { it.backgroundMe }, { s, p -> s.copy(backgroundMe = p) },
+        { it.pageMe }, { s, v -> s.copy(pageMe = v) }
+    )
+)
+
+private fun pageSummary(snapshot: ThemeSnapshot, entry: PageEntry): String {
+    val state = if (entry.enabled(snapshot)) "已启用" else "已关闭（这一页是微信原生）"
+    val image = if (entry.path(snapshot).isBlank()) "未设图" else "已设图"
+    return "$state · $image"
+}
+
+private fun showPreview(context: Context, title: String, path: String) {
+    if (path.isBlank()) {
+        showThemeDialog(context, title, "还没有设置背景图")
+        return
+    }
+    val bitmap = runCatching { BitmapFactory.decodeFile(path) }.getOrNull()
+    if (bitmap == null) {
+        showThemeDialog(context, title, "图片读取失败：$path")
+        return
+    }
+    val view = ImageView(context).apply {
+        setImageBitmap(bitmap)
+        adjustViewBounds = true
+        setPadding(24, 24, 24, 24)
+    }
+    runCatching {
+        AlertDialog.Builder(context)
+            .setTitle(title)
+            .setView(view)
+            .setPositiveButton("关闭", null)
             .show()
     }
 }
