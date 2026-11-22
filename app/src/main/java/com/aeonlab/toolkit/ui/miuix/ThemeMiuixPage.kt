@@ -274,7 +274,7 @@ internal fun ThemeMiuixPage(
                                 allowGradient = false,
                                 onReset = { update { it.copy(tabBackgroundColor = "") } }
                             ) { value ->
-                                update { it.copy(tabBackgroundColor = value.trim().take(9) })
+                                update { it.copy(tabBackgroundColor = value.trim().take(9)) }
                             }
                             InsetDivider()
                             ColorPickerRow(
@@ -284,7 +284,7 @@ internal fun ThemeMiuixPage(
                                 allowGradient = false,
                                 onReset = { update { it.copy(tabTextColor = "") } }
                             ) { value ->
-                                update { it.copy(tabTextColor = value.trim().take(9) })
+                                update { it.copy(tabTextColor = value.trim().take(9)) }
                             }
                             InsetDivider()
                             ColorPickerRow(
@@ -294,7 +294,7 @@ internal fun ThemeMiuixPage(
                                 allowGradient = false,
                                 onReset = { update { it.copy(tabSelectedTextColor = "") } }
                             ) { value ->
-                                update { it.copy(tabSelectedTextColor = value.trim().take(9) })
+                                update { it.copy(tabSelectedTextColor = value.trim().take(9)) }
                             }
                         }
                     }
@@ -355,7 +355,7 @@ internal fun ThemeMiuixPage(
                             allowGradient = false,
                             onReset = { update { it.copy(actionBarBackgroundColor = "") } }
                         ) { value ->
-                            update { it.copy(actionBarBackgroundColor = value.trim().take(9) })
+                            update { it.copy(actionBarBackgroundColor = value.trim().take(9)) }
                         }
                         InsetDivider()
                         ColorPickerRow(
@@ -365,7 +365,7 @@ internal fun ThemeMiuixPage(
                             allowGradient = false,
                             onReset = { update { it.copy(actionBarTitleColor = "") } }
                         ) { value ->
-                            update { it.copy(actionBarTitleColor = value.trim().take(9) })
+                            update { it.copy(actionBarTitleColor = value.trim().take(9)) }
                         }
                         InsetDivider()
                         ColorPickerRow(
@@ -375,7 +375,7 @@ internal fun ThemeMiuixPage(
                             allowGradient = false,
                             onReset = { update { it.copy(actionBarSubtitleColor = "") } }
                         ) { value ->
-                            update { it.copy(actionBarSubtitleColor = value.trim().take(9) })
+                            update { it.copy(actionBarSubtitleColor = value.trim().take(9)) }
                         }
                     }
                 }
@@ -430,7 +430,7 @@ private fun exportSummary(snapshot: ThemeSnapshot): String {
     if (snapshot.tabEnabled) items.add("底栏")
     if (snapshot.roundAvatar) items.add("圆形头像")
     if (snapshot.actionBarHide) items.add("隐藏 ActionBar")
-    if (snapshot.backgroundPaths().any { it.isNotBlank() }) items.add("页面背景")
+    if (snapshot.backgroundPaths().any { it.isNotBlank()) } items.add("页面背景")
     return if (items.isEmpty()) "当前没有勾选主题项" else "当前包含：" + items.joinToString("、")
 }
 
