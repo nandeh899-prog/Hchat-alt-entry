@@ -430,7 +430,7 @@ private fun exportSummary(snapshot: ThemeSnapshot): String {
     if (snapshot.tabEnabled) items.add("底栏")
     if (snapshot.roundAvatar) items.add("圆形头像")
     if (snapshot.actionBarHide) items.add("隐藏 ActionBar")
-    if (snapshot.backgroundPaths().any { it.isNotBlank()) } items.add("页面背景")
+    if (snapshot.backgroundPaths().any { it.isNotBlank() }) items.add("页面背景")
     return if (items.isEmpty()) "当前没有勾选主题项" else "当前包含：" + items.joinToString("、")
 }
 
