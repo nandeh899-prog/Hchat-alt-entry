@@ -172,7 +172,7 @@ object ThemeSettings {
                     it.className.substringAfterLast('.') + "." + it.methodName + ":" + it.lineNumber
                 }
                 HLog.i(
-                    "$TAG 页面开关写入(671): " + listOf("主", "通", "发", "我", "启").zip(before.zip(after)) { n, p ->
+                    "[AeonLab:Theme] 页面开关写入(671): " + listOf("主", "通", "发", "我", "启").zip(before.zip(after)) { n, p ->
                         "$n=${p.first}->${p.second}"
                     }.joinToString(" ") + " 调用方=" + caller
                 )
