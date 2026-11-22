@@ -61,6 +61,12 @@ object ThemeSettings {
 
     val BACKGROUND_KEYS = listOf(KEY_BG_SPLASH, KEY_BG_HOME, KEY_BG_CONTACTS, KEY_BG_DISCOVER, KEY_BG_ME)
 
+    /** 667：每页壁纸开关（关掉＝这一页当作没设图，回到未启用主题时的原样）。 */
+    const val KEY_PAGE_HOME = "theme_page_home"
+    const val KEY_PAGE_CONTACTS = "theme_page_contacts"
+    const val KEY_PAGE_DISCOVER = "theme_page_discover"
+    const val KEY_PAGE_ME = "theme_page_me"
+
     /** 主题包里的背景「叠色」与「模糊半径」，按槽位存成 JSON（微X 主题的 c / b 两个字段）。 */
     const val KEY_BG_OVERLAY = "theme_background_overlay"
     const val KEY_BG_BLUR = "theme_background_blur"
@@ -98,6 +104,10 @@ object ThemeSettings {
             backgroundContacts = sp.getString(KEY_BG_CONTACTS, "").orEmpty(),
             backgroundDiscover = sp.getString(KEY_BG_DISCOVER, "").orEmpty(),
             backgroundMe = sp.getString(KEY_BG_ME, "").orEmpty(),
+            pageHome = sp.getBoolean(KEY_PAGE_HOME, true),
+            pageContacts = sp.getBoolean(KEY_PAGE_CONTACTS, true),
+            pageDiscover = sp.getBoolean(KEY_PAGE_DISCOVER, true),
+            pageMe = sp.getBoolean(KEY_PAGE_ME, true),
             backgroundOverlay = readStringMap(sp, KEY_BG_OVERLAY),
             backgroundBlur = readIntMap(sp, KEY_BG_BLUR)
         )
@@ -127,6 +137,10 @@ object ThemeSettings {
             .putString(KEY_BG_CONTACTS, snapshot.backgroundContacts)
             .putString(KEY_BG_DISCOVER, snapshot.backgroundDiscover)
             .putString(KEY_BG_ME, snapshot.backgroundMe)
+            .putBoolean(KEY_PAGE_HOME, snapshot.pageHome)
+            .putBoolean(KEY_PAGE_CONTACTS, snapshot.pageContacts)
+            .putBoolean(KEY_PAGE_DISCOVER, snapshot.pageDiscover)
+            .putBoolean(KEY_PAGE_ME, snapshot.pageMe)
             .putString(KEY_BG_OVERLAY, encodeStringMap(snapshot.backgroundOverlay))
             .putString(KEY_BG_BLUR, encodeIntMap(snapshot.backgroundBlur))
         TAB_ICON_KEYS.forEachIndexed { index, key ->
@@ -219,10 +233,25 @@ data class ThemeSnapshot(
     val backgroundContacts: String = "",
     val backgroundDiscover: String = "",
     val backgroundMe: String = "",
+    val pageHome: Boolean = true,
+    val pageContacts: Boolean = true,
+    val pageDiscover: Boolean = true,
+    val pageMe: Boolean = true,
     val backgroundOverlay: Map<String, String> = emptyMap(),
     val backgroundBlur: Map<String, Int> = emptyMap(),
     val rowMaskStrength: Int = 0
 ) {
+    /**
+     * 667：真正会被应用的每页背景图。关掉的页面返回空串，
+     * 调用方原有的「path 空白就跳过这一页」逻辑因此把该页彻底放过——不铺图、不做内容分层、不装行遮罩。
+     */
+    fun pagePaths(): List<String> = listOf(
+        if (pageHome) backgroundHome else "",
+        if (pageContacts) backgroundContacts else "",
+        if (pageDiscover) backgroundDiscover else "",
+        if (pageMe) backgroundMe else ""
+    )
+
     fun backgroundPaths(): List<String> = listOf(
         backgroundSplash,
         backgroundHome,

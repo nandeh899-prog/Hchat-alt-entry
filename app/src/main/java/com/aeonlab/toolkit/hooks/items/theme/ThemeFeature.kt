@@ -651,12 +651,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         log: Boolean
     ) {
         if (!snapshot.backgroundEnabled) return
-        val paths = listOf(
-            snapshot.backgroundHome,
-            snapshot.backgroundContacts,
-            snapshot.backgroundDiscover,
-            snapshot.backgroundMe
-        )
+        val paths = snapshot.pagePaths()
         if (paths.all { it.isBlank() }) {
             if (log) HLog.i("$TAG 页面背景开关已开，但四个页面一张图都没设置，本轮跳过")
             return
@@ -676,7 +671,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         // 610：切页过渡底衬——给 ViewPager 自己铺一张窗口锚定壁纸（宿主静态位=(0,0)，逐帧恒定）。
         // 页面在滑动过程中被宿主重录/重绘的空洞里，透出来的是壁纸而不是微信 fragment 渐变底。
-        applyPagerUnderlay(pager, paths.firstOrNull { it.isNotBlank() }, log)
+        applyPagerUnderlay(pager, paths.firstOrNull { it.isNotBlank() }, paths.firstOrNull()?.takeIf { it.isNotBlank() }, log)
         val slots = listOf(
             ThemeImageStore.SLOT_HOME,
             ThemeImageStore.SLOT_CONTACTS,
@@ -1909,12 +1904,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         pageSignatureAt[page] = sig
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled || !snapshot.backgroundEnabled) return
-        val paths = listOf(
-            snapshot.backgroundHome,
-            snapshot.backgroundContacts,
-            snapshot.backgroundDiscover,
-            snapshot.backgroundMe
-        )
+        val paths = snapshot.pagePaths()
         val path = paths.getOrNull(index)?.takeIf { it.isNotBlank() } ?: return
         val image = bitmap(path) ?: return
         val themeSlots = listOf(
@@ -6800,8 +6790,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     /** 610：ViewPager 自身也铺一张窗口锚定壁纸，切页过渡期的空洞露壁纸而不是宿主的渐变底。 */
-    private fun applyPagerUnderlay(pager: ViewGroup, path: String?, log: Boolean) {
-        if (path.isNullOrBlank()) return
+    private fun applyPagerUnderlay(pager: ViewGroup, path: String?, homePath: String?, log: Boolean) {
+        if (path.isNullOrBlank()) {
+            // 667：四页都关掉时把底衬摘掉，避免整页壁纸从 ViewPager 底下透出来
+            val current = pagerUnderlays.remove(pager)
+            if (current != null && pager.background === current) {
+                runCatching { pager.setBackgroundDrawable(null) }
+            }
+            return
+        }
         val image = bitmap(path) ?: return
         // 617：底衬换成「按页分格 + 随 scrollX 平移」的一层，切页过程中连续跟随手指，
         // 落定前后是同一份 Bitmap 与同一套 cover 矩阵，不会再「落定才换成下页的图」。
@@ -6813,7 +6810,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val bmp = pageBitmapByPage[child]
                 if (bmp != null) underlay.setSlot(i, bmp)
             }
-            if (underlay.slotBitmap(0) == null) underlay.setSlot(0, image)
+            // 667：首页关掉时不能把别的页的图回填到第 0 格
+            if (homePath != null && underlay.slotBitmap(0) == null) {
+                (bitmap(homePath) ?: image).let { underlay.setSlot(0, it) }
+            }
         }
         if (pager.background !== underlay) {
             runCatching { pager.setBackgroundDrawable(underlay) }

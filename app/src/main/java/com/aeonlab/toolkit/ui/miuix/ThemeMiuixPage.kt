@@ -384,6 +384,30 @@ internal fun ThemeMiuixPage(
                             persist(snapshot.copy(backgroundEnabled = checked))
                         }
                         if (snapshot.backgroundEnabled) {
+                            InsetDivider()
+                            SwitchRow(
+                                checked = snapshot.pageHome,
+                                title = "主页（微信）显示壁纸",
+                                summary = "关掉＝这一页回到未启用主题时的原样；改动后重进微信生效"
+                            ) { checked -> persist(snapshot.copy(pageHome = checked)) }
+                            InsetDivider()
+                            SwitchRow(
+                                checked = snapshot.pageContacts,
+                                title = "通讯录显示壁纸",
+                                summary = "关掉＝这一页回到未启用主题时的原样；改动后重进微信生效"
+                            ) { checked -> persist(snapshot.copy(pageContacts = checked)) }
+                            InsetDivider()
+                            SwitchRow(
+                                checked = snapshot.pageDiscover,
+                                title = "发现显示壁纸",
+                                summary = "关掉＝这一页回到未启用主题时的原样；改动后重进微信生效"
+                            ) { checked -> persist(snapshot.copy(pageDiscover = checked)) }
+                            InsetDivider()
+                            SwitchRow(
+                                checked = snapshot.pageMe,
+                                title = "我显示壁纸",
+                                summary = "关掉＝这一页回到未启用主题时的原样；改动后重进微信生效"
+                            ) { checked -> persist(snapshot.copy(pageMe = checked)) }
                             backgroundSlots.forEach { slot ->
                                 InsetDivider()
                                 ActionRow(title = slot.second, summary = imageSummary(slot.third(snapshot))) {
