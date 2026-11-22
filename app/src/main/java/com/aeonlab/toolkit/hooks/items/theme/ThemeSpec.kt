@@ -70,10 +70,27 @@ object ThemeSpec {
         return root.toString(2)
     }
 
+
+    /**
+     * 672：导入/应用主题只该覆盖主题内容，不能顺带改用户对各页面背景开关的选择。
+     * 主题 JSON 没有这五个字段，构造出的 ThemeSnapshot 会退回数据类默认值 true，
+     * 把用户关掉的页面重新打开（21:51 日志里四页全被打成「页面 N 目标」就是这个后果）。
+     */
+    private fun keepingPageSwitches(context: Context, snapshot: ThemeSnapshot): ThemeSnapshot {
+        val current = ThemeSettings.snapshot(context)
+        return snapshot.copy(
+            pageHome = current.pageHome,
+            pageContacts = current.pageContacts,
+            pageDiscover = current.pageDiscover,
+            pageMe = current.pageMe,
+            pageSplash = current.pageSplash
+        )
+    }
+
     fun importJson(context: Context, text: String, sourceName: String = ""): ImportOutcome {
         return when (val parsed = parseJson(context, text)) {
             is ImportOutcome.Success -> {
-                ThemeSettings.write(context, parsed.snapshot.copy(enabled = true))
+                ThemeSettings.write(context, keepingPageSwitches(context, parsed.snapshot.copy(enabled = true)))
                 ThemeSync.applyRoundAvatar(context, parsed.snapshot.roundAvatar)
                 parsed
             }
@@ -213,10 +230,10 @@ object ThemeSpec {
         applied.addAll(describeApplied(finalSnapshot))
         if (config != null) {
             applied.addAll(paraDescribe(config!!))
-            ThemeSettings.write(context, finalSnapshot)
+            ThemeSettings.write(context, keepingPageSwitches(context, finalSnapshot))
             ThemeSync.applyRoundAvatar(context, finalSnapshot.roundAvatar)
         } else {
-            ThemeSettings.write(context, finalSnapshot)
+            ThemeSettings.write(context, keepingPageSwitches(context, finalSnapshot))
         }
         if (applied.isEmpty()) {
             return ImportOutcome.Failure("主题包解析完成，但没有可以落到设置里的字段")
@@ -676,7 +693,7 @@ object ThemeSpec {
             backgroundOverlay = overlay,
             backgroundBlur = blur
         )
-        ThemeSettings.write(context, finalSnapshot)
+        ThemeSettings.write(context, keepingPageSwitches(context, finalSnapshot))
         ThemeSync.applyRoundAvatar(context, finalSnapshot.roundAvatar)
         if (applied.isEmpty()) {
             return ImportOutcome.Failure(

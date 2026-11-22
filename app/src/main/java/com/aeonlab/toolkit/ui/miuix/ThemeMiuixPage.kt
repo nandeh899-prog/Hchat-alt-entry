@@ -100,7 +100,7 @@ internal fun ThemeMiuixPage(
             BottomActionBar(
                 primaryText = "保存设置",
                 onPrimaryClick = {
-                    ThemeSettings.write(context, snapshot)
+                    update { it }
                     ThemeLibrary.syncApplied(context)
                     ThemeSync.applyRoundAvatar(context, snapshot.roundAvatar)
                     Toast.makeText(context, "已保存，回到微信首页立即生效", Toast.LENGTH_SHORT).show()
@@ -134,7 +134,7 @@ internal fun ThemeMiuixPage(
                             showThemeDialog(context, "导出失败", "当前页面不在 Activity 里，无法调起系统保存界面")
                             return@ActionRow
                         }
-                        ThemeSettings.write(context, snapshot)
+                        update { it }
                         val json = runCatching { ThemeSpec.exportJson(context) }.getOrElse {
                             showThemeDialog(context, "导出失败", "生成主题文件失败：${it.message ?: it.javaClass.simpleName}")
                             return@ActionRow
