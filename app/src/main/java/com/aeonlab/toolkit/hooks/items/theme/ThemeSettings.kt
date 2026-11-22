@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import com.aeonlab.toolkit.preferences.AeonLabStorage
+import com.aeonlab.toolkit.utils.HLog
 
 /**
  * 美化主题的本地设置（主题数据落地格式见 [ThemeSpec]）。
@@ -149,7 +150,34 @@ object ThemeSettings {
         TAB_ICON_KEYS.forEachIndexed { index, key ->
             editor.putString(key, snapshot.tabIcons.getOrElse(index) { "" })
         }
+        val probe = runCatching { preferences(context) }.getOrNull()
+        val before = probe?.let {
+            listOf(
+                it.getBoolean(KEY_PAGE_HOME, true), it.getBoolean(KEY_PAGE_CONTACTS, true),
+                it.getBoolean(KEY_PAGE_DISCOVER, true), it.getBoolean(KEY_PAGE_ME, true),
+                it.getBoolean(KEY_PAGE_SPLASH, true)
+            )
+        }
         editor.apply()
+        // 671 探针：谁把五个页面开关写成什么值（只读旧值，不改行为）
+        runCatching {
+            if (probe == null || before == null) return@runCatching
+            val after = listOf(
+                probe.getBoolean(KEY_PAGE_HOME, true), probe.getBoolean(KEY_PAGE_CONTACTS, true),
+                probe.getBoolean(KEY_PAGE_DISCOVER, true), probe.getBoolean(KEY_PAGE_ME, true),
+                probe.getBoolean(KEY_PAGE_SPLASH, true)
+            )
+            if (before != after) {
+                val caller = Throwable().stackTrace.drop(1).take(4).joinToString(" <- ") {
+                    it.className.substringAfterLast('.') + "." + it.methodName + ":" + it.lineNumber
+                }
+                HLog.i(
+                    "$TAG 页面开关写入(671): " + listOf("主", "通", "发", "我", "启").zip(before.zip(after)) { n, p ->
+                        "$n=${p.first}->${p.second}"
+                    }.joinToString(" ") + " 调用方=" + caller
+                )
+            }
+        }
         runCatching { onSettingsWritten?.invoke(context) }
     }
 

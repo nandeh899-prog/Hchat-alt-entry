@@ -146,6 +146,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     @Volatile private var guardHits = 0L
     @Volatile private var lastGuardLogAt = 0L
     private var pagePrepCount = 0
+    private var lastPageSkipProbeAt = 0L
     private var fastAssertLogged = false
     private val guardTransparent = ColorDrawable(Color.TRANSPARENT)
 
@@ -664,6 +665,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
             return
         }
         if (log) {
+            HLog.i(
+                "$TAG 页面开关状态(671): 主=${snapshot.pageHome} 通=${snapshot.pageContacts} 发=${snapshot.pageDiscover} 我=${snapshot.pageMe} 启=${snapshot.pageSplash}" +
+                    " 底图主=${snapshot.backgroundHome.isNotBlank()} 通=${snapshot.backgroundContacts.isNotBlank()}" +
+                    " 发=${snapshot.backgroundDiscover.isNotBlank()} 我=${snapshot.backgroundMe.isNotBlank()}"
+            )
             HLog.i(
                 "$TAG 页面背景容器: ${pager.javaClass.name}#${idName(pager)}" +
                     " 子项=${pager.childCount} 尺寸=${pager.width}x${pager.height} 可见=${pager.isShown}"
@@ -1906,7 +1912,17 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled || !snapshot.backgroundEnabled) return
         val paths = snapshot.pagePaths()
-        val path = paths.getOrNull(index)?.takeIf { it.isNotBlank() } ?: return
+        val flags = "主=${snapshot.pageHome} 通=${snapshot.pageContacts} 发=${snapshot.pageDiscover} 我=${snapshot.pageMe} 启=${snapshot.pageSplash}"
+        val raw = paths.getOrNull(index)
+        if (raw.isNullOrBlank()) {
+            // 671 探针：这一页被判为「关」时，把读到的开关原值打出来（证明读的是哪个值）
+            if (SystemClock.uptimeMillis() - lastPageSkipProbeAt >= 5000L) {
+                lastPageSkipProbeAt = SystemClock.uptimeMillis()
+                HLog.i("$TAG 页面开关读取(671): 第 ${index + 1} 页 $flags → 路径=空，跳过铺图（$reason）")
+            }
+            return
+        }
+        val path = raw
         val image = bitmap(path) ?: return
         val themeSlots = listOf(
             ThemeImageStore.SLOT_HOME,
