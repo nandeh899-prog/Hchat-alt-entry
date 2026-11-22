@@ -53,6 +53,7 @@ internal fun ThemeMiuixPage(
     fun persist(next: ThemeSnapshot) {
         ThemeSettings.write(context, next)
         snapshot = ThemeSettings.snapshot(context)
+        ThemeLibrary.syncApplied(context)
     }
 
     fun importBytes(bytes: ByteArray, sourceName: String) {
@@ -89,6 +90,7 @@ internal fun ThemeMiuixPage(
                 primaryText = "保存设置",
                 onPrimaryClick = {
                     ThemeSettings.write(context, snapshot)
+                    ThemeLibrary.syncApplied(context)
                     ThemeSync.applyRoundAvatar(context, snapshot.roundAvatar)
                     Toast.makeText(context, "已保存，回到微信首页立即生效", Toast.LENGTH_SHORT).show()
                 },
@@ -116,18 +118,6 @@ internal fun ThemeMiuixPage(
                         persist(snapshot.copy(enabled = checked))
                     }
                     InsetDivider()
-                    ActionRow(
-                        title = "主题文件",
-                        summary = "导出 / 导入主题（.hctheme.json，可与 MDWechat 配置互通）"
-                    ) {
-                        showThemeDialog(
-                            context,
-                            "主题文件",
-                            "导出会在系统文件选择器里生成一个自包含的主题文件（图片以 base64 内联）。\n" +
-                                "导入支持 Hchat 主题文件，也支持手机里现成的 zip 主题包（扩展名是 .zip 或被改成 .txt 的 zip 都可以）。"
-                        )
-                    }
-                    InsetDivider()
                     ActionRow(title = "导出主题", summary = exportSummary(snapshot)) {
                         if (activity == null) {
                             showThemeDialog(context, "导出失败", "当前页面不在 Activity 里，无法调起系统保存界面")
@@ -151,20 +141,6 @@ internal fun ThemeMiuixPage(
                             }
                         }
                     }
-                    InsetDivider()
-                    ActionRow(title = "导入主题", summary = "选择 .hctheme.json / .json / 主题 zip 包") {
-                        if (activity == null) {
-                            showThemeDialog(context, "导入失败", "当前页面不在 Activity 里，无法调起系统文件选择器")
-                            return@ActionRow
-                        }
-                        ThemeFileIo.importThemeFile(activity) { bytes, name, error ->
-                            when {
-                                error != null -> showThemeDialog(context, "导入失败", error)
-                                bytes == null -> showThemeDialog(context, "导入失败", "没有读到文件内容")
-                                else -> importBytes(bytes, name.orEmpty())
-                            }
-                        }
-                    }
                 }
             }
 
@@ -172,8 +148,8 @@ internal fun ThemeMiuixPage(
             item {
                 SettingsCard {
                     ActionRow(
-                        title = "导入到主题库",
-                        summary = if (library.isEmpty()) "还没有保存的主题；导入后可以随时切换" else "已保存 ${library.size} 份，点击导入新的"
+                        title = "导入主题",
+                        summary = if (library.isEmpty()) "导入后会存进主题库并立即应用" else "已保存 ${library.size} 份，导入后立即应用"
                     ) {
                         if (activity == null) {
                             showThemeDialog(context, "导入失败", "当前页面不在 Activity 里，无法调起系统文件选择器")
@@ -185,8 +161,18 @@ internal fun ThemeMiuixPage(
                                 bytes == null -> showThemeDialog(context, "导入失败", "没有读到文件内容")
                                 else -> ThemeLibrary.import(context, bytes, name.orEmpty())
                                     .onSuccess { entry ->
-                                        library = ThemeLibrary.list(context)
-                                        showThemeDialog(context, "已加入主题库", "「${entry.name}」已保存，点它就能应用")
+                                        when (val out = ThemeLibrary.apply(context, entry.id)) {
+                                            is ThemeSpec.ImportOutcome.Success -> {
+                                                snapshot = ThemeSettings.snapshot(context)
+                                                library = ThemeLibrary.list(context)
+                                                ThemeSync.applyRoundAvatar(context, snapshot.roundAvatar)
+                                                showThemeDialog(context, "已导入并应用", "「${entry.name}」已存进主题库并应用")
+                                            }
+                                            is ThemeSpec.ImportOutcome.Failure -> {
+                                                library = ThemeLibrary.list(context)
+                                                showThemeDialog(context, "已存进主题库，但应用失败", out.reason)
+                                            }
+                                        }
                                     }
                                     .onFailure { showThemeDialog(context, "导入失败", it.message ?: it.javaClass.simpleName) }
                             }

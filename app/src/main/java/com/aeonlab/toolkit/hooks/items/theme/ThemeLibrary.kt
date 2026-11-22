@@ -25,6 +25,7 @@ object ThemeLibrary {
     private const val JSON_FILE = "theme.json"
     private const val ZIP_FILE = "theme.zip"
     private const val STATE_FILE = "state.json"
+    private const val OVERRIDE_FILE = "override.json"
 
     private fun root(context: Context): File = File(File(context.filesDir, "AeonLab"), "theme-library")
 
@@ -110,16 +111,41 @@ object ThemeLibrary {
         Entry(dir.name, baseName, System.currentTimeMillis(), false, isZip)
     }
 
-    /** 应用一份库里的主题：与「导入主题」同一条通道。 */
+    /**
+     * 把当前设置回写到「当前应用」的那份主题里。
+     * 这样在主题库条目上改过的标题栏颜色等参数不会在切换主题后又退回导入时的原值。
+     */
+    fun syncApplied(context: Context) {
+        val id = appliedId(context)
+        if (id.isEmpty()) return
+        val dir = File(root(context), id)
+        if (!dir.isDirectory) return
+        val json = runCatching { ThemeSpec.exportJson(context) }.getOrNull() ?: return
+        if (json.isBlank()) return
+        runCatching { File(dir, OVERRIDE_FILE).writeText(json) }
+    }
+
+    /** 应用一份库里的主题：优先用回写过的参数，其次用导入时的原文件。 */
     fun apply(context: Context, id: String): ThemeSpec.ImportOutcome {
         val dir = File(root(context), id)
         val name = displayName(context, id)
-        val outcome: ThemeSpec.ImportOutcome = if (File(dir, ZIP_FILE).isFile) {
-            val bytes = runCatching { File(dir, ZIP_FILE).readBytes() }.getOrNull()
-            if (bytes == null) ThemeSpec.ImportOutcome.Failure("读取主题包失败") else ThemeSpec.importArchive(context, bytes, name)
-        } else {
-            val text = runCatching { File(dir, JSON_FILE).readText() }.getOrNull()
-            if (text == null) ThemeSpec.ImportOutcome.Failure("读取主题文件失败") else ThemeSpec.importJson(context, text, name)
+        val override = File(dir, OVERRIDE_FILE)
+        val outcome: ThemeSpec.ImportOutcome = when {
+            override.isFile -> {
+                val text = runCatching { override.readText() }.getOrNull()
+                if (text.isNullOrBlank()) ThemeSpec.ImportOutcome.Failure("读取主题参数失败")
+                else ThemeSpec.importJson(context, text, name)
+            }
+            File(dir, ZIP_FILE).isFile -> {
+                val bytes = runCatching { File(dir, ZIP_FILE).readBytes() }.getOrNull()
+                if (bytes == null) ThemeSpec.ImportOutcome.Failure("读取主题包失败")
+                else ThemeSpec.importArchive(context, bytes, name)
+            }
+            else -> {
+                val text = runCatching { File(dir, JSON_FILE).readText() }.getOrNull()
+                if (text == null) ThemeSpec.ImportOutcome.Failure("读取主题文件失败")
+                else ThemeSpec.importJson(context, text, name)
+            }
         }
         if (outcome is ThemeSpec.ImportOutcome.Success) setApplied(context, id)
         return outcome
