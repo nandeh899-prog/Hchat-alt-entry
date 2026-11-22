@@ -3,8 +3,14 @@ package com.aeonlab.toolkit.ui.miuix
 import android.app.Activity
 import android.app.AlertDialog
 import android.graphics.BitmapFactory
+import android.graphics.BitmapFactory
 import android.content.Context
+import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.Switch
+import android.widget.TextView
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.compose.foundation.layout.PaddingValues
@@ -391,31 +397,15 @@ internal fun ThemeMiuixPage(
                             update { it.copy(backgroundEnabled = checked) }
                         }
                         if (snapshot.backgroundEnabled) {
-                            pageEntries.forEach { entry ->
-                                InsetDivider()
-                                ActionRow(title = entry.title, summary = pageSummary(snapshot, entry)) {
-                                    val path = entry.path(snapshot)
-                                    val onLabel = if (entry.slot == ThemeImageStore.SLOT_SPLASH) "显示启动图" else "在这一页显示壁纸"
-                                    AlertDialog.Builder(context)
-                                        .setTitle(entry.title)
-                                        .setMultiChoiceItems(
-                                            arrayOf(onLabel),
-                                            booleanArrayOf(entry.enabled(snapshot))
-                                        ) { _, _, checked ->
-                                            update { current -> entry.withEnabled(current, checked) }
-                                        }
-                                        .setPositiveButton("换背景图") { _, _ ->
-                                            pickImage(context, entry.slot) { picked ->
-                                                ThemeImageStore.delete(context, entry.path(snapshot))
-                                                update { current -> entry.withPath(current, picked) }
-                                            }
-                                        }
-                                        .setNeutralButton("预览") { _, _ ->
-                                            showPreview(context, entry.title, entry.path(snapshot))
-                                        }
-                                        .setNegativeButton("关闭", null)
-                                        .show()
-                                }
+                            InsetDivider()
+                            ActionRow(title = "设置页面背景图片", summary = backgroundSummary(snapshot)) {
+                                AlertDialog.Builder(context)
+                                    .setTitle("设置页面背景图片")
+                                    .setItems(pageEntries.map { pageLabel(snapshot, it) }.toTypedArray()) { _, which ->
+                                        showPageDialog(context, pageEntries[which], { ThemeSettings.snapshot(context) }) { block -> update(block) }
+                                    }
+                                    .setNegativeButton("返回", null)
+                                    .show()
                             }
                         }
                     }
@@ -598,10 +588,88 @@ private val pageEntries = listOf(
     )
 )
 
-private fun pageSummary(snapshot: ThemeSnapshot, entry: PageEntry): String {
-    val state = if (entry.enabled(snapshot)) "已启用" else "已关闭（这一页是微信原生）"
+private fun backgroundSummary(snapshot: ThemeSnapshot): String {
+    val on = pageEntries.count { it.enabled(snapshot) }
+    val set = pageEntries.count { it.path(snapshot).isNotBlank() }
+    return "$on/${pageEntries.size} 页开启 · 已设 $set 张图"
+}
+
+private fun pageLabel(snapshot: ThemeSnapshot, entry: PageEntry): String {
+    val state = if (entry.enabled(snapshot)) "开启" else "关闭"
     val image = if (entry.path(snapshot).isBlank()) "未设图" else "已设图"
-    return "$state · $image"
+    return "${entry.title}（$state · $image）"
+}
+
+private fun showPageDialog(
+    context: Context,
+    entry: PageEntry,
+    current: () -> ThemeSnapshot,
+    update: ((ThemeSnapshot) -> ThemeSnapshot) -> Unit
+) {
+    val snapshot = current()
+    val density = context.resources.displayMetrics.density
+    fun px(value: Int): Int = (value * density).toInt()
+    val box = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(px(20), px(10), px(20), px(4))
+    }
+    box.addView(
+        Switch(context).apply {
+            text = "开启"
+            isChecked = entry.enabled(snapshot)
+            setOnCheckedChangeListener { _, checked -> update { s -> entry.withEnabled(s, checked) } }
+        }
+    )
+    box.addView(
+        TextView(context).apply {
+            val path = current().let(entry.path)
+            text = if (path.isBlank()) "当前图片：未设置" else "当前图片：已设置"
+            setPadding(0, px(8), 0, px(8))
+        }
+    )
+    val imagePath = entry.path(snapshot)
+    val bitmap = if (imagePath.isBlank()) null else runCatching { BitmapFactory.decodeFile(imagePath) }.getOrNull()
+    if (bitmap != null) {
+        box.addView(
+            ImageView(context).apply {
+                setImageBitmap(bitmap)
+                adjustViewBounds = true
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, px(200))
+            }
+        )
+    }
+    val actions = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        setPadding(0, px(6), 0, 0)
+    }
+    actions.addView(
+        Button(context).apply {
+            text = "换背景图"
+            setOnClickListener {
+                val old = current().let(entry.path)
+                pickImage(context, entry.slot) { picked ->
+                    ThemeImageStore.delete(context, old)
+                    update { s -> entry.withPath(s, picked) }
+                }
+            }
+        },
+        LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+    )
+    actions.addView(
+        Button(context).apply {
+            text = "预览"
+            setOnClickListener { showPreview(context, entry.title, current().let(entry.path)) }
+        },
+        LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+    )
+    box.addView(actions)
+    AlertDialog.Builder(context)
+        .setTitle(entry.title)
+        .setView(box)
+        .setPositiveButton("确定", null)
+        .setNegativeButton("取消", null)
+        .show()
 }
 
 private fun showPreview(context: Context, title: String, path: String) {
