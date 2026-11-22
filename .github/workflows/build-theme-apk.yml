@@ -17,13 +17,17 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: 安装 platform 37 / build-tools 36
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+          SDK="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          CMDLINE=$(ls -d "$SDK"/cmdline-tools/*/bin 2>/dev/null | head -1)
+          echo "cmdline-tools: $CMDLINE"
+          yes | "$CMDLINE/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$CMDLINE/sdkmanager" --install "platform-tools" "platforms;android-37" "build-tools;36.0.0" || {
+            echo "--- 可用的 platform 包 ---"; "$CMDLINE/sdkmanager" --list | grep -E "platforms;android-3" | head -20; exit 1; }
+          ls "$SDK/platforms" "$SDK/build-tools"
 
       - name: 临时签名密钥（本次仅用于编译出可分析产物）
         run: |
