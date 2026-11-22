@@ -3,6 +3,7 @@ package com.aeonlab.toolkit.ui.miuix
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
+import android.widget.EditText
 import android.widget.Toast
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.aeonlab.toolkit.hooks.items.theme.ThemeFileIo
+import com.aeonlab.toolkit.hooks.items.theme.ThemeLibrary
 import com.aeonlab.toolkit.hooks.items.theme.ThemeImageStore
 import com.aeonlab.toolkit.hooks.items.theme.ThemeSettings
 import com.aeonlab.toolkit.hooks.items.theme.ThemeSnapshot
@@ -43,6 +45,7 @@ internal fun ThemeMiuixPage(
     onBack: () -> Unit
 ) {
     var snapshot by remember { mutableStateOf(ThemeSettings.snapshot(context)) }
+    var library by remember { mutableStateOf(ThemeLibrary.list(context)) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     val activity = context as? Activity
@@ -160,6 +163,68 @@ internal fun ThemeMiuixPage(
                                 bytes == null -> showThemeDialog(context, "导入失败", "没有读到文件内容")
                                 else -> importBytes(bytes, name.orEmpty())
                             }
+                        }
+                    }
+                }
+            }
+
+            item { SmallTitle(modifier = Modifier.padding(top = 10.dp), text = "主题库") }
+            item {
+                SettingsCard {
+                    ActionRow(
+                        title = "导入到主题库",
+                        summary = if (library.isEmpty()) "还没有保存的主题；导入后可以随时切换" else "已保存 ${library.size} 份，点击导入新的"
+                    ) {
+                        if (activity == null) {
+                            showThemeDialog(context, "导入失败", "当前页面不在 Activity 里，无法调起系统文件选择器")
+                            return@ActionRow
+                        }
+                        ThemeFileIo.importThemeFile(activity) { bytes, name, error ->
+                            when {
+                                error != null -> showThemeDialog(context, "导入失败", error)
+                                bytes == null -> showThemeDialog(context, "导入失败", "没有读到文件内容")
+                                else -> ThemeLibrary.import(context, bytes, name.orEmpty())
+                                    .onSuccess { entry ->
+                                        library = ThemeLibrary.list(context)
+                                        showThemeDialog(context, "已加入主题库", "「${entry.name}」已保存，点它就能应用")
+                                    }
+                                    .onFailure { showThemeDialog(context, "导入失败", it.message ?: it.javaClass.simpleName) }
+                            }
+                        }
+                    }
+                }
+            }
+            library.forEach { entry ->
+                item {
+                    SettingsCard {
+                        ActionRow(title = entry.name, summary = librarySummary(entry)) {
+                            showLibraryActions(
+                                context = context,
+                                entryName = entry.name,
+                                onApply = {
+                                    when (val outcome = ThemeLibrary.apply(context, entry.id)) {
+                                        is ThemeSpec.ImportOutcome.Success -> {
+                                            snapshot = ThemeSettings.snapshot(context)
+                                            library = ThemeLibrary.list(context)
+                                            ThemeSync.applyRoundAvatar(context, snapshot.roundAvatar)
+                                            Toast.makeText(context, "已应用「${entry.name}」", Toast.LENGTH_SHORT).show()
+                                        }
+                                        is ThemeSpec.ImportOutcome.Failure -> showThemeDialog(context, "应用失败", outcome.reason)
+                                    }
+                                },
+                                onRename = {
+                                    showRenameDialog(context, entry.name) { newName ->
+                                        ThemeLibrary.rename(context, entry.id, newName)
+                                        library = ThemeLibrary.list(context)
+                                    }
+                                },
+                                onDelete = {
+                                    showConfirmDialog(context, "删除主题", "确定从主题库删除「${entry.name}」？（不会改变当前已应用的设置）") {
+                                        ThemeLibrary.delete(context, entry.id)
+                                        library = ThemeLibrary.list(context)
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -428,3 +493,60 @@ private class BackgroundSlot(
     val third: (ThemeSnapshot) -> String,
     val fourth: (ThemeSnapshot, String?) -> ThemeSnapshot
 )
+
+private fun librarySummary(entry: ThemeLibrary.Entry): String {
+    val state = if (entry.applied) "当前已应用" else "未应用"
+    val kind = if (entry.isArchive) "zip 主题包" else "主题文件"
+    if (entry.savedAt <= 0L) return "$state · $kind"
+    val stamp = SimpleDateFormat("MM-dd HH:mm", Locale.ROOT).format(Date(entry.savedAt))
+    return "$state · $kind · $stamp"
+}
+
+private fun showLibraryActions(
+    context: Context,
+    entryName: String,
+    onApply: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit
+) {
+    runCatching {
+        AlertDialog.Builder(context)
+            .setTitle(entryName)
+            .setItems(arrayOf("应用这个主题", "重命名", "删除")) { dialog, which ->
+                dialog.dismiss()
+                when (which) {
+                    0 -> onApply()
+                    1 -> onRename()
+                    2 -> onDelete()
+                }
+            }
+            .show()
+    }
+}
+
+private fun showRenameDialog(context: Context, current: String, onConfirm: (String) -> Unit) {
+    runCatching {
+        val input = EditText(context).apply {
+            setText(current)
+            setSelection(current.length)
+            setSingleLine()
+        }
+        AlertDialog.Builder(context)
+            .setTitle("重命名主题")
+            .setView(input)
+            .setPositiveButton("确定") { _, _ -> onConfirm(input.text?.toString().orEmpty()) }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+}
+
+private fun showConfirmDialog(context: Context, title: String, message: String, onConfirm: () -> Unit) {
+    runCatching {
+        AlertDialog.Builder(context)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("删除") { _, _ -> onConfirm() }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+}
