@@ -1,0 +1,58 @@
+name: build-theme-apk
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-theme-apk.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 安装 platform 37 / build-tools 36
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+
+      - name: 临时签名密钥（本次仅用于编译出可分析产物）
+        run: |
+          mkdir -p app/keystore
+          keytool -genkeypair -keystore "app/keystore/。。.jks" -storetype JKS \
+            -storepass buildonly -keypass buildonly -alias hchat \
+            -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=build-only"
+
+      - name: 编译 release（关 R8，测试通道）
+        env:
+          HCAT_VERSION_CODE: ${{ vars.HCAT_VERSION_CODE || '663' }}
+          HCAT_VERSION_NAME: ${{ vars.HCAT_VERSION_NAME || '5.5.103.663-theme' }}
+          HCAT_APP_ID_SUFFIX: '.coexist'
+          HCAT_MINIFY: 'false'
+          HCAT_STORE_PASSWORD: buildonly
+          HCAT_KEY_ALIAS: hchat
+          HCAT_KEY_PASSWORD: buildonly
+          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease -x lintVitalRelease --no-daemon \
+            -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
+            -Dkotlin.compiler.execution.strategy=in-process --max-workers=1
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
