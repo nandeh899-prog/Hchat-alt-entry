@@ -42,8 +42,12 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("。。")
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // 测试包通道：HCAT_MINIFY=false 时用 release 变体但关掉 R8 与资源收缩。
+            // debug 变体在 Compose 编译 46,295 行的 MiuixSettingsPage.kt 时会抛
+            // ClassTooLargeException（见 docs/FEATURE_FRAMEWORK.md），所以测试包走这条路径。
+            val minify = providers.environmentVariable("HCAT_MINIFY").orNull?.trim()?.lowercase() != "false"
+            isMinifyEnabled = minify
+            isShrinkResources = minify
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
