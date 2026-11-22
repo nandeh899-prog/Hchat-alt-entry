@@ -25,8 +25,16 @@ jobs:
           CMDLINE=$(ls -d "$SDK"/cmdline-tools/*/bin 2>/dev/null | head -1)
           echo "cmdline-tools: $CMDLINE"
           yes | "$CMDLINE/sdkmanager" --licenses > /dev/null 2>&1 || true
-          "$CMDLINE/sdkmanager" --install "platform-tools" "platforms;android-37" "build-tools;36.0.0" || {
-            echo "--- 可用的 platform 包 ---"; "$CMDLINE/sdkmanager" --list | grep -E "platforms;android-3" | head -20; exit 1; }
+          "$CMDLINE/sdkmanager" --install "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+          if [ ! -d "$SDK/platforms/android-37" ] && [ -d "$SDK/platforms/android-37.0" ]; then
+            mv "$SDK/platforms/android-37.0" "$SDK/platforms/android-37"
+          fi
+          if grep -q "^AndroidVersion.ApiLevel=" "$SDK/platforms/android-37/source.properties"; then
+            sed -i 's/^AndroidVersion.ApiLevel=.*/AndroidVersion.ApiLevel=37/' "$SDK/platforms/android-37/source.properties"
+          else
+            echo "AndroidVersion.ApiLevel=37" >> "$SDK/platforms/android-37/source.properties"
+          fi
+          grep -E "AndroidVersion.ApiLevel|Pkg.Desc" "$SDK/platforms/android-37/source.properties"
           ls "$SDK/platforms" "$SDK/build-tools"
 
       - name: 临时签名密钥（本次仅用于编译出可分析产物）
