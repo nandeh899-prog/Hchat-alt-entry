@@ -75,3 +75,9 @@
     java.lang.String m;
     java.lang.String d;
 }
+
+# LSPosed 入口（2026-11-10 CI 实测补上）：这两个类名由 assets/xposed_init 与
+# META-INF/xposed/java_init.list 以纯文本引用，R8 看不到这层引用；只 keep
+# ModuleEntry 会让入口类被整类删除（不是改名），模块加载即失败。
+-keep class com.aeonlab.toolkit.LegacyEntry { *; }
+-keep class com.aeonlab.toolkit.ModernEntry { *; }
