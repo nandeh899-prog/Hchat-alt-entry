@@ -127,6 +127,8 @@ object ThemeLibrary {
 
     /** 应用一份库里的主题：优先用回写过的参数，其次用导入时的原文件。 */
     fun apply(context: Context, id: String): ThemeSpec.ImportOutcome {
+        // 行遮罩强度是全局参数，不跟着主题走：切换主题后保持用户当前的值
+        val keepRowMask = ThemeSettings.snapshot(context).rowMaskStrength
         val dir = File(root(context), id)
         val name = displayName(context, id)
         val override = File(dir, OVERRIDE_FILE)
@@ -147,7 +149,13 @@ object ThemeLibrary {
                 else ThemeSpec.importJson(context, text, name)
             }
         }
-        if (outcome is ThemeSpec.ImportOutcome.Success) setApplied(context, id)
+        if (outcome is ThemeSpec.ImportOutcome.Success) {
+            setApplied(context, id)
+            val now = ThemeSettings.snapshot(context)
+            if (now.rowMaskStrength != keepRowMask) {
+                ThemeSettings.write(context, now.copy(rowMaskStrength = keepRowMask))
+            }
+        }
         return outcome
     }
 

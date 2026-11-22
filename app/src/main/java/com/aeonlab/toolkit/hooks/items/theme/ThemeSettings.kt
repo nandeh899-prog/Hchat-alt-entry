@@ -76,7 +76,7 @@ object ThemeSettings {
     fun snapshot(context: Context): ThemeSnapshot {
         val sp = preferences(context)
         return ThemeSnapshot(
-            rowMaskStrength = sp.getInt(KEY_ROW_MASK_STRENGTH, 12),
+            rowMaskStrength = sp.getInt(KEY_ROW_MASK_STRENGTH, 0),
             enabled = sp.getBoolean(KEY_ENABLE, false),
             name = sp.getString(KEY_NAME, "").orEmpty(),
             author = sp.getString(KEY_AUTHOR, "").orEmpty(),
@@ -221,7 +221,7 @@ data class ThemeSnapshot(
     val backgroundMe: String = "",
     val backgroundOverlay: Map<String, String> = emptyMap(),
     val backgroundBlur: Map<String, Int> = emptyMap(),
-    val rowMaskStrength: Int = 12
+    val rowMaskStrength: Int = 0
 ) {
     fun backgroundPaths(): List<String> = listOf(
         backgroundSplash,
