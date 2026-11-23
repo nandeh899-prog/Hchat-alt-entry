@@ -395,6 +395,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
     // （用户 11-23 08:34 截图：设置/设置>聊天 右半侧透出壁纸、行列跟着错位）。
     // 只在窗口失焦/宿主 onPause 这些一次性时机改，不做每帧写入。
     private var wallpaperHidden = false
+    // 677：状态栏那条底色由宿主反复写回 #ffededed（10:03 日志 windowStatusBar=#ffededed 9 次），
+    // 我们只在 applyWindowBackground 里设过一次透明，之后就被盖掉。这里按 1 秒节流重设窗口栏位颜色
+    // （窗口属性，不是逐帧写宿主 View 属性），并把标题栏内部那块灰白底清掉。
+    private val rowsProbedAt: MutableMap<View, Long> = WeakHashMap()
+    private var lastWindowColorAssert = 0L
+    private var titleBarClearedLogged = 0
     private val focusWatched: MutableSet<ViewGroup> = Collections.newSetFromMap(WeakHashMap<ViewGroup, Boolean>())
 
     @Volatile
@@ -574,6 +580,93 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
             null
         }.getOrNull()
+    }
+
+    /**
+     * 677：宿主会把 window.statusBarColor 写回 #ffededed（10:03 日志 9 次），我们设的透明只活到下一次宿主写入。
+     * 这里按 1 秒节流把状态栏/导航栏重新设回透明——改的是窗口属性，不是逐帧写宿主 View 属性。
+     */
+    private fun assertWindowColors(activity: Activity) {
+        if (wallpaperHidden) return
+        val now = SystemClock.uptimeMillis()
+        if (now - lastWindowColorAssert < 1000L) return
+        lastWindowColorAssert = now
+        runCatching {
+            val window = activity.window ?: return
+            val sb = window.statusBarColor
+            if (sb != Color.TRANSPARENT) {
+                window.statusBarColor = Color.TRANSPARENT
+                HLog.i("$TAG 状态栏底色写回透明(677): 宿主写的 #" + Integer.toHexString(sb))
+            }
+            if (window.navigationBarColor != Color.TRANSPARENT) window.navigationBarColor = Color.TRANSPARENT
+        }.onFailure { HLog.e("$TAG 状态栏底色重设异常(677): ${it.message}") }
+    }
+
+    /**
+     * 677 取证件：把当前页列表的行视图连同行内子视图的底色打出来（每页 60 秒最多一次）。
+     * 用户 11-23 10:03/10:07 截图里通讯录的行是白底、只有 6dp 行缝露出壁纸，
+     * 但同一时刻的 `内容分层` 计数显示行已被换成透明遮罩——到底是哪一层在画白，靠这份转储定位。
+     */
+    private fun findListView(page: View): ViewGroup? {
+        var best: ViewGroup? = null
+        var bestArea = 0
+        fun walk(v: View, d: Int) {
+            if (d > 14) return
+            if (v is ViewGroup && v !== page) {
+                val n = v.javaClass.simpleName
+                if ((v is android.widget.AbsListView || n.contains("RecyclerView") || n.contains("ListView")) && v.childCount > 0) {
+                    val area = v.width * v.height
+                    if (area > bestArea) {
+                        bestArea = area
+                        best = v
+                    }
+                }
+            }
+            if (v is ViewGroup) for (i in 0 until v.childCount) v.getChildAt(i)?.let { walk(it, d + 1) }
+        }
+        walk(page, 0)
+        return best
+    }
+
+    private fun dumpRowsProbe(page: View, log: Boolean) {
+        if (!log) return
+        val now = SystemClock.uptimeMillis()
+        val last = rowsProbedAt[page]
+        if (last != null && now - last < 60000L) return
+        rowsProbedAt[page] = now
+        runCatching {
+            val list = findListView(page) ?: return
+            val lw = list.width.coerceAtLeast(list.measuredWidth)
+            val lh = list.height.coerceAtLeast(list.measuredHeight)
+            HLog.i(
+                "$TAG 行底色转储(677): 列表=${list.javaClass.simpleName}#${idName(list)} ${lw}x$lh" +
+                    " bg=${descDrawable(list.background)} cacheHint=" +
+                    runCatching { "#" + Integer.toHexString((list as android.widget.AbsListView).cacheColorHint) }.getOrDefault("-")
+            )
+            if (list is ViewGroup) {
+                val n = minOf(list.childCount, 6)
+                for (i in 0 until n) {
+                    val row = list.getChildAt(i) ?: continue
+                    val rw = row.width.coerceAtLeast(row.measuredWidth)
+                    val rh = row.height.coerceAtLeast(row.measuredHeight)
+                    HLog.i(
+                        "$TAG   行$i: ${row.javaClass.simpleName}#${idName(row)} ${rw}x$rh" +
+                            " bg=${descDrawable(row.background)} 我们改过=${clearedViews.contains(row) || rowScrimDrawables.containsKey(row)}"
+                    )
+                    if (row is ViewGroup) {
+                        for (j in 0 until minOf(row.childCount, 4)) {
+                            val c = row.getChildAt(j) ?: continue
+                            val cw = c.width.coerceAtLeast(c.measuredWidth)
+                            val ch = c.height.coerceAtLeast(c.measuredHeight)
+                            HLog.i(
+                                "$TAG     行$i 子$j: ${c.javaClass.simpleName}#${idName(c)} ${cw}x$ch" +
+                                    " bg=${descDrawable(c.background)}"
+                            )
+                        }
+                    }
+                }
+            }
+        }.onFailure { HLog.e("$TAG 行底色转储异常(677): ${it.message}") }
     }
 
     private fun hideWallpaperForOverlay(reason: String) {
@@ -785,6 +878,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 )
             }
             applyPageBitmap(page, image, resources, overlay, log, path, index == 0)
+            runCatching { dumpRowsProbe(page, log) }
+                .onFailure { HLog.e("$TAG 行底色探针异常(677): ${it.message}") }
             // 613：登记槽位并监听这页的首次布局（内容 inflate 的那一帧，draw 之前补铺）
             pageSlots[page] = index
             installPageLayoutWatch(page, index)
@@ -1360,7 +1455,22 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         }
                     }
                     width < pageWidth * 0.30f -> {
-                        if (log && sample.size < 120) {
+                        // 677：20%~30% 宽但底色为不透明 .9/纯色的「行内白块」不再跳过——
+                        // 通讯录行里 1017x174 的白 .9 就是这个量级（10:03 灰条绘制者取证：
+                        // color=#ffffffff 来源=NinePatchDrawable.draw 1017x174）。只清底色，不动窄图/图标。
+                        val rowBand = height <= pageHeight * 0.25f
+                        if (rowBand && width >= pageWidth * 0.18f && background != null &&
+                            background !is BitmapDrawable && background.alpha == 255 &&
+                            !(background is ColorDrawable && Color.alpha(background.color) == 0)
+                        ) {
+                            if (!replacedBackgrounds.containsKey(view)) replacedBackgrounds[view] = background
+                            view.background = ColorDrawable(Color.TRANSPARENT)
+                            clearedViews.add(view)
+                            counters[0]++
+                            if (log && sample.size < 120) {
+                                sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→行内白块清底(677)")
+                            }
+                        } else if (log && sample.size < 120) {
                             sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} 跳过(窄)")
                         }
                     }
@@ -1681,6 +1791,43 @@ private class ThemeRuntime(private val context: FeatureContext) {
             cleared++
             names.add("${view.javaClass.simpleName}#${idName(view)}")
         }
+        // 677：灰白那条不在上面这些容器上，而在 ActionBar 内部的子视图里。
+        // 判据（10:07:59 主页单开时 decor 顶部转储）：
+        //   `LinearLayout#- 1240x174 bg=fff7f7f7`（整宽标题条）、`RelativeLayout#nvt 310x174 bg=NinePatchDrawable`（标题卡片），
+        //   两者都在 ActionBar 子树内、高≈标题栏高、底色不透明。只清背景，不动 padding/尺寸，不碰 ImageView 与状态栏条。
+        var barCleared = 0
+        runCatching {
+            val bar = findViewByClassName(decor, "ActionBarContainer")
+                ?: findViewByClassName(decor, "ActionBarOverlayLayout")
+            val barW = bar?.width?.coerceAtLeast(bar.measuredWidth) ?: 0
+            val barH = bar?.height?.coerceAtLeast(bar.measuredHeight) ?: 0
+            if (bar is ViewGroup && barW > 0 && barH > 0) {
+                fun walkBar(v: View, d: Int) {
+                    if (d > 8) return
+                    val w = v.width.coerceAtLeast(v.measuredWidth)
+                    val h = v.height.coerceAtLeast(v.measuredHeight)
+                    val bg = v.background
+                    if (v !== bar && v.id != android.R.id.statusBarBackground &&
+                        v !is android.widget.ImageView && bg != null && bg.alpha == 255 &&
+                        w >= barW * 0.15f && h in 1..(barH * 2) &&
+                        !(bg is ColorDrawable && Color.alpha(bg.color) == 0) &&
+                        !homeImageHosts.containsKey(v)
+                    ) {
+                        if (!replacedBackgrounds.containsKey(v)) replacedBackgrounds[v] = bg
+                        v.setBackgroundColor(Color.TRANSPARENT)
+                        clearedViews.add(v)
+                        barCleared++
+                        if (names.size < 12) names.add("${v.javaClass.simpleName}#${idName(v)}")
+                    }
+                    if (v is ViewGroup) for (i in 0 until v.childCount) walkBar(v.getChildAt(i), d + 1)
+                }
+                walkBar(bar, 0)
+            }
+        }.onFailure { HLog.e("$TAG 标题栏内部清底异常(677): ${it.message}") }
+        if (barCleared > 0 && titleBarClearedLogged < 5) {
+            titleBarClearedLogged++
+            HLog.i("$TAG 标题栏内部灰白底已清(677): $barCleared 处（ActionBar 子树里高≈标题栏高的不透明底色）")
+        }
         if (cleared == 0 && runCatching {
             val t = android.os.SystemClock.elapsedRealtime()
             val last = titleDumpedAt[decor]
@@ -1708,7 +1855,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             rows.forEach { HLog.i("$TAG   标题区: $it") }
         }
         HLog.i(
-            "$TAG 标题卡片区域已全透明: 清空 $cleared 处底色 [${names.joinToString("/")}]" +
+            "$TAG 标题卡片区域已全透明: 清空 $cleared 处底色 + 标题栏内 $barCleared 处 [${names.joinToString("/")}]" +
                 " 状态栏全沉浸: 图标=${if (darkIcons) "深色" else "浅色"}" +
                 " 背景亮度=${String.format(java.util.Locale.US, "%.2f", luma)}"
         )
@@ -5344,6 +5491,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 // 613：先做逐帧断言（纯引用比对，不受 400ms 节流限制），再跑常规 enforce。
                 runCatching { fastAssertBackgroundsBeforeDraw() }
                     .onFailure { HLog.e("$TAG 逐帧断言异常(613): ${it.message}", it) }
+                runCatching { assertWindowColors(activity) }
+                    .onFailure { HLog.e("$TAG 状态栏底色重设异常(677): ${it.message}", it) }
                 runCatching { enforce(activity, decor) }
                     .onFailure { HLog.e("$TAG 兜底重刷异常: ${it.message}", it) }
                 return true
