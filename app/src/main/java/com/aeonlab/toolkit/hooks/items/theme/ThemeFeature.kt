@@ -6060,19 +6060,49 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return false
     }
 
+    /** 底色填充色（排除纯白：最近页的图标/文字是白的，不能一起弄没）。 */
+    private fun isTaskBarBandFill(color: Int): Boolean =
+        isTaskBarBandColor(color) && color != 0xffffffff.toInt()
+
+    /** 被几何门槛拒掉的形状也留痕，避免下一轮又「静默不命中」。 */
+    private fun noteRejectedBandShape(method: String, param: XC_MethodHook.MethodHookParam) {
+        val sig = runCatching {
+            when (val a0 = param.args.getOrNull(0)) {
+                is android.graphics.RectF -> "$method ${a0.width().toInt()}x${a0.height().toInt()}"
+                is android.graphics.Rect -> "$method ${a0.width()}x${a0.height()}"
+                is android.graphics.Path -> {
+                    val r = android.graphics.RectF()
+                    a0.computeBounds(r, true)
+                    "$method ${r.width().toInt()}x${r.height().toInt()}"
+                }
+                else -> method
+            }
+        }.getOrDefault(method)
+        val now = SystemClock.elapsedRealtime()
+        synchronized(taskBarRejectedShapes) {
+            val last = taskBarRejectedShapes[sig]
+            if (last != null && now - last < 60_000L) return
+            taskBarRejectedShapes[sig] = now
+            if (taskBarRejectedShapes.size > 32) taskBarRejectedShapes.clear()
+        }
+        HLog.i("$TAG 任务栏自绘形状未达门槛(680): $sig（要求宽≥500 高≥28）")
+    }
+
+    private val taskBarRejectedShapes: MutableMap<String, Long> = Collections.synchronizedMap(HashMap())
+
     /** 只挡「整条带」的填充，别挡图标/文字：图标也走 drawPath，只是尺寸小。 */
     private fun taskBarFillIsBand(method: String, param: XC_MethodHook.MethodHookParam): Boolean {
         when (method) {
             "drawRect", "drawRoundRect" -> {
                 val a0 = param.args.getOrNull(0)
-                if (a0 is android.graphics.RectF) return a0.width() >= 800f && a0.height() >= 48f
-                if (a0 is android.graphics.Rect) return a0.width() >= 800 && a0.height() >= 48
+                if (a0 is android.graphics.RectF) return a0.width() >= 500f && a0.height() >= 28f
+                if (a0 is android.graphics.Rect) return a0.width() >= 500 && a0.height() >= 28
                 if (param.args.size >= 4) {
                     val l = param.args[0] as? Float ?: return false
                     val top = param.args[1] as? Float ?: return false
                     val r = param.args[2] as? Float ?: return false
                     val b = param.args[3] as? Float ?: return false
-                    return (r - l) >= 800f && (b - top) >= 48f
+                    return (r - l) >= 500f && (b - top) >= 28f
                 }
                 return false
             }
@@ -6081,7 +6111,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val rect = android.graphics.RectF()
                 return runCatching {
                     path.computeBounds(rect, true)
-                    rect.width() >= 800f && rect.height() >= 48f
+                    rect.width() >= 500f && rect.height() >= 28f
                 }.getOrDefault(false)
             }
             else -> return true // drawPaint / drawColor / drawARGB / drawRGB：整块填充
@@ -6089,9 +6119,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun blockTaskBarSelfDraw(param: XC_MethodHook.MethodHookParam, color: Int, what: String, method: String): Boolean {
-        if (!isTaskBarBandColor(color)) return false
-        if (!taskBarFillIsBand(method, param)) return false
+        if (!isTaskBarBandFill(color)) return false
         if (!callerIsTaskBarOnDraw()) return false
+        if (!taskBarFillIsBand(method, param)) {
+            noteRejectedBandShape(method, param)
+            return false
+        }
         param.setResult(null)
         taskBarBlocked679++
         val now = SystemClock.elapsedRealtime()
@@ -6373,12 +6406,26 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     val color = param.args.firstOrNull() as? Int ?: return
                     if (color != grey && color != purple) return
                     if (isTaskBarBandColor(color) && callerIsTaskBarOnDraw()) {
-                        // 只记不改：同一支画笔后面还要画标题文字，改色会把文字也弄没。
-                        // 真正拦截在 drawPath/drawRect/drawPaint 那一层（见 blockTaskBarSelfDraw）。
-                        val now = SystemClock.elapsedRealtime()
-                        if (now - lastTaskBarBlockLogAt >= 3000L) {
-                            lastTaskBarBlockLogAt = now
-                            HLog.i("$TAG 任务栏自绘画笔取证(679): Paint.setColor #" + Integer.toHexString(color) + " 调用者=TaskBarBottomView.onDraw")
+                        // 680：12:25 日志 25 次命中这一条（条件成立），但只记不改 → 灰带还在。
+                        // 现在把这一支画笔置透明：TaskBarBottomView.onDraw 里 setColor 是「先设色再画」，
+                        // 文字/图标是另设色（纯白留给它，见 isTaskBarBandFill）→ 只弄掉底色。
+                        if (isTaskBarBandFill(color)) {
+                            param.args[0] = Color.TRANSPARENT
+                            taskBarBlocked679++
+                            val now = SystemClock.elapsedRealtime()
+                            if (now - lastTaskBarBlockLogAt >= 3000L) {
+                                lastTaskBarBlockLogAt = now
+                                HLog.i(
+                                    "$TAG 任务栏自绘底色已拦(680): Paint.setColor #" + Integer.toHexString(color) +
+                                        "→透明 调用者=TaskBarBottomView.onDraw 累计=$taskBarBlocked679"
+                                )
+                            }
+                        } else {
+                            val now = SystemClock.elapsedRealtime()
+                            if (now - lastTaskBarBlockLogAt >= 3000L) {
+                                lastTaskBarBlockLogAt = now
+                                HLog.i("$TAG 任务栏自绘画笔取证(680): Paint.setColor #" + Integer.toHexString(color) + "（纯白保留）调用者=TaskBarBottomView.onDraw")
+                            }
                         }
                         return
                     }
