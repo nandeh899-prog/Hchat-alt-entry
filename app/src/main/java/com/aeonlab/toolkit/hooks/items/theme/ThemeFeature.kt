@@ -2363,7 +2363,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
         }
-        HLog.i("$TAG 设置页背景转储(681): 类=${a.javaClass.simpleName} 窗口底=${a.window?.background?.javaClass?.simpleName ?: "null"} " + sb.toString())
+        HLog.i("$TAG 设置页背景转储(681): 类=${a.javaClass.simpleName} 窗口底=${a.window?.decorView?.background?.javaClass?.simpleName ?: "null"} " + sb.toString())
     }
 
     /** 613：把某一页的背景与内容分层在它被看见之前做到位（切页回调 / 页面 layout 回调共用）。 */
