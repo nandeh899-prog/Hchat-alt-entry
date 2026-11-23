@@ -2249,6 +2249,109 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastNativeFillAt = 0L
     private var nativeFillCount = 0
     private var lastOverlayProbeAt = 0L
+    private var nativeGuardsInstalled = false
+
+    /** 683：宿主深色底家族（#181818..#303030 的不透明灰黑）。 */
+    private fun isNativeDark(c: Int): Boolean {
+        if (Color.alpha(c) != 255) return false
+        val r = c shr 16 and 0xFF; val g = c shr 8 and 0xFF; val b = c and 0xFF
+        return r == g && g == b && r >= 0x18 && r <= 0x30
+    }
+
+    /** 683：自家壁纸层（锚定层 / 底衬）——只认自家类名，绝不碰宿主 drawable。 */
+    private fun isOurWallpaperDrawable(d: Any?): Boolean {
+        if (d == null) return false
+        val n = d.javaClass.name
+        return n.contains("ScreenAnchoredBitmapDrawable") || n.contains("PagerStripWallpaperDrawable") || n.contains("Wallpaper")
+    }
+
+    /** 683：原生模式下把自家壁纸层摘成原生灰（一次性，状态翻转时跑）。 */
+    private fun stripOurWallpaper(decor: ViewGroup, reason: String) {
+        val queue = ArrayList<View>(); queue.add(decor)
+        var i = 0; var n = 0
+        while (i < queue.size && i < 1500) {
+            val v = queue[i]; i++
+            val bg = v.background
+            if (isOurWallpaperDrawable(bg)) {
+                val old = bg?.javaClass?.simpleName
+                runCatching { v.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                n++
+                if (n <= 8) HLog.i("$TAG 原生模式已摘壁纸层(683): ${v.javaClass.simpleName}#${idName(v)} 原=$old（$reason）")
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        HLog.i("$TAG 原生模式壁纸层(683): 已摘=$n 处（$reason）")
+    }
+
+    /** 683：状态探针（关主开关 / 四页全关各打一次，报计数而不是「已处理」）。 */
+    private fun dumpNativeState(reason: String) {
+        val snap = runCatching { ThemeSettings.snapshot(context.hostContext()) }.getOrNull()
+        val dec = runCatching { currentActivity()?.window?.decorView as? ViewGroup }.getOrNull()
+        var dark = 0; var wp = 0
+        if (dec != null) {
+            val queue = ArrayList<View>(); queue.add(dec); var i = 0
+            while (i < queue.size && i < 1500) {
+                val v = queue[i]; i++
+                val c = runCatching { (v.background as? ColorDrawable)?.color }.getOrNull()
+                if (c != null && isNativeDark(c)) dark++
+                if (isOurWallpaperDrawable(v.background)) wp++
+                if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+            }
+        }
+        HLog.i("$TAG 状态探针(683): 主开关=${snap?.enabled} 页=${snap?.pageHome}/${snap?.pageContacts}/${snap?.pageDiscover}/${snap?.pageMe} hidden=$wallpaperHidden 深色底=$dark 壁纸层=$wp decorBg=${dec?.background?.javaClass?.simpleName} 窗口=${currentActivity()?.javaClass?.simpleName}（$reason）")
+    }
+
+    /**
+     * 683：在写入处拦宿主深色底——原生模式下把 #232323 族改成原生灰。
+     * 618 的教训是「不要靠重复写宿主属性」，所以这里做的是「不让那一次写发生」，而不是事后反复巡检。
+     */
+    private fun installNativeModeGuards() {
+        if (nativeGuardsInstalled) return
+        nativeGuardsInstalled = true
+        runCatching {
+            XposedBridge.hookAllMethods(View::class.java, "setBackgroundColor", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    if (!nativeOnlyMode()) return
+                    val c = param.args.getOrNull(0) as? Int ?: return
+                    if (!isNativeDark(c)) return
+                    param.args[0] = NATIVE_GREY
+                    val v = param.thisObject as? View
+                    HLog.i("$TAG 原生模式拦宿主深色底(683): ${v?.javaClass?.simpleName}#${v?.let { idName(it) }} 原=#" + Integer.toHexString(c) + " → #ffededed")
+                }
+            })
+            XposedBridge.hookAllMethods(View::class.java, "setBackgroundDrawable", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    if (!nativeOnlyMode()) return
+                    val d = param.args.getOrNull(0) as? ColorDrawable ?: return
+                    if (!isNativeDark(d.color)) return
+                    param.args[0] = ColorDrawable(NATIVE_GREY)
+                    HLog.i("$TAG 原生模式拦宿主深色底(683): drawable 原=#" + Integer.toHexString(d.color) + " → #ffededed")
+                }
+            })
+            HLog.i("$TAG 原生模式写入拦截已就位(683)")
+        }.onFailure { HLog.e("$TAG 原生模式写入拦截异常(683): ${it.message}") }
+    }
+
+    /** 683：设置页里任何「页面大小的非纯色底」都换原生灰，并点出原类名（探针用）。 */
+    private fun greyOutSettingsAnyDrawable(a: Activity, reason: String) {
+        val dm = a.resources.displayMetrics
+        val root = runCatching { a.window?.decorView as? ViewGroup }.getOrNull() ?: return
+        val queue = ArrayList<View>(); queue.add(root)
+        var i = 0; var n = 0
+        while (i < queue.size && i < 1500) {
+            val v = queue[i]; i++
+            val w = v.width.coerceAtLeast(v.measuredWidth); val h = v.height.coerceAtLeast(v.measuredHeight)
+            val bg = v.background
+            if (w >= dm.widthPixels / 2 && h >= dm.heightPixels * 3 / 10 && bg != null && bg !is ColorDrawable) {
+                val old = bg.javaClass.simpleName
+                runCatching { v.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                n++
+                if (n <= 8) HLog.i("$TAG 设置页背景已换原生灰(683): ${v.javaClass.simpleName}#${idName(v)} 视=${w}x$h 原=$old（$reason）")
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        if (n > 0) HLog.i("$TAG 设置页背景(683): 已换=$n 处（$reason）")
+    }
 
     /**
      * 682：主开关（启用页面背景）关掉、或四个页面开关全关时，整页就该是微信原生观感。
@@ -2274,6 +2377,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { decor.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
             runCatching { activity.window?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
             HLog.i("$TAG 原生模式已开启(682): 主开关/页面开关全关 → 窗口底与装饰视图置原生灰（$reason）")
+            runCatching { stripOurWallpaper(decor, reason) }
+            runCatching { dumpNativeState("进入原生模式") }
             restoreNativeFillTree(decor, reason)
         } else {
             wallpaperHidden = false
@@ -2392,6 +2497,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { (a.window?.decorView as? ViewGroup)?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
             runCatching { (a.findViewById<View>(android.R.id.content) as? ViewGroup)?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
             HLog.i("$TAG 设置页装饰/内容底已置原生灰(682): ${a.javaClass.simpleName}")
+            runCatching { greyOutSettingsAnyDrawable(a, reason) }
         }
         mainHandler.postDelayed({
             runCatching { greyOutSettingsBitmaps(a, reason) }
@@ -5908,6 +6014,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }, LIFECYCLE_BUMP_DELAY_MS)
             }
         }
+        runCatching { installNativeModeGuards() }
         runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
             .onFailure { HLog.e("$TAG 原生模式同步异常(682): ${it.message}") }
         bump("onCreate")
