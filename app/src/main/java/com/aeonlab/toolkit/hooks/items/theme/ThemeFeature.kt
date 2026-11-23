@@ -2237,6 +2237,135 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return sig
     }
 
+    // 681：关页原生灰还原 / 微信原生设置页灰底还原
+    private val NATIVE_GREY = 0xffededed.toInt()
+    private val offPageFillAt: MutableMap<View, Long> = java.util.HashMap()
+    private var offPageFillCount = 0
+    private var lastOffPageFillLogAt = 0L
+    private val settingsGreyAt: MutableMap<Activity, Long> = WeakHashMap()
+
+    /**
+     * 681：关页（该页开关关闭 = 当作没设图）时，宿主给页面容器留的深色底会把列表分组头显成黑条。
+     * 只处理「页面大小（宽≥70%屏宽 且 高≥30%屏高）+ 不透明深色（通道均值<0x60）」的容器底色，
+     * 换成原生灰 #ffededed；其余视图（行、分组头、分隔线、白卡）不动。
+     */
+    private fun restoreOffPageNativeFill(page: View, index: Int, reason: String) {
+        val dm = page.resources.displayMetrics
+        val now = SystemClock.uptimeMillis()
+        if (now - (offPageFillAt[page] ?: 0L) < 1000L) return
+        offPageFillAt[page] = now
+        var fixed = 0
+        val queue = ArrayList<View>()
+        queue.add(page)
+        var i = 0
+        while (i < queue.size && i < 400) {
+            val v = queue[i]; i++
+            val w = v.width.coerceAtLeast(v.measuredWidth)
+            val h = v.height.coerceAtLeast(v.measuredHeight)
+            if (v !== page && w >= dm.widthPixels * 7 / 10 && h >= dm.heightPixels * 3 / 10) {
+                val c = runCatching { (v.background as? ColorDrawable)?.color }.getOrNull()
+                if (c != null && Color.alpha(c) == 255 &&
+                    ((c shr 16 and 0xFF) + (c shr 8 and 0xFF) + (c and 0xFF)) / 3 < 0x60
+                ) {
+                    runCatching { v.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                    offPageFillCount++
+                    fixed++
+                    if (now - lastOffPageFillLogAt >= 2000L) {
+                        lastOffPageFillLogAt = now
+                        HLog.i(
+                            "$TAG 关页容器底色已还原(681): 第 ${index + 1} 页 ${v.javaClass.simpleName}#${idName(v)}" +
+                                " 视=${w}x$h 原=#" + Integer.toHexString(c) + " → #ffededed 累计=$offPageFillCount"
+                        )
+                    }
+                }
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        if (fixed > 0) {
+            HLog.i("$TAG 关页原生灰已就位(681): 第 ${index + 1} 页 还原=$fixed 处（$reason）")
+        }
+    }
+
+    /**
+     * 681：微信原生设置页（com.tencent.mm.plugin.setting.*）保持原生灰底。
+     * 13:06 截图实测（设备原生 1240x2772）：设置主页 y=1560..1684、通用页 y=1460..1584 处
+     * x≥720 整片透出壁纸、x<720 是内容白卡 ⇒ 宿主把主题壁纸铺在了设置窗口的「窗口底/页面底」上。
+     * 只做两件事：①窗口底色换成原生灰；②把页面大小的位图背景（=被铺上去的壁纸）换成原生灰。
+     * 只对微信原生设置页生效，聊天/朋友圈/小程序与主题自己的设置页都不动。
+     */
+    private fun applyNativeGreyToSettingsPage(a: Activity, reason: String) {
+        if (!a.javaClass.name.startsWith("com.tencent.mm.plugin.setting")) return
+        val now = SystemClock.uptimeMillis()
+        val first = !settingsGreyAt.containsKey(a)
+        if (first) settingsGreyAt[a] = now
+        if (first) {
+            mainHandler.postDelayed({ runCatching { dumpSettingsPageTree(a) } }, 600L)
+        }
+        if (now - (settingsGreyAt[a] ?: 0L) >= 2000L || first) {
+            settingsGreyAt[a] = now
+            runCatching { a.window?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                .onFailure { HLog.e("$TAG 设置页窗口底色异常(681): ${it.message}") }
+            HLog.i("$TAG 设置页窗口底色已置原生灰(681): ${a.javaClass.simpleName}（$reason）")
+        }
+        mainHandler.postDelayed({
+            runCatching { greyOutSettingsBitmaps(a, reason) }
+                .onFailure { HLog.e("$TAG 设置页位图层异常(681): ${it.message}") }
+        }, 400L)
+    }
+
+    /** 把设置页里「页面大小的位图背景」（宿主铺的壁纸）换成原生灰；.9 与纯色底不碰。 */
+    private fun greyOutSettingsBitmaps(a: Activity, reason: String) {
+        val decor = a.window?.decorView as? ViewGroup ?: return
+        val dm = a.resources.displayMetrics
+        var n = 0
+        val queue = ArrayList<View>()
+        queue.add(decor)
+        var i = 0
+        while (i < queue.size && i < 1500) {
+            val v = queue[i]; i++
+            val w = v.width.coerceAtLeast(v.measuredWidth)
+            val h = v.height.coerceAtLeast(v.measuredHeight)
+            val bg = v.background
+            if (bg != null && w >= dm.widthPixels * 5 / 10 && h >= dm.heightPixels * 3 / 10) {
+                val bn = bg.javaClass.name
+                if (bg is BitmapDrawable || bn.contains("Bitmap") || bn.contains("ImageDrawable")) {
+                    runCatching { v.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                    n++
+                    HLog.i(
+                        "$TAG 设置页壁纸底已还原(681): ${v.javaClass.simpleName}#${idName(v)} 视=${w}x$h" +
+                            " 原=${bg.javaClass.simpleName} 累计=$n（$reason）"
+                    )
+                }
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        HLog.i("$TAG 设置页壁纸底已还原(681): 本轮命中=$n 处（窗口底色已置原生灰，$reason）")
+    }
+
+    /** 设置页背景转储：本次修复没盖住时，下一份日志能直接点名哪一层在画壁纸。 */
+    private fun dumpSettingsPageTree(a: Activity) {
+        val decor = a.window?.decorView as? ViewGroup ?: return
+        val dm = a.resources.displayMetrics
+        val sb = StringBuilder()
+        val queue = ArrayList<View>()
+        queue.add(decor)
+        var i = 0
+        while (i < queue.size && i < 1500) {
+            val v = queue[i]; i++
+            val w = v.width.coerceAtLeast(v.measuredWidth)
+            val h = v.height.coerceAtLeast(v.measuredHeight)
+            if (w >= dm.widthPixels * 3 / 10 && h >= dm.heightPixels / 20) {
+                sb.append('[').append(v.javaClass.simpleName).append('#').append(idName(v))
+                    .append(' ').append(w).append('x').append(h)
+                    .append(" top=").append(absTopOfView(v))
+                    .append(" bg=").append(v.background?.javaClass?.simpleName ?: "null")
+                    .append(" vis=").append(v.visibility).append(']')
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        HLog.i("$TAG 设置页背景转储(681): 类=${a.javaClass.simpleName} 窗口底=${a.window?.background?.javaClass?.simpleName ?: "null"} " + sb.toString())
+    }
+
     /** 613：把某一页的背景与内容分层在它被看见之前做到位（切页回调 / 页面 layout 回调共用）。 */
     private fun prepPageNow(activity: Activity, page: View, index: Int, reason: String) {
         val now = SystemClock.uptimeMillis()
@@ -2255,6 +2384,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val flags = "主=${snapshot.pageHome} 通=${snapshot.pageContacts} 发=${snapshot.pageDiscover} 我=${snapshot.pageMe} 启=${snapshot.pageSplash}"
         val raw = paths.getOrNull(index)
         if (raw.isNullOrBlank()) {
+            // 681：关页不再「什么都不做」——宿主给每页容器留了深色底（13:06 日志
+            // LinearLayout 1240x2310 bg=ColorDrawable#ff232323），列表分组头是原生透明行，
+            // 关页时整条露成黑底（1000142860.jpg：y=1175..1250 / 1450..1540 实测 #232323）。
+            // 只把「页面大小 + 不透明深色」的容器底色还原成原生灰，行/分组头/分隔线一律不碰。
+            runCatching { restoreOffPageNativeFill(page, index, reason) }
+                .onFailure { HLog.e("$TAG 关页底色还原异常(681): ${it.message}") }
             // 671 探针：这一页被判为「关」时，把读到的开关原值打出来（证明读的是哪个值）
             if (SystemClock.uptimeMillis() - lastPageSkipProbeAt >= 5000L) {
                 lastPageSkipProbeAt = SystemClock.uptimeMillis()
@@ -5692,7 +5827,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 object : android.app.Application.ActivityLifecycleCallbacks {
                     override fun onActivityCreated(a: Activity, b: android.os.Bundle?) = bump("onCreate")
                     override fun onActivityStarted(a: Activity) = bump("onStart")
-                    override fun onActivityResumed(a: Activity) = bump("onResume")
+                    override fun onActivityResumed(a: Activity) {
+                        // 681：微信原生设置页是叠加页，宿主把主题壁纸铺在它的窗口底上，
+                        // 原生透明的分组头/卡片右侧就整片透出壁纸（1000142866/67.jpg）。
+                        runCatching { applyNativeGreyToSettingsPage(a, "onResume") }
+                            .onFailure { HLog.e("$TAG 设置页灰底异常(681): ${it.message}") }
+                        bump("onResume")
+                    }
                     override fun onActivityPaused(a: Activity) {}
                     override fun onActivityStopped(a: Activity) {}
                     override fun onActivitySaveInstanceState(a: Activity, b: android.os.Bundle) {}
