@@ -6022,6 +6022,200 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  改为 hook Canvas 画矩形/圆角矩形/纯色的调用，命中 #ededed / #7a7396 时抓调用栈，让绘制者自己现身。 */
     private val painterProbeSigs: MutableMap<String, Long> = Collections.synchronizedMap(HashMap())
 
+
+    // ===== 679：按 11:42 日志的绘制者实锤改「按绘制点拦」，不再猜 view.background =====
+    // 日志判据（verbose 11:08:21 起，覆盖到 11:42）：
+    //   `灰条绘制者取证: color=#ffededed 来源=Paint.setColor/RecordingCanvas.drawPath <- TaskBarBottomView→onDraw` ×13
+    //   `color=#ff7a7396 ... <- TaskBarBottomView→onDraw` ×4
+    //   `color=#ffffffff 来源=NinePatchDrawable.draw 1017x174/1240x99 <- View.drawBackground` ×54
+    // 截图原生像素（1240x2772）：主页 1000142846 y=115..295 纯 #EDEDED（正是 TaskBarBottomView 自绘的那条），
+    //   最近 1000142847 y=2560 起 #7A7395（=#7a7396，同一个 TaskBarBottomView 在底部），通讯录行 #FFFFFF。
+    // 结论：这两条带**不是** view.background 画的，前几轮清背景/清 ActionBar 子树都碰不到它；行白底是九宫格 .9。
+    private var taskBarBlocked679 = 0
+    private var lastTaskBarBlockLogAt = 0L
+    private var topBandSkip679 = 0
+    private var lastTopBandSkipLogAt = 0L
+    private val rowWhiteByPainter = Collections.synchronizedMap(HashMap<View, Long>())
+    private var rowWhiteByPainterCount = 0
+    private var lastRowWhiteByPainterLogAt = 0L
+
+    /** 这条带用的两种填充色：浅灰（#ededed/#f1f1f1）与紫灰（#7a7396，最近页底栏）。 */
+    private fun isTaskBarBandColor(color: Int): Boolean {
+        if (Color.alpha(color) != 255) return false
+        if (color == 0xff7a7396.toInt()) return true
+        return Color.red(color) >= 226 && Color.green(color) >= 226 && Color.blue(color) >= 226
+    }
+
+    /** 只在颜色命中灰/紫灰时才走栈扫描（否则 Paint.setColor 每帧上千次会拖慢）。 */
+    private fun callerIsTaskBarOnDraw(): Boolean {
+        val st = Throwable().stackTrace
+        var i = 0
+        while (i < st.size) {
+            val f = st[i]
+            val cn = f.className
+            if (cn.endsWith("TaskBarBottomView") && f.methodName == "onDraw") return true
+            if (cn == "android.view.View" || cn == "android.view.ViewGroup") return false
+            i++
+        }
+        return false
+    }
+
+    /** 只挡「整条带」的填充，别挡图标/文字：图标也走 drawPath，只是尺寸小。 */
+    private fun taskBarFillIsBand(method: String, param: XC_MethodHook.MethodHookParam): Boolean {
+        when (method) {
+            "drawRect", "drawRoundRect" -> {
+                val a0 = param.args.getOrNull(0)
+                if (a0 is android.graphics.RectF) return a0.width() >= 800f && a0.height() >= 48f
+                if (a0 is android.graphics.Rect) return a0.width() >= 800 && a0.height() >= 48
+                if (param.args.size >= 4) {
+                    val l = param.args[0] as? Float ?: return false
+                    val top = param.args[1] as? Float ?: return false
+                    val r = param.args[2] as? Float ?: return false
+                    val b = param.args[3] as? Float ?: return false
+                    return (r - l) >= 800f && (b - top) >= 48f
+                }
+                return false
+            }
+            "drawPath" -> {
+                val path = param.args.getOrNull(0) as? android.graphics.Path ?: return false
+                val rect = android.graphics.RectF()
+                return runCatching {
+                    path.computeBounds(rect, true)
+                    rect.width() >= 800f && rect.height() >= 48f
+                }.getOrDefault(false)
+            }
+            else -> return true // drawPaint / drawColor / drawARGB / drawRGB：整块填充
+        }
+    }
+
+    private fun blockTaskBarSelfDraw(param: XC_MethodHook.MethodHookParam, color: Int, what: String, method: String): Boolean {
+        if (!isTaskBarBandColor(color)) return false
+        if (!taskBarFillIsBand(method, param)) return false
+        if (!callerIsTaskBarOnDraw()) return false
+        param.setResult(null)
+        taskBarBlocked679++
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastTaskBarBlockLogAt >= 3000L) {
+            lastTaskBarBlockLogAt = now
+            HLog.i(
+                "$TAG 任务栏自绘底色已拦(679): $what #" + Integer.toHexString(color) +
+                    " 调用者=TaskBarBottomView.onDraw 累计=$taskBarBlocked679"
+            )
+        }
+        return true
+    }
+
+    private fun absTopOfView(v: View): Int {
+        var top = 0
+        var cur: View? = v
+        var guard = 0
+        while (cur != null && guard++ < 24) {
+            top += cur.top
+            cur = cur.parent as? View
+        }
+        return top
+    }
+
+    private fun topViewOf(v: View?): View? {
+        var cur: View? = v
+        var guard = 0
+        while (cur != null && guard++ < 30) {
+            val parent = cur.parent as? View ?: return cur
+            cur = parent
+        }
+        return cur
+    }
+
+    /** owner 是否在「主窗口（含 pager 的那棵树）」里——用来挡掉主题设置页/聊天页/小程序等其它窗口。 */
+    private fun insidePagerWindow(owner: View): Boolean {
+        val pager = lastHomePager?.get() ?: return false
+        val a = topViewOf(owner) ?: return false
+        val b = topViewOf(pager) ?: return false
+        return a === b
+    }
+
+    /** owner 是否在我们铺壁纸的那几页里（页面本体 / 页面内视图）。 */
+    private fun insideMyPages(owner: View): Boolean {
+        val pager = lastHomePager?.get()
+        var cur: View? = owner
+        var guard = 0
+        while (cur != null && guard++ < 30) {
+            if (cur === pager) return true
+            if (pageDrawables.containsKey(cur) || pageScrim.containsKey(cur) || pageSlots.containsKey(cur)) return true
+            if (cur.javaClass.simpleName == "LayoutListenerView") return true
+            cur = cur.parent as? View
+        }
+        return false
+    }
+
+    /**
+     * 顶带里「整宽 + 不透明浅灰/白」的 ColorDrawable 背景：直接不让它画。
+     * 只认同一窗口（含 pager）里的、位置在顶部 20% 屏高内、宽≥600、高≤520 的 owner，避免误伤其它页面。
+     */
+    private fun topBandGreyGuard(param: XC_MethodHook.MethodHookParam, d: ColorDrawable) {
+        val c = runCatching { d.color }.getOrNull() ?: return
+        if (Color.alpha(c) != 255) return
+        if (Color.red(c) < 226 || Color.green(c) < 226 || Color.blue(c) < 226) return
+        val owner = runCatching { d.callback as? View }.getOrNull() ?: return
+        if (!owner.isAttachedToWindow) return
+        if (!insidePagerWindow(owner)) return
+        val w = owner.width.coerceAtLeast(owner.measuredWidth)
+        val h = owner.height.coerceAtLeast(owner.measuredHeight)
+        if (w < 600 || h <= 0 || h > 520) return
+        if (absTopOfView(owner) >= 430) return
+        param.setResult(null)
+        topBandSkip679++
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastTopBandSkipLogAt >= 3000L) {
+            lastTopBandSkipLogAt = now
+            HLog.i(
+                "$TAG 顶带背景已跳过(679): ${owner.javaClass.simpleName}#${idName(owner)} ${w}x$h" +
+                    " top=${absTopOfView(owner)} color=#" + Integer.toHexString(c) + " 累计=$topBandSkip679"
+            )
+        }
+    }
+
+    /**
+     * 行白底：日志里 54 次 `color=#ffffffff 来源=NinePatchDrawable.draw 1017x174 / 1240x99`，
+     * 说明行白是九宫格 .9 背景在 draw 时画出来的。这里直接按「绘制者 owner」找到那个 View，
+     * 把它的背景一次性换成我们那条 6dp 缝的透明行遮罩（保留 .9 自带的左/上缩进），
+     * 并登记 clearedViews / rowScrimDrawables —— 宿主再写回时由 613 引用级守卫与 reassertRowScrims 压回。
+     * 作用域：owner 必须在我们铺壁纸的那几页里、位于内容区（absTop≥200）、绘制尺寸宽≥600、高 40..340。
+     */
+    private fun clearWhiteRowByPainter(d: android.graphics.drawable.NinePatchDrawable, bw: Int, bh: Int) {
+        if (bh < 40 || bh > 340 || bw < 600) return
+        val owner = runCatching { d.callback as? View }.getOrNull() ?: return
+        if (!owner.isAttachedToWindow) return
+        if (absTopOfView(owner) < 200) return
+        if (!insideMyPages(owner)) return
+        if (rowWhiteByPainter.containsKey(owner)) return
+        if (rowWhiteByPainter.size > 600) rowWhiteByPainter.clear()
+        rowWhiteByPainter[owner] = SystemClock.elapsedRealtime()
+        mainHandler.post {
+            runCatching {
+                val bg = owner.background
+                if (!replacedBackgrounds.containsKey(owner)) replacedBackgrounds[owner] = bg
+                val kept = rowPaddingOf(owner)
+                val gap = (ROW_GAP_DP * owner.resources.displayMetrics.density).toInt()
+                val inset = InsetDrawable(ColorDrawable(Color.TRANSPARENT), 0, 0, 0, gap)
+                owner.background = inset
+                rowScrimDrawables[owner] = inset
+                rowPaddingKept[owner] = kept
+                applyKeptPadding(owner, kept)
+                clearedViews.add(owner)
+                rowWhiteByPainterCount++
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastRowWhiteByPainterLogAt >= 2000L) {
+                    lastRowWhiteByPainterLogAt = now
+                    HLog.i(
+                        "$TAG 行白底按绘制者清底(679): ${owner.javaClass.simpleName}#${idName(owner)}" +
+                            " 视=${owner.width}x${owner.height} 绘制=${bw}x$bh 累计=$rowWhiteByPainterCount"
+                    )
+                }
+            }.onFailure { HLog.e("$TAG 行白底清底异常(679): ${it.message}") }
+        }
+    }
+
     private fun installGreyPainterProbe() {
         val grey = 0xffededed.toInt()
         val purple = 0xff7a7396.toInt()
@@ -6055,6 +6249,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                                 val cvs = param.thisObject as? Canvas ?: return
                                 if (cvs.width < 800 || cvs.height < 100) return
                             }
+                            if (blockTaskBarSelfDraw(param, color, "${clz.simpleName}.$method", method)) return
                             reportPainter(color, "${clz.simpleName}.$method")
                         }
                     })
@@ -6079,6 +6274,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                                 val cvs = param.thisObject as? Canvas ?: return
                                 if (cvs.width < 800 || cvs.height < 100) return
                             }
+                            if (blockTaskBarSelfDraw(param, color, "${clz.simpleName}.$method", method)) return
                             reportPainter(color, "${clz.simpleName}.$method")
                         }
                     })
@@ -6130,6 +6326,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             Color.alpha(c) == 255 && Color.red(c) >= 224 && Color.green(c) >= 224 && Color.blue(c) >= 224
                         }
                     }.getOrNull() else null
+                    if (hit != null) clearWhiteRowByPainter(d, r.width(), r.height())
                     reportPainter(hit ?: 0xffffffff.toInt(), "NinePatchDrawable.draw ${r.width()}x${r.height()}")
                 }
             })
@@ -6175,12 +6372,33 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     val color = param.args.firstOrNull() as? Int ?: return
                     if (color != grey && color != purple) return
+                    if (isTaskBarBandColor(color) && callerIsTaskBarOnDraw()) {
+                        // 只记不改：同一支画笔后面还要画标题文字，改色会把文字也弄没。
+                        // 真正拦截在 drawPath/drawRect/drawPaint 那一层（见 blockTaskBarSelfDraw）。
+                        val now = SystemClock.elapsedRealtime()
+                        if (now - lastTaskBarBlockLogAt >= 3000L) {
+                            lastTaskBarBlockLogAt = now
+                            HLog.i("$TAG 任务栏自绘画笔取证(679): Paint.setColor #" + Integer.toHexString(color) + " 调用者=TaskBarBottomView.onDraw")
+                        }
+                        return
+                    }
                     reportPainter(color, "Paint.setColor")
                 }
             })
             HLog.i("$TAG 灰条绘制者取证已挂: Paint.setColor")
         installWindowDecorCollector()
         }.onFailure { HLog.e("$TAG 灰条绘制者取证挂载失败 Paint.setColor: ${it.message}", it) }
+        // 679：顶带里那 23 次 `#ffededed 来源=View.drawBackground/ColorDrawable.draw` 也用同一条守卫挡掉。
+        runCatching {
+            XposedBridge.hookAllMethods(ColorDrawable::class.java, "draw", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val d = param.thisObject as? ColorDrawable ?: return
+                    runCatching { topBandGreyGuard(param, d) }
+                        .onFailure { HLog.e("$TAG 顶带背景拦截异常(679): ${it.message}") }
+                }
+            })
+            HLog.i("$TAG 顶带背景守卫已挂(679): ColorDrawable.draw")
+        }.onFailure { HLog.e("$TAG 顶带背景守卫挂载失败(679): ${it.message}", it) }
     }
 
     private fun reportPainter(color: Int, source: String) {
