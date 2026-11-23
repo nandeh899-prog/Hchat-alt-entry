@@ -2243,6 +2243,82 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var offPageFillCount = 0
     private var lastOffPageFillLogAt = 0L
     private val settingsGreyAt: MutableMap<Activity, Long> = WeakHashMap()
+    // 682：主开关/四页全关时切「原生模式」用的状态与探针
+    private var lastNativeModeCheckAt = 0L
+    private var nativeModeOn = false
+    private var lastNativeFillAt = 0L
+    private var nativeFillCount = 0
+    private var lastOverlayProbeAt = 0L
+
+    /**
+     * 682：主开关（启用页面背景）关掉、或四个页面开关全关时，整页就该是微信原生观感。
+     * 14:47 截图实测：此时窗口底仍是主题壁纸（主页标题栏/状态栏压成壁纸暗部 #19182A），
+     * 宿主页面容器还留 #232323（通讯录两条分组头 y=1158..1256 / 1431..1530 满宽纯 #232323）。
+     */
+    private fun nativeOnlyMode(): Boolean {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastNativeModeCheckAt < 1500L) return nativeModeOn
+        lastNativeModeCheckAt = now
+        val snap = runCatching { ThemeSettings.snapshot(context.hostContext()) }.getOrNull()
+        nativeModeOn = snap == null || !snap.enabled ||
+            (!snap.pageHome && !snap.pageContacts && !snap.pageDiscover && !snap.pageMe)
+        return nativeModeOn
+    }
+
+    /** 682：原生模式下的状态机（只在状态变化时写一次，不做逐帧写）。 */
+    private fun syncNativeOnlyMode(activity: Activity, decor: ViewGroup, reason: String) {
+        val want = nativeOnlyMode()
+        if (want == wallpaperHidden) return
+        if (want) {
+            wallpaperHidden = true
+            runCatching { decor.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+            runCatching { activity.window?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+            HLog.i("$TAG 原生模式已开启(682): 主开关/页面开关全关 → 窗口底与装饰视图置原生灰（$reason）")
+            restoreNativeFillTree(decor, reason)
+        } else {
+            wallpaperHidden = false
+            HLog.i("$TAG 原生模式已退出(682): 恢复页面背景（$reason）")
+            scheduleReapply("原生模式退出(682)")
+        }
+    }
+
+    /**
+     * 682：把宿主留下的深色底还原成原生灰。只认「不透明、R=G=B 且接近 0x23、宽≥90%屏宽、高≥40px」的纯色底，
+     * 覆盖 681 漏掉的行高深色条（分组头 1240x98）与页面容器；文字/图标/白卡/图片背景一律不碰。
+     */
+    private fun restoreNativeFillTree(root: View, reason: String) {
+        val dm = root.resources.displayMetrics
+        val now = SystemClock.uptimeMillis()
+        if (now - lastNativeFillAt < 1000L) return
+        lastNativeFillAt = now
+        val queue = ArrayList<View>(); queue.add(root)
+        var i = 0; var fixed = 0
+        while (i < queue.size && i < 1500) {
+            val v = queue[i]; i++
+            val w = v.width.coerceAtLeast(v.measuredWidth)
+            val h = v.height.coerceAtLeast(v.measuredHeight)
+            if (w >= dm.widthPixels * 9 / 10 && h >= 40) {
+                val c = runCatching { (v.background as? ColorDrawable)?.color }.getOrNull()
+                if (c != null && Color.alpha(c) == 255) {
+                    val r = c shr 16 and 0xFF; val g = c shr 8 and 0xFF; val b = c and 0xFF
+                    if (r == g && g == b && r >= 0x18 && r <= 0x30) {
+                        runCatching { v.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                        fixed++; nativeFillCount++
+                        if (now - lastOffPageFillLogAt >= 2000L) {
+                            lastOffPageFillLogAt = now
+                            HLog.i(
+                                "$TAG 宿主深色底已还原(682): ${v.javaClass.simpleName}#${idName(v)} 视=${w}x$h" +
+                                    " 原=#" + Integer.toHexString(c) + " → #ffededed 累计=$nativeFillCount（$reason）"
+                            )
+                        }
+                    }
+                }
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        if (fixed > 0) HLog.i("$TAG 原生模式深色底(682): 本轮还原=$fixed 处（$reason）")
+    }
+
 
     /**
      * 681：关页（该页开关关闭 = 当作没设图）时，宿主给页面容器留的深色底会把列表分组头显成黑条。
@@ -2294,7 +2370,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 只对微信原生设置页生效，聊天/朋友圈/小程序与主题自己的设置页都不动。
      */
     private fun applyNativeGreyToSettingsPage(a: Activity, reason: String) {
-        if (!a.javaClass.name.startsWith("com.tencent.mm.plugin.setting")) return
+        val an = a.javaClass.name
+        if (an.contains(LAUNCHER_UI_CLASS) || an.startsWith("com.aeonlab")) return
+        val hit = an.startsWith("com.tencent.mm.plugin.setting") || an.contains("etting")
+        if (SystemClock.uptimeMillis() - lastOverlayProbeAt >= 5000L) {
+            lastOverlayProbeAt = SystemClock.uptimeMillis()
+            HLog.i("$TAG 叠加页探测(682): 类=${a.javaClass.simpleName} 灰底命中=$hit")
+        }
+        if (!hit) return
         val now = SystemClock.uptimeMillis()
         val first = !settingsGreyAt.containsKey(a)
         if (first) settingsGreyAt[a] = now
@@ -2306,6 +2389,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { a.window?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
                 .onFailure { HLog.e("$TAG 设置页窗口底色异常(681): ${it.message}") }
             HLog.i("$TAG 设置页窗口底色已置原生灰(681): ${a.javaClass.simpleName}（$reason）")
+            runCatching { (a.window?.decorView as? ViewGroup)?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+            runCatching { (a.findViewById<View>(android.R.id.content) as? ViewGroup)?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+            HLog.i("$TAG 设置页装饰/内容底已置原生灰(682): ${a.javaClass.simpleName}")
         }
         mainHandler.postDelayed({
             runCatching { greyOutSettingsBitmaps(a, reason) }
@@ -2389,6 +2475,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             // 关页时整条露成黑底（1000142860.jpg：y=1175..1250 / 1450..1540 实测 #232323）。
             // 只把「页面大小 + 不透明深色」的容器底色还原成原生灰，行/分组头/分隔线一律不碰。
             runCatching { restoreOffPageNativeFill(page, index, reason) }
+            runCatching { syncNativeOnlyMode(activity, page.rootView as? ViewGroup ?: return@runCatching, "关页($reason)") }
                 .onFailure { HLog.e("$TAG 关页底色还原异常(681): ${it.message}") }
             // 671 探针：这一页被判为「关」时，把读到的开关原值打出来（证明读的是哪个值）
             if (SystemClock.uptimeMillis() - lastPageSkipProbeAt >= 5000L) {
@@ -5821,6 +5908,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }, LIFECYCLE_BUMP_DELAY_MS)
             }
         }
+        runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷($tag)") }
+            .onFailure { HLog.e("$TAG 原生模式同步异常(682): ${it.message}") }
         bump("onCreate")
         runCatching {
             activity.application.registerActivityLifecycleCallbacks(
