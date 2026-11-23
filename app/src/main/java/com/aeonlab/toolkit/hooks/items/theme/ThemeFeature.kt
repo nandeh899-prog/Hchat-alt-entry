@@ -2250,6 +2250,46 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var nativeFillCount = 0
     private var lastOverlayProbeAt = 0L
     private var nativeGuardsInstalled = false
+    private var settingsHook684 = false
+
+    /**
+     * 684：原生模式下把「页面」做成不透明原生灰，并转储页面大小的非纯色底（定位状态 B 透出的那层）。
+     * 依据：683 日志 `壁纸层=0`、`划动跟随(617)…底衬=null`、`decorBg=ColorDrawable` ——
+     * 透出的不是自家壁纸层，而是「我们让页面变透明 + 主题不在」时露出的微信自己的底。
+     */
+    private fun applyNativePages684(decor: ViewGroup, reason: String) {
+        val dm = decor.resources.displayMetrics
+        val queue = ArrayList<View>(); queue.add(decor); var i = 0
+        var pages = 0; var bars = 0; var odd = 0
+        while (i < queue.size && i < 1500) {
+            val v = queue[i]; i++
+            val w = v.width.coerceAtLeast(v.measuredWidth); val h = v.height.coerceAtLeast(v.measuredHeight)
+            val cn = v.javaClass.name
+            val isPager = cn.contains("ViewPager")
+            if (isPager && v is ViewGroup) {
+                for (k in 0 until v.childCount) {
+                    val c = v.getChildAt(k) ?: continue
+                    if (c.width >= dm.widthPixels * 9 / 10 && c.height >= dm.heightPixels / 3) {
+                        runCatching { c.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                        pages++
+                        if (pages <= 4) HLog.i("$TAG 原生模式页面已置不透明(684): ${c.javaClass.simpleName}#${idName(c)} 视=${c.width}x${c.height} 原=${c.background?.javaClass?.simpleName}")
+                    }
+                }
+            }
+            if (cn.contains("ActionBarContainer") && w >= dm.widthPixels * 9 / 10 && h >= 40) {
+                runCatching { v.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                bars++
+                if (bars <= 3) HLog.i("$TAG 原生模式标题栏已置不透明(684): ${v.javaClass.simpleName}#${idName(v)} 视=${w}x$h")
+            }
+            val bg = v.background
+            if (bg != null && bg !is ColorDrawable && w >= dm.widthPixels / 2 && h >= dm.heightPixels / 3) {
+                odd++
+                if (odd <= 8) HLog.i("$TAG 页面非纯色底探针(684): ${v.javaClass.simpleName}#${idName(v)} 视=${w}x$h 原=${bg.javaClass.name}")
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        HLog.i("$TAG 原生模式页面/标题栏(684): 页面置灰=$pages 标题栏置灰=$bars 页面级非纯色底=$odd（$reason）")
+    }
 
     /** 683：宿主深色底家族（#181818..#303030 的不透明灰黑）。 */
     private fun isNativeDark(c: Int): Boolean {
@@ -2305,6 +2345,26 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 683：在写入处拦宿主深色底——原生模式下把 #232323 族改成原生灰。
      * 618 的教训是「不要靠重复写宿主属性」，所以这里做的是「不让那一次写发生」，而不是事后反复巡检。
      */
+
+    /** 684：不依赖 LauncherUI 生命周期的设置页钩子（设置页可能在别的进程，683 日志 `叠加页探测`=0）。 */
+    private fun installSettingsResumeHook684() {
+        if (settingsHook684) return
+        settingsHook684 = true
+        runCatching {
+            XposedBridge.hookAllMethods(Activity::class.java, "onResume", object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val a = param.thisObject as? Activity ?: return
+                    val n = a.javaClass.name
+                    if (n.contains(LAUNCHER_UI_CLASS) || n.startsWith("com.aeonlab")) return
+                    HLog.i("$TAG 叠加页探测(684): 类=$n")
+                    if (!n.contains("etting") && !n.contains("Setting")) return
+                    runCatching { applyNativeGreyToSettingsPage(a, "onResume684") }
+                }
+            })
+            HLog.i("$TAG 设置页钩子已就位(684)")
+        }.onFailure { HLog.e("$TAG 设置页钩子异常(684): ${it.message}") }
+    }
+
     private fun installNativeModeGuards() {
         if (nativeGuardsInstalled) return
         nativeGuardsInstalled = true
@@ -2363,7 +2423,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (now - lastNativeModeCheckAt < 1500L) return nativeModeOn
         lastNativeModeCheckAt = now
         val snap = runCatching { ThemeSettings.snapshot(context.hostContext()) }.getOrNull()
-        nativeModeOn = snap == null || !snap.enabled ||
+        nativeModeOn = snap == null || !snap.backgroundEnabled ||
             (!snap.pageHome && !snap.pageContacts && !snap.pageDiscover && !snap.pageMe)
         return nativeModeOn
     }
@@ -2378,6 +2438,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { activity.window?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
             HLog.i("$TAG 原生模式已开启(682): 主开关/页面开关全关 → 窗口底与装饰视图置原生灰（$reason）")
             runCatching { stripOurWallpaper(decor, reason) }
+            runCatching { applyNativePages684(decor, reason) }
             runCatching { dumpNativeState("进入原生模式") }
             restoreNativeFillTree(decor, reason)
         } else {
@@ -2402,7 +2463,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val v = queue[i]; i++
             val w = v.width.coerceAtLeast(v.measuredWidth)
             val h = v.height.coerceAtLeast(v.measuredHeight)
-            if (w >= dm.widthPixels * 9 / 10 && h >= 40) {
+            if (h >= dm.heightPixels * 95 / 100) {
+                HLog.i("$TAG 全屏容器跳过不置灰(684): ${v.javaClass.simpleName}#${idName(v)} 视=${w}x$h 原=#" + Integer.toHexString((runCatching { (v.background as? ColorDrawable)?.color }.getOrNull() ?: 0)) + "（留宿主原样，避免底栏区露灰块）")
+            }
+            if (w >= dm.widthPixels * 9 / 10 && h >= 40 && h < dm.heightPixels * 95 / 100) {
                 val c = runCatching { (v.background as? ColorDrawable)?.color }.getOrNull()
                 if (c != null && Color.alpha(c) == 255) {
                     val r = c shr 16 and 0xFF; val g = c shr 8 and 0xFF; val b = c and 0xFF
@@ -6015,6 +6079,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
         }
         runCatching { installNativeModeGuards() }
+        runCatching { installSettingsResumeHook684() }
         runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
             .onFailure { HLog.e("$TAG 原生模式同步异常(682): ${it.message}") }
         bump("onCreate")
@@ -7555,6 +7620,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val purple = 0xff7a7396.toInt()
         val cb = object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
+        if (nativeOnlyMode()) return  // 684ï¼åçæ¨¡å¼ä¸ä¿çå®¿ä¸»åçä¸éæ
+        if (nativeOnlyMode()) return  // 684ï¼åçæ¨¡å¼ä¸ä¿çå®¿ä¸»åçä¸éæ
                 val view = param.thisObject as? View ?: return
                 val incoming = param.args.firstOrNull() as? Drawable ?: return
                 // 613 主路径：已登记视图被宿主改写的那一次调用里就换回我们的背景。
