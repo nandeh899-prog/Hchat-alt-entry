@@ -400,6 +400,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     // （窗口属性，不是逐帧写宿主 View 属性），并把标题栏内部那块灰白底清掉。
     private val rowsProbedAt: MutableMap<View, Long> = WeakHashMap()
     private var lastWindowColorAssert = 0L
+    private var lastScrimRefreshAt = 0L
+    private var lastScrimRefreshLogAt = 0L
     private var titleBarClearedLogged = 0
     private val focusWatched: MutableSet<ViewGroup> = Collections.newSetFromMap(WeakHashMap<ViewGroup, Boolean>())
 
@@ -582,6 +584,54 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }.getOrNull()
     }
 
+    /** 当前 ViewPager 里正在显示的那一页（按 viewport 覆盖面积最大取，不依赖 pager 类名）。 */
+    private fun visiblePageOfPager(pager: ViewGroup): View? {
+        var best: View? = null
+        var bestOverlap = 0
+        val left = pager.scrollX
+        val right = left + pager.width
+        for (i in 0 until pager.childCount) {
+            val c = pager.getChildAt(i) ?: continue
+            val overlap = minOf(c.right, right) - maxOf(c.left, left)
+            if (overlap > bestOverlap) {
+                bestOverlap = overlap
+                best = c
+            }
+        }
+        return best
+    }
+
+    /**
+     * 678：11:08 日志里通讯录页的 `内容分层` 计数全是 0（`容器置透明 0 个，通栏行压半透明 0 个`，背景图 741x1600），
+     * 说明那一趟是在页面还没 inflate 内容时跑的；`retryUnscrimmedPages` 的 20 次重试也被空页面消耗完，
+     * 之后内容就绪（列表 15 行、行高 174、白 .9）再没人跑过一次分层 —— 行白底就是这么留下来的。
+     * 这里在常驻补刷里对**可见页**按 1.2 秒节流补跑一次分层（幂等：已换过的行背景 alpha=0 会被跳过），
+     * 每 6 秒打一次计数，页面就绪后再也不会漏。
+     */
+    private fun refreshVisiblePageScrim() {
+        val pager = lastHomePager?.get() ?: return
+        if (!pager.isAttachedToWindow || pager.width <= 0) return
+        val page = visiblePageOfPager(pager) ?: return
+        val spec = pageScrim[page] ?: return
+        val group = page as? ViewGroup ?: return
+        if (group.childCount <= 2) return
+        val now = SystemClock.uptimeMillis()
+        if (now - lastScrimRefreshAt < 1200L) return
+        lastScrimRefreshAt = now
+        scrimRetryCount[page] = 0
+        val logNow = now - lastScrimRefreshLogAt >= 6000L
+        if (logNow) lastScrimRefreshLogAt = now
+        applyContentScrim(page, spec.bitmap, spec.overlayColor, spec.isHome, log = logNow)
+        if (logNow) {
+            HLog.i(
+                "$TAG 可见页分层补跑(678): 页=${page.javaClass.simpleName}#${idName(page)}" +
+                    " 子项=${group.childCount} 尺寸=${page.width}x${page.height} 已分层页=${scrimmedPages.size}"
+            )
+        }
+        runCatching { dumpRowsProbe(page, true) }
+            .onFailure { HLog.e("$TAG 行底色探针异常(678): ${it.message}") }
+    }
+
     /**
      * 677：宿主会把 window.statusBarColor 写回 #ffededed（10:03 日志 9 次），我们设的透明只活到下一次宿主写入。
      * 这里按 1 秒节流把状态栏/导航栏重新设回透明——改的是窗口属性，不是逐帧写宿主 View 属性。
@@ -632,14 +682,23 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (!log) return
         val now = SystemClock.uptimeMillis()
         val last = rowsProbedAt[page]
-        if (last != null && now - last < 60000L) return
+        if (last != null && now - last < 20000L) return
         rowsProbedAt[page] = now
+        val group = page as? ViewGroup
+        if (group == null || group.childCount <= 2) {
+            HLog.i("$TAG 行底色转储(678): 页面内容未就绪 子项=${group?.childCount ?: -1}")
+            return
+        }
         runCatching {
-            val list = findListView(page) ?: return
+            val list = findListView(page)
+            if (list == null) {
+                HLog.i("$TAG 行底色转储(678): 未命中列表容器 页面=${page.javaClass.simpleName} 子项=${group.childCount} 尺寸=${page.width}x${page.height}")
+                return
+            }
             val lw = list.width.coerceAtLeast(list.measuredWidth)
             val lh = list.height.coerceAtLeast(list.measuredHeight)
             HLog.i(
-                "$TAG 行底色转储(677): 列表=${list.javaClass.simpleName}#${idName(list)} ${lw}x$lh" +
+                "$TAG 行底色转储(678): 列表=${list.javaClass.simpleName}#${idName(list)} ${lw}x$lh" +
                     " bg=${descDrawable(list.background)} cacheHint=" +
                     runCatching { "#" + Integer.toHexString((list as android.widget.AbsListView).cacheColorHint) }.getOrDefault("-")
             )
@@ -1828,6 +1887,60 @@ private class ThemeRuntime(private val context: FeatureContext) {
             titleBarClearedLogged++
             HLog.i("$TAG 标题栏内部灰白底已清(677): $barCleared 处（ActionBar 子树里高≈标题栏高的不透明底色）")
         }
+        // 678：11:08 日志证明灰带不在 ActionBar 子树里（ActionBar 自身 bg=ColorDrawable#7a7396＝全透明），
+        // 而在 **decor 顶部的其他兄弟层**上：绘制栈 `ColorDrawable.draw ← View.drawBackground`，
+        // 颜色 `#ffededed`，且宿主对 View#nhm 写 #ffededed 累计 370 次（我们只在 636 钩子上拦它的写入）。
+        // 判据（截图定量 1240x2772）：主页/通讯录 的 y≈139..270 一条纯 #EDEDED。这里按「整宽 × 顶带内 × 不透明浅灰/白 .9」
+        // 一次性清成透明并登记 clearedViews，让 613 的引用级守卫在宿主再写回时也换回我们的透明。
+        var topBandCleared = 0
+        runCatching {
+            val decorW = decor.width.coerceAtLeast(decor.measuredWidth)
+            val decorH = decor.height.coerceAtLeast(decor.measuredHeight)
+            if (decorW > 0 && decorH > 0) {
+                val bandLimit = (decorH * 0.20f).toInt().coerceIn(200, 620)
+                fun absTopOf(v: View): Int {
+                    var top = 0
+                    var cur: View? = v
+                    var guard = 0
+                    while (cur != null && guard++ < 24) {
+                        top += cur.top
+                        cur = cur.parent as? View
+                    }
+                    return top
+                }
+                fun walkTop(v: View, d: Int) {
+                    if (d > 18) return
+                    val w = v.width.coerceAtLeast(v.measuredWidth)
+                    val h = v.height.coerceAtLeast(v.measuredHeight)
+                    val bg = v.background
+                    if (v !== decor && w > 0 && h in 1..520 && w >= decorW * 0.5f && bg != null &&
+                        bg !is ScreenAnchoredBitmapDrawable && bg !is PagerStripWallpaperDrawable &&
+                        !homeImageHosts.containsKey(v) && !pageDrawables.containsKey(v)
+                    ) {
+                        val grey = when (bg) {
+                            is ColorDrawable ->
+                                Color.alpha(bg.color) == 255 && Color.red(bg.color) >= 230 &&
+                                    Color.green(bg.color) >= 230 && Color.blue(bg.color) >= 230
+                            is android.graphics.drawable.NinePatchDrawable -> true
+                            else -> false
+                        }
+                        if (grey && absTopOf(v) < bandLimit) {
+                            if (!replacedBackgrounds.containsKey(v)) replacedBackgrounds[v] = bg
+                            v.setBackgroundColor(Color.TRANSPARENT)
+                            clearedViews.add(v)
+                            topBandCleared++
+                            HLog.i(
+                                "$TAG 顶带灰底已清(678): ${v.javaClass.simpleName}#${idName(v)} ${w}x$h" +
+                                    " top=${absTopOf(v)} bg=" + descDrawable(bg)
+                            )
+                        }
+                    }
+                    if (v is ViewGroup) for (i in 0 until v.childCount) walkTop(v.getChildAt(i) ?: continue, d + 1)
+                }
+                walkTop(decor, 0)
+            }
+        }.onFailure { HLog.e("$TAG 顶带清底异常(678): ${it.message}") }
+        if (topBandCleared > 0) HLog.i("$TAG 顶带灰底合计已清(678): $topBandCleared 处")
         if (cleared == 0 && runCatching {
             val t = android.os.SystemClock.elapsedRealtime()
             val last = titleDumpedAt[decor]
@@ -5512,6 +5625,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 if (!decor.isAttachedToWindow) return
                 runCatching { enforce(activity, decor, force = true) }
                     .onFailure { HLog.e("$TAG 常驻补刷异常: ${it.message}", it) }
+                runCatching { refreshVisiblePageScrim() }
+                    .onFailure { HLog.e("$TAG 可见页分层补跑异常(678): ${it.message}", it) }
                 mainHandler.postDelayed(this, PERIODIC_TICK_MS)
             }
         }
