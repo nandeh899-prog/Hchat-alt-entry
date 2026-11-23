@@ -397,13 +397,7 @@ internal fun ThemeMiuixPage(
                         if (snapshot.backgroundEnabled) {
                             InsetDivider()
                             ActionRow(title = "设置页面背景图片", summary = backgroundSummary(snapshot)) {
-                                AlertDialog.Builder(context)
-                                    .setTitle("设置页面背景图片")
-                                    .setItems(pageEntries.map { pageLabel(snapshot, it) }.toTypedArray()) { _, which ->
-                                        showPageDialog(context, pageEntries[which], { ThemeSettings.snapshot(context) }) { block -> update(block) }
-                                    }
-                                    .setNegativeButton("返回", null)
-                                    .show()
+                                showPageListDialog(context, pageEntries, { ThemeSettings.snapshot(context) }) { block -> update(block) }
                             }
                         }
                     }
@@ -598,11 +592,33 @@ private fun pageLabel(snapshot: ThemeSnapshot, entry: PageEntry): String {
     return "${entry.title}（$state · $image）"
 }
 
+/**
+ * 676：二级列表。三级面板关掉后要退回这一层（用户 11-23 08:34：点「确定」直接退回了主题页），
+ * 所以把列表做成可重复弹出的函数，由面板的 onDismiss 回调再弹一次。
+ */
+private fun showPageListDialog(
+    context: Context,
+    entries: List<PageEntry>,
+    current: () -> ThemeSnapshot,
+    update: ((ThemeSnapshot) -> ThemeSnapshot) -> Unit
+) {
+    AlertDialog.Builder(context)
+        .setTitle("设置页面背景图片")
+        .setItems(entries.map { pageLabel(current(), it) }.toTypedArray()) { _, which ->
+            showPageDialog(context, entries[which], current, update) {
+                showPageListDialog(context, entries, current, update)
+            }
+        }
+        .setNegativeButton("返回", null)
+        .show()
+}
+
 private fun showPageDialog(
     context: Context,
     entry: PageEntry,
     current: () -> ThemeSnapshot,
-    update: ((ThemeSnapshot) -> ThemeSnapshot) -> Unit
+    update: ((ThemeSnapshot) -> ThemeSnapshot) -> Unit,
+    onClosed: () -> Unit = {}
 ) {
     val snapshot = current()
     val density = context.resources.displayMetrics.density
@@ -667,6 +683,7 @@ private fun showPageDialog(
         .setView(box)
         .setPositiveButton("确定", null)
         .setNegativeButton("取消", null)
+        .setOnDismissListener { onClosed() }
         .show()
 }
 

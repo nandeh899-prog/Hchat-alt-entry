@@ -21,6 +21,11 @@ import android.view.ViewGroup
  */
 class PagerStripWallpaperDrawable(private val host: ViewGroup) : Drawable() {
 
+    private companion object {
+        /** 676：未开启背景的页格画这个不透明原生底，挡住窗口壁纸层的透出。 */
+        const val OFF_FILL = 0xffededed.toInt()
+    }
+
     private val slots = arrayOfNulls<Bitmap>(8)
     private val overlays = IntArray(8)
     private val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.DITHER_FLAG)
@@ -35,6 +40,12 @@ class PagerStripWallpaperDrawable(private val host: ViewGroup) : Drawable() {
 
     fun slotBitmap(index: Int): Bitmap? = if (index in slots.indices) slots[index] else null
 
+    /** 676：叠加页在前台时把壁纸格全部清掉（连着 fill 一起），离开后再由主题重铺。 */
+    fun clearSlots() {
+        for (i in slots.indices) slots[i] = null
+        invalidateSelf()
+    }
+
     fun filledCount(): Int = slots.count { it != null }
 
     override fun draw(canvas: Canvas) {
@@ -43,10 +54,18 @@ class PagerStripWallpaperDrawable(private val host: ViewGroup) : Drawable() {
         if (w <= 0 || h <= 0) return
         val sx = host.scrollX.toFloat()
         for (i in slots.indices) {
-            val bmp = slots[i] ?: continue
-            if (bmp.width <= 0 || bmp.height <= 0) continue
             val cellLeft = i * w - sx
             if (cellLeft + w <= 0f || cellLeft >= w.toFloat()) continue
+            val bmp = slots[i]
+            if (bmp == null || bmp.width <= 0 || bmp.height <= 0) {
+                // 676：这一页没设图（该页开关关闭）→ 画不透明原生底。
+                // 之前空槽不画，页面上没被内容盖住的地方就透出窗口那层壁纸（用户 11-23 08:34 截图：
+                // 只开主页时通讯录/发现底部仍见壁纸）。这里只动我们自己的绘制层，不写宿主属性。
+                paint.alpha = 255
+                paint.color = OFF_FILL
+                canvas.drawRect(cellLeft, 0f, cellLeft + w, h.toFloat(), paint)
+                continue
+            }
             canvas.save()
             canvas.clipRect(cellLeft, 0f, cellLeft + w, h.toFloat())
             val scale = maxOf(w.toFloat() / bmp.width.toFloat(), h.toFloat() / bmp.height.toFloat())

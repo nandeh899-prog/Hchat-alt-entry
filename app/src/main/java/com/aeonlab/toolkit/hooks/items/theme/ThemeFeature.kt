@@ -390,6 +390,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
     /** 见过的 LauncherUI；用来在没有当前页面信息时兜底重刷。 */
     private val launchers: MutableSet<Activity> = Collections.newSetFromMap(WeakHashMap<Activity, Boolean>())
 
+    // 676：叠加页（微信原生设置页这类独立 Activity）在前台时，把壁纸层临时撤掉。
+    // 依据：这些页面是从 LauncherUI 之上叠加的窗口，透区里能看见我们铺在 LauncherUI 上的壁纸
+    // （用户 11-23 08:34 截图：设置/设置>聊天 右半侧透出壁纸、行列跟着错位）。
+    // 只在窗口失焦/宿主 onPause 这些一次性时机改，不做每帧写入。
+    private var wallpaperHidden = false
+    private val focusWatched: MutableSet<ViewGroup> = Collections.newSetFromMap(WeakHashMap<ViewGroup, Boolean>())
+
     @Volatile
     private var lastDumpAt = 0L
 
@@ -468,6 +475,19 @@ private class ThemeRuntime(private val context: FeatureContext) {
         } else {
             HLog.e("$TAG 没找到 LauncherUI.onCreate，冷启动首帧只能等 onResume 补(613)")
         }
+        val pause = KavaReflector.findMethod(launcher, "onPause")
+            ?: KavaReflector.findMethodRecursive(launcher, "onPause")
+        if (pause != null) {
+            runCatching {
+                HookRegistry.get().hook(pause, object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        // 676：宿主被叠加页盖住时先撤壁纸，回来时 applyTheme 会重铺。
+                        runCatching { if (overlayActivity() != null) hideWallpaperForOverlay("宿主 onPause") }
+                            .onFailure { HLog.e("$TAG 壁纸暂隐失败(676): ${it.message}") }
+                    }
+                })
+            }.onFailure { HLog.e("$TAG 挂载 LauncherUI.onPause 失败(676): ${it.message}") }
+        }
         installed = true
         HLog.i("$TAG 主题 Hook 已挂载（页面=${LAUNCHER_UI_CLASS}，微信版本=${hostVersion()}）")
         installGreyPainterProbe()
@@ -519,6 +539,63 @@ private class ThemeRuntime(private val context: FeatureContext) {
         maybeShowSplash(activity, decor, snapshot)
         installEnforcement(activity, decor)
         dumpDecorTree(decor)
+        if (focusWatched.add(decor)) {
+            runCatching {
+                decor.viewTreeObserver.addOnWindowFocusChangeListener { hasFocus ->
+                    if (hasFocus) {
+                        runCatching { restoreWallpaperAfterOverlay("窗口获焦") }
+                    } else {
+                        runCatching { if (overlayActivity() != null) hideWallpaperForOverlay("窗口失焦") }
+                    }
+                }
+            }.onFailure { HLog.e("$TAG 焦点监听挂载失败(676): ${it.message}") }
+        }
+    }
+
+    /** 676：当前是否有一个非 LauncherUI 的可见 Activity 压在上面（微信原生设置页等）。 */
+    private fun overlayActivity(): Activity? {
+        return runCatching {
+            val threadClass = Class.forName("android.app.ActivityThread")
+            val thread = threadClass.getMethod("currentActivityThread").invoke(null) ?: return@runCatching null
+            val field = threadClass.getDeclaredField("mActivities").apply { isAccessible = true }
+            val records = field.get(thread) as? Map<*, *> ?: return@runCatching null
+            for (value in records.values) {
+                val record = value ?: continue
+                val paused = runCatching {
+                    record.javaClass.getDeclaredField("paused").apply { isAccessible = true }.getBoolean(record)
+                }.getOrDefault(true)
+                if (paused) continue
+                val activity = runCatching {
+                    record.javaClass.getDeclaredField("activity").apply { isAccessible = true }.get(record) as? Activity
+                }.getOrNull() ?: continue
+                if (activity.isFinishing) continue
+                if (activity.javaClass.name.contains(LAUNCHER_UI_CLASS)) continue
+                return@runCatching activity
+            }
+            null
+        }.getOrNull()
+    }
+
+    private fun hideWallpaperForOverlay(reason: String) {
+        if (wallpaperHidden) return
+        wallpaperHidden = true
+        runCatching {
+            for ((pager, drawable) in pagerUnderlays.entries.toList()) {
+                if (drawable is PagerStripWallpaperDrawable) drawable.clearSlots()
+                if (pager.background === drawable) {
+                    runCatching { pager.setBackgroundDrawable(ColorDrawable(0xffededed.toInt())) }
+                }
+            }
+            restoreTouchedViews()
+        }.onFailure { HLog.e("$TAG 壁纸暂隐异常(676): ${it.message}") }
+        HLog.i("$TAG 壁纸层暂隐(676): 原因=$reason（叠加页在前台，壁纸层全部撤下）")
+    }
+
+    private fun restoreWallpaperAfterOverlay(reason: String) {
+        if (!wallpaperHidden) return
+        wallpaperHidden = false
+        HLog.i("$TAG 壁纸层恢复(676): 原因=$reason")
+        scheduleReapply("叠加页退出")
     }
 
     private fun applyActionBar(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
@@ -1796,6 +1873,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * enforce（≤400ms）才补上，中间那几帧就是「停留本页也偶发闪一下」。
      */
     private fun guardedBackgroundFor(view: View, incoming: Drawable): Drawable? {
+        // 676：叠加页在前台时壁纸层已撤下，这段时间放行宿主自己写背景，别把壁纸又拉回来。
+        if (wallpaperHidden) return null
         // 状态栏那条 139px 由 612 的 window.statusBarColor 通道管，绝不能被这里的「清透明」碰到。
         if (view.id == android.R.id.statusBarBackground) return null
         try {
@@ -1818,6 +1897,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * （例如直接改 Drawable 颜色、或走我们没钩到的通道）在同一帧内拉回。
      */
     private fun fastAssertBackgroundsBeforeDraw() {
+        if (wallpaperHidden) return
         if (!fastAssertLogged) {
             fastAssertLogged = true
             HLog.i("$TAG 逐帧背景断言已生效(613): 每帧绘制前把被宿主改写的页面/容器/行底色拉回")
