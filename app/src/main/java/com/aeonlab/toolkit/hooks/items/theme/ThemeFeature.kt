@@ -2256,6 +2256,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var nativeTicker685 = false
     private var wallpaperDrawHooked686 = false
     private var pullDownHooked686 = false
+    private var lastWriteProbe687 = 0L
+    private var lastDbgDraw687 = 0L
+    private var lastOwnWallpaperLog687 = 0L
     private var settingsHook684 = false
 
     /**
@@ -2435,9 +2438,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (wallpaperDrawHooked686) return
         wallpaperDrawHooked686 = true
         runCatching {
-            val cls = Class.forName("com.aeonlab.toolkit.hooks.items.theme.ScreenAnchoredBitmapDrawable")
-            XposedBridge.hookAllMethods(cls, "draw", object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val dw = param.args.getOrNull(0)
+                    val now = System.currentTimeMillis()
+                    if (now - lastOwnWallpaperLog687 > 500) {
+                        lastOwnWallpaperLog687 = now
+                        HLog.i("$TAG \u81ea\u5bb6\u58c1\u7eb8\u5c42(687): \u7ed8\u5236\u5df2\u62e6 \u5bf9\u8c61=" + dw)
+                    }
                     if (nativeOnlyMode()) param.result = null
                 }
             })
@@ -2467,6 +2473,20 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         }
                     })
                 }
+                for (m in arrayOf("onDraw", "dispatchDraw", "draw")) {
+                    runCatching {
+                        XposedBridge.hookAllMethods(cls, m, object : XC_MethodHook() {
+                            override fun beforeHookedMethod(param: MethodHookParam) {
+                                val now = System.currentTimeMillis()
+                                if (now - lastDbgDraw687 > 500) {
+                                    lastDbgDraw687 = now
+                                    val vv = param.thisObject as? View
+                                    HLog.i("$TAG \u4e0b\u62c9\u80cc\u666f\u7ed8\u5236(687): \u7c7b=" + (vv?.javaClass?.simpleName ?: cn) + " \u65b9\u6cd5=$m \u89c6=" + (vv?.width ?: -1) + "x" + (vv?.height ?: -1))
+                                }
+                            }
+                        })
+                    }
+                }
                 HLog.i("$TAG 动态背景层绘制已接管(686): $cn")
             }.onFailure { HLog.i("$TAG 动态背景层未命中(686): $cn") }
         }
@@ -2480,7 +2500,20 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             XposedBridge.hookAllMethods(View::class.java, "setBackgroundColor", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    if (!masterWallpaperOn686()) return  // 686ï¼ä¸»å¼å³å³çæ¶ä¸ç¢°å®¿ä¸»åºè²
+                        runCatching {
+                            val vv = param.args.getOrNull(0) as? View
+                            if (vv != null) {
+                                val w = vv.width.coerceAtLeast(vv.measuredWidth); val hh = vv.height.coerceAtLeast(vv.measuredHeight)
+                                val dm2 = vv.resources.displayMetrics
+                                if (w >= dm2.widthPixels * 2 / 5 || hh >= dm2.heightPixels / 3) {
+                                    val now = System.currentTimeMillis()
+                                    if (now - lastWriteProbe687 > 300) {
+                                        lastWriteProbe687 = now
+                                        HLog.i("$TAG \u5e95\u8272\u5199\u5165\u7559\u75d5(687): \u89c6\u56fe=${vv.javaClass.simpleName}#${idName(vv)} \u89c6=${w}x$hh \u53c2\u6570=" + param.args.getOrNull(0) + " \u4e0a\u4e0b\u6587=${vv.context?.javaClass?.simpleName}")
+                                    }
+                                }
+                            }
+                        }
                     if (!nativeOnlyMode()) return
                     val c = param.args.getOrNull(0) as? Int ?: return
                     if (!isNativeDark(c)) return
