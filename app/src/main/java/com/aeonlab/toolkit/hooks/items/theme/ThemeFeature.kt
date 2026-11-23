@@ -438,6 +438,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     @Synchronized
     fun installWeChatHooks(): Boolean {
+        runCatching { installNativeModeGuards() }
+        runCatching { tickNativeMode685() }   // 685：不分进程，设置页可能在别的进程
+        runCatching { installSettingsResumeHook684() }
         if (installed) return true
         val launcher = KavaReflector.loadClass(LAUNCHER_UI_CLASS, context.hostClassLoader())
         if (launcher == null) {
@@ -2250,6 +2253,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var nativeFillCount = 0
     private var lastOverlayProbeAt = 0L
     private var nativeGuardsInstalled = false
+    private var nativeTicker685 = false
     private var settingsHook684 = false
 
     /**
@@ -2270,7 +2274,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 for (k in 0 until v.childCount) {
                     val c = v.getChildAt(k) ?: continue
                     if (c.width >= dm.widthPixels * 9 / 10 && c.height >= dm.heightPixels / 3) {
-                        runCatching { c.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                        runCatching { c.setBackgroundDrawable(ColorDrawable(0xFFFFFFFF.toInt())) }
                         pages++
                         if (pages <= 4) HLog.i("$TAG 原生模式页面已置不透明(684): ${c.javaClass.simpleName}#${idName(c)} 视=${c.width}x${c.height} 原=${c.background?.javaClass?.simpleName}")
                     }
@@ -2285,6 +2289,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (bg != null && bg !is ColorDrawable && w >= dm.widthPixels / 2 && h >= dm.heightPixels / 3) {
                 odd++
                 if (odd <= 8) HLog.i("$TAG 页面非纯色底探针(684): ${v.javaClass.simpleName}#${idName(v)} 视=${w}x$h 原=${bg.javaClass.name}")
+                runCatching { v.setBackgroundDrawable(ColorDrawable(0xFFFFFFFF.toInt())) }   // 685：这就是 App 那张背景图所在层，直接盖白
+            }
+            if (isPager && w >= dm.widthPixels * 9 / 10 && h >= dm.heightPixels / 3) {
+                runCatching { v.setBackgroundDrawable(ColorDrawable(0xFFFFFFFF.toInt())) }   // 685：ViewPager 自身也要不透
             }
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
         }
@@ -2365,6 +2373,57 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }.onFailure { HLog.e("$TAG 设置页钩子异常(684): ${it.message}") }
     }
 
+    /**
+     * 685：原生模式巡检（~900ms 节流）。684 只在「状态翻转」时跑一次，而微信进程是常驻的 ——
+     * 一旦已处于原生模式，后续所有 bump 都被 `if (want == wallpaperHidden) return` 挡掉，
+     * 于是新建/复用的页面与分组头永远不被处理（真机：四页全关症状与 683 完全一样）。
+     */
+    private fun tickNativeMode685() {
+        if (nativeTicker685) return
+        nativeTicker685 = true
+        val h = Handler(Looper.getMainLooper())
+        val r = object : Runnable {
+            override fun run() {
+                val ok = runCatching {
+                    if (!nativeOnlyMode()) { nativeTicker685 = false; return }
+                    val a = currentActivity()
+                    val d = a?.window?.decorView as? ViewGroup
+                    if (d != null) {
+                        applyNativePages684(d, "\u5de1\u68c0(685)")
+                        restoreNativeFillTree(d, "\u5de1\u68c0(685)")
+                        probeBottomBand685(d, "\u5de1\u68c0(685)")
+                    }
+                }.isSuccess
+                if (!ok) { nativeTicker685 = false; return }
+                h.postDelayed(this, 900)
+            }
+        }
+        h.postDelayed(r, 900)
+        HLog.i("$TAG \u539f\u751f\u6a21\u5f0f\u5de1\u68c0\u5df2\u542f\u52a8(685)")
+    }
+
+    /** 685：报「底部那条带子」到底是谁的（类名 + 尺寸 + 底色）。 */
+    private fun probeBottomBand685(decor: ViewGroup, reason: String) {
+        val dm = decor.resources.displayMetrics
+        for (y in intArrayOf(dm.heightPixels - 40, dm.heightPixels - 120)) {
+            val v = findViewAt685(decor, dm.widthPixels / 2, y) ?: continue
+            val c = runCatching { (v.background as? ColorDrawable)?.color }.getOrNull()
+            HLog.i("$TAG \u5e95\u680f\u533a\u63a2\u9488(685): y=$y \u8986\u76d6\u89c6\u56fe=${v.javaClass.simpleName}#${idName(v)} \u89c6=${v.width}x${v.height} bg=" + (if (c != null) "#" + Integer.toHexString(c) else "null/" + v.background?.javaClass?.name) + "\uff08$reason\uff09")
+        }
+    }
+
+    private fun findViewAt685(root: View, x: Int, y: Int): View? {
+        if (root.visibility != View.VISIBLE) return null
+        val rc = android.graphics.Rect()
+        runCatching { root.getGlobalVisibleRect(rc) }
+        if (!rc.contains(x, y)) return null
+        if (root is ViewGroup) for (i in root.childCount - 1 downTo 0) {
+            val c = findViewAt685(root.getChildAt(i), x, y)
+            if (c != null) return c
+        }
+        return root
+    }
+
     private fun installNativeModeGuards() {
         if (nativeGuardsInstalled) return
         nativeGuardsInstalled = true
@@ -2439,6 +2498,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             HLog.i("$TAG 原生模式已开启(682): 主开关/页面开关全关 → 窗口底与装饰视图置原生灰（$reason）")
             runCatching { stripOurWallpaper(decor, reason) }
             runCatching { applyNativePages684(decor, reason) }
+            runCatching { tickNativeMode685() }
             runCatching { dumpNativeState("进入原生模式") }
             restoreNativeFillTree(decor, reason)
         } else {
