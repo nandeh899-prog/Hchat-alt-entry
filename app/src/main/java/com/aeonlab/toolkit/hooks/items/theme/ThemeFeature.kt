@@ -5908,7 +5908,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }, LIFECYCLE_BUMP_DELAY_MS)
             }
         }
-        runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷($tag)") }
+        runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
             .onFailure { HLog.e("$TAG 原生模式同步异常(682): ${it.message}") }
         bump("onCreate")
         runCatching {
