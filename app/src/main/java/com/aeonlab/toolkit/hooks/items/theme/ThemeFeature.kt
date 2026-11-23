@@ -2254,6 +2254,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastOverlayProbeAt = 0L
     private var nativeGuardsInstalled = false
     private var nativeTicker685 = false
+    private var wallpaperDrawHooked686 = false
+    private var pullDownHooked686 = false
     private var settingsHook684 = false
 
     /**
@@ -2424,12 +2426,61 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return root
     }
 
+
+    /** 686：「主开关（启用页面背景）开着」——只有这时才需要压制/还原底。 */
+    private fun masterWallpaperOn686(): Boolean = runCatching { runCatching { ThemeSettings.snapshot(context.hostContext()) }.getOrNull()?.backgroundEnabled == true }.getOrDefault(true)
+
+    /** 686：自家壁纸层在原生模式下一律不画（真机证据：泄漏的就是挂在窗口上的 ScreenAnchoredBitmapDrawable）。 */
+    private fun hookOurWallpaperDraw686() {
+        if (wallpaperDrawHooked686) return
+        wallpaperDrawHooked686 = true
+        runCatching {
+            val cls = Class.forName("com.aeonlab.toolkit.hooks.items.theme.ScreenAnchoredBitmapDrawable")
+            XposedBridge.hookAllMethods(cls, "draw", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    if (nativeOnlyMode()) param.result = null
+                }
+            })
+            HLog.i("$TAG 自家壁纸层绘制已接管(686)")
+        }.onFailure { HLog.e("$TAG 自家壁纸层接管异常(686): ${it.message}") }
+    }
+
+    /** 686：下拉「最近」那层动态背景（深紫）在原生模式下一律不画。 */
+    private fun hookPullDownDraw686() {
+        if (pullDownHooked686) return
+        pullDownHooked686 = true
+        for (cn in arrayOf("com.tencent.mm.plugin.multitask.ui.bg.DynamicBgContainer",
+                           "com.tencent.mm.dynamicbackground.view.GradientColorBackgroundView",
+                           "com.tencent.mm.ui.mogic.WxViewPager")) {
+            runCatching {
+                val cls = Class.forName(cn)
+                if (cn.endsWith("WxViewPager")) {
+                    XposedBridge.hookAllMethods(cls, "draw", object : XC_MethodHook() {
+                        override fun beforeHookedMethod(param: MethodHookParam) {
+                            if (nativeOnlyMode() && masterWallpaperOn686()) param.result = null
+                        }
+                    })
+                } else {
+                    XposedBridge.hookAllMethods(cls, "draw", object : XC_MethodHook() {
+                        override fun beforeHookedMethod(param: MethodHookParam) {
+                            if (nativeOnlyMode()) param.result = null
+                        }
+                    })
+                }
+                HLog.i("$TAG 动态背景层绘制已接管(686): $cn")
+            }.onFailure { HLog.i("$TAG 动态背景层未命中(686): $cn") }
+        }
+    }
+
     private fun installNativeModeGuards() {
+        runCatching { hookOurWallpaperDraw686() }
+        runCatching { hookPullDownDraw686() }
         if (nativeGuardsInstalled) return
         nativeGuardsInstalled = true
         runCatching {
             XposedBridge.hookAllMethods(View::class.java, "setBackgroundColor", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
+                    if (!masterWallpaperOn686()) return  // 686ï¼ä¸»å¼å³å³çæ¶ä¸ç¢°å®¿ä¸»åºè²
                     if (!nativeOnlyMode()) return
                     val c = param.args.getOrNull(0) as? Int ?: return
                     if (!isNativeDark(c)) return
@@ -2599,6 +2650,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 只对微信原生设置页生效，聊天/朋友圈/小程序与主题自己的设置页都不动。
      */
     private fun applyNativeGreyToSettingsPage(a: Activity, reason: String) {
+        if (!masterWallpaperOn686()) return  // 686ï¼ç¶æ Aä¸è®¾ç½®é¡µæ¬æ¥å°±æ­£å¸¸
         val an = a.javaClass.name
         if (an.contains(LAUNCHER_UI_CLASS) || an.startsWith("com.aeonlab")) return
         val hit = an.startsWith("com.tencent.mm.plugin.setting") || an.contains("etting")
