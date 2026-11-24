@@ -438,9 +438,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     @Synchronized
     fun installWeChatHooks(): Boolean {
-        runCatching { installNativeModeGuards() }
-        runCatching { tickNativeMode685() }   // 685：不分进程，设置页可能在别的进程
-        runCatching { installSettingsResumeHook684() }
         if (installed) return true
         val launcher = KavaReflector.loadClass(LAUNCHER_UI_CLASS, context.hostClassLoader())
         if (launcher == null) {
@@ -456,7 +453,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             HookRegistry.get().hook(resume, object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    val activity = thisOf692(param) as? Activity ?: return
+                    val activity = param.thisObject as? Activity ?: return
                     if (activity.javaClass.name.contains(LAUNCHER_UI_CLASS)) launchers.add(activity)
                     runCatching { applyTheme(activity) }
                         .onFailure { HLog.e("$TAG 应用主题异常: ${it.message}", it) }
@@ -475,7 +472,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching {
                 HookRegistry.get().hook(onCreate, object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        val activity = thisOf692(param) as? Activity ?: return
+                        val activity = param.thisObject as? Activity ?: return
                         if (!activity.javaClass.name.contains(LAUNCHER_UI_CLASS)) return
                         launchers.add(activity)
                         runCatching { applyEarlyWindowBackground(activity) }
@@ -1741,7 +1738,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun applyWindowBackground(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
         // 619：黑线定位探针挂在这条每次 enforce 都会走的路径上（3 秒一次、只读）
         runCatching { locateLines(activity, decor, SystemClock.uptimeMillis()) }
-        // 699 停用旧探针(主线程占用优先): runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
+        runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
         rowMaskAlpha = (snapshot.rowMaskStrength.coerceIn(0, 100) * 255) / 100
         if (snapshot.rowMaskStrength != lastAppliedRowStrength) {
             if (lastAppliedRowStrength >= 0) {
@@ -2253,16 +2250,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var nativeFillCount = 0
     private var lastOverlayProbeAt = 0L
     private var nativeGuardsInstalled = false
-    private var nativeTicker685 = false
-    private var wallpaperDrawHooked686 = false
-    private var pullDownHooked686 = false
-    private var lastWriteProbe687 = 0L
-    private var lastDbgDraw687 = 0L
-    private var lastOwnWallpaperLog687 = 0L
-    private var lastPagerStrip689 = 0L
-    private var probeSink690 = false
-    private var lastProbeWrite690 = 0L
-    private var tick691 = 0
     private var settingsHook684 = false
 
     /**
@@ -2283,7 +2270,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 for (k in 0 until v.childCount) {
                     val c = v.getChildAt(k) ?: continue
                     if (c.width >= dm.widthPixels * 9 / 10 && c.height >= dm.heightPixels / 3) {
-                        runCatching { c.setBackgroundDrawable(ColorDrawable(0xFFFFFFFF.toInt())) }
+                        runCatching { c.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
                         pages++
                         if (pages <= 4) HLog.i("$TAG 原生模式页面已置不透明(684): ${c.javaClass.simpleName}#${idName(c)} 视=${c.width}x${c.height} 原=${c.background?.javaClass?.simpleName}")
                     }
@@ -2298,10 +2285,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (bg != null && bg !is ColorDrawable && w >= dm.widthPixels / 2 && h >= dm.heightPixels / 3) {
                 odd++
                 if (odd <= 8) HLog.i("$TAG 页面非纯色底探针(684): ${v.javaClass.simpleName}#${idName(v)} 视=${w}x$h 原=${bg.javaClass.name}")
-                runCatching { v.setBackgroundDrawable(ColorDrawable(0xFFFFFFFF.toInt())) }   // 685：这就是 App 那张背景图所在层，直接盖白
-            }
-            if (isPager && w >= dm.widthPixels * 9 / 10 && h >= dm.heightPixels / 3) {
-                runCatching { v.setBackgroundDrawable(ColorDrawable(0xFFFFFFFF.toInt())) }   // 685：ViewPager 自身也要不透
             }
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
         }
@@ -2370,7 +2353,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             XposedBridge.hookAllMethods(Activity::class.java, "onResume", object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    val a = thisOf692(param) as? Activity ?: return
+                    val a = param.thisObject as? Activity ?: return
                     val n = a.javaClass.name
                     if (n.contains(LAUNCHER_UI_CLASS) || n.startsWith("com.aeonlab")) return
                     HLog.i("$TAG 叠加页探测(684): 类=$n")
@@ -2382,382 +2365,26 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }.onFailure { HLog.e("$TAG 设置页钩子异常(684): ${it.message}") }
     }
 
-    /**
-     * 685：原生模式巡检（~900ms 节流）。684 只在「状态翻转」时跑一次，而微信进程是常驻的 ——
-     * 一旦已处于原生模式，后续所有 bump 都被 `if (want == wallpaperHidden) return` 挡掉，
-     * 于是新建/复用的页面与分组头永远不被处理（真机：四页全关症状与 683 完全一样）。
-     */
-    private fun tickNativeMode685() {
-        if (nativeTicker685) return
-        nativeTicker685 = true
-        val h = Handler(Looper.getMainLooper())
-        val r = object : Runnable {
-            override fun run() {
-                val ok = runCatching {
-                    if (!nativeOnlyMode()) { nativeTicker685 = false; return }
-                    val a = currentActivity()
-                    val d = a?.window?.decorView as? ViewGroup
-                    if (d != null) {
-                        applyNativePages684(d, "\u5de1\u68c0(685)")
-                        restoreNativeFillTree(d, "\u5de1\u68c0(685)")
-                        if (tick691 % 4 == 0) probeBottomBand685(d, "\u5de1\u68c0(685)")  // 691：贵，降到 1/4 频率
-                        tick691++
-                        appendProbe690("tick(695)", "\u539f\u751f=" + nativeOnlyMode() + " \u8df3\u7ed8=" + skipCount692 + " \u76d1\u63a7=" + tick691)
-// 696 停用：该巡检写入每轮把 DynamicBgContainer/GradientColorBackgroundView 的底色写白（改=3/轮、同一 ColorDrawable 实例），但屏幕仍紫：紫是这些 View 自己 draw 出来的，与背景无关；每轮与宿主互相覆盖还带来额外失效重绘。
-// 696 停用：该巡检写入在 690 日志里命中数为 0（通讯录分组头/字母索引的灰来自 681/684 路径，未被本函数碰过），保留函数定义但不再每轮扫树。
-                    }
-                }.isSuccess
-                if (!ok) { nativeTicker685 = false; return }
-                h.postDelayed(this, 5000)  // 691
-            }
-        }
-        h.postDelayed(r, 5000)  // 691：900ms 太密（主线程整树走查×5），放到 5s
-        HLog.i("$TAG \u539f\u751f\u6a21\u5f0f\u5de1\u68c0\u5df2\u542f\u52a8(685)")
-    }
-
-    /** 685：报「底部那条带子」到底是谁的（类名 + 尺寸 + 底色）。 */
-    private fun probeBottomBand685(decor: ViewGroup, reason: String) {
-        val dm = decor.resources.displayMetrics
-        for (y in intArrayOf(dm.heightPixels - 40, dm.heightPixels - 120)) {
-            val v = findViewAt685(decor, dm.widthPixels / 2, y) ?: continue
-            val c = runCatching { (v.background as? ColorDrawable)?.color }.getOrNull()
-            HLog.i("$TAG \u5e95\u680f\u533a\u63a2\u9488(685): y=$y \u8986\u76d6\u89c6\u56fe=${v.javaClass.simpleName}#${idName(v)} \u89c6=${v.width}x${v.height} bg=" + (if (c != null) "#" + Integer.toHexString(c) else "null/" + v.background?.javaClass?.name) + "\uff08$reason\uff09")
-        }
-    }
-
-    private fun findViewAt685(root: View, x: Int, y: Int): View? {
-        if (root.visibility != View.VISIBLE) return null
-        val rc = android.graphics.Rect()
-        runCatching { root.getGlobalVisibleRect(rc) }
-        if (!rc.contains(x, y)) return null
-        if (root is ViewGroup) for (i in root.childCount - 1 downTo 0) {
-            val c = findViewAt685(root.getChildAt(i), x, y)
-            if (c != null) return c
-        }
-        return root
-    }
-
-
-    /** 686：「主开关（启用页面背景）开着」——只有这时才需要压制/还原底。 */
-    private fun masterWallpaperOn686(): Boolean = runCatching { runCatching { ThemeSettings.snapshot(context.hostContext()) }.getOrNull()?.backgroundEnabled == true }.getOrDefault(true)
-
-    /** 686：自家壁纸层在原生模式下一律不画（真机证据：泄漏的就是挂在窗口上的 ScreenAnchoredBitmapDrawable）。 */
-    private fun hookOurWallpaperDraw686() {
-        if (wallpaperDrawHooked686) return
-        wallpaperDrawHooked686 = true
-        runCatching {
-            val cls = Class.forName("com.aeonlab.toolkit.hooks.items.theme.ScreenAnchoredBitmapDrawable")
-            XposedBridge.hookAllMethods(cls, "draw", object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    val dw = argsAt692(param, 0)
-                    val now = System.currentTimeMillis()
-                    if (now - lastOwnWallpaperLog687 > 500) {
-                        lastOwnWallpaperLog687 = now
-                        HLog.i("$TAG \u81ea\u5bb6\u58c1\u7eb8\u5c42(687): \u7ed8\u5236\u5df2\u62e6 \u5bf9\u8c61=" + dw)
-            runCatching {
-                val cls2 = Class.forName("com.aeonlab.toolkit.hooks.items.theme.PagerStripWallpaperDrawable")
-                val nOwn2 = XposedBridge.hookAllMethods(cls2, "draw", object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val now2 = System.currentTimeMillis()
-                        if (now2 - lastPagerStrip689 > 500) {
-                            lastPagerStrip689 = now2
-                            HLog.i("$TAG \u81ea\u5bb6\u5206\u683c\u58c1\u7eb8\u5c42(689): \u7ed8\u5236\u5df2\u62e6")
-                        }
-                        if (nativeOnlyMode()) skipOnce692(param, "draw")
-                    }
-                })
-                HLog.i("$TAG \u81ea\u5bb6\u5206\u683c\u58c1\u7eb8\u5c42(689): \u672c\u7c7b\u58f0\u660e\u547d\u4e2d=" + nOwn2)
-                // 695：撤掉全局 Log.println 钩子（每个 Log 调用都要进回调，是额外开销）；证据改由巡检快照提供
-            }
-                    }
-                    if (nativeOnlyMode()) skipOnce692(param, "draw")
-                }
-            })
-            HLog.i("$TAG 自家壁纸层绘制已接管(686)")
-        }.onFailure { HLog.e("$TAG 自家壁纸层接管异常(686): ${it.message}") }
-    }
-
-    /** 686：下拉「最近」那层动态背景（深紫）在原生模式下一律不画。 */
-    /** 689：状态 A 的紫＝小程序「最近」那层动态背景没还原成原生白，从后面透出来（用户定位）。巡检里幂等换不透明白。 */
-    private fun whitenMiniProgramLayer689(decor: ViewGroup, reason: String) {
-        val q = ArrayList<View>(); q.add(decor); var i = 0; var n = 0
-        while (i < q.size && i < 3000) {
-            val v = q[i]; i++
-            val cn = v.javaClass.name
-            val isBgRole = cn.indexOf("DynamicBg") >= 0 || cn.indexOf("GradientColor") >= 0 || cn.indexOf("multitask.ui.bg") >= 0 || cn.indexOf("dynamicbackground") >= 0 ||
-                (cn.indexOf("multitask") >= 0 && (cn.indexOf("Bg") >= 0 || cn.indexOf("Background") >= 0 || cn.indexOf("Container") >= 0)) ||
-                (cn.indexOf("appbrand") >= 0 && cn.indexOf("Background") >= 0)
-            if (isBgRole) {
-                val bg = v.background
-                if (bg == null || bg !is ColorDrawable || (bg as ColorDrawable).color != 0xFFFFFFFF.toInt()) {
-                    runCatching { v.setBackgroundDrawable(ColorDrawable(0xFFFFFFFF.toInt())); n++ }
-                    if (n <= 5) HLog.i("$TAG \u5c0f\u7a0b\u5e8f\u5c42\u5df2\u8fd8\u539f\u767d(689): " + v.javaClass.simpleName + "#" + idName(v) + " \u89c6=" + v.width + "x" + v.height + " \u539f=" + bg)
-                }
-            }
-            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { q.add(it) }
-        }
-        if (n > 0) HLog.i("$TAG \u5c0f\u7a0b\u5e8f\u5c42\u8fd8\u539f\u6c47\u603b(689): \u6539=$n\uff08$reason\uff09")
-    }
-
-    /** 689：宿主深色块提亮（#18..#38 灰阶、不透）——状态 A 分组头(满宽矮条)与右侧字母索引(竖长条)都覆盖。 */
-    private fun lightenDarkBlocks689(decor: ViewGroup, reason: String) {
-        val q = ArrayList<View>(); q.add(decor); var i = 0; var n = 0; var seen = 0
-        val sw = decor.resources.displayMetrics.widthPixels; val sh = decor.resources.displayMetrics.heightPixels
-        while (i < q.size && i < 3000) {
-            val v = q[i]; i++
-            val bg = v.background
-            if (bg is ColorDrawable) {
-                val c = bg.color; val a = (c ushr 24) and 0xFF
-                val r = (c shr 16) and 0xFF; val g = (c shr 8) and 0xFF; val bl = c and 0xFF
-                val w = v.width.coerceAtLeast(v.measuredWidth); val h = v.height.coerceAtLeast(v.measuredHeight)
-                if (a == 0xFF && r == g && g == bl && r in 0x18..0x38 && h >= 40 && (w >= sw * 3 / 5 || (h >= sh * 2 / 5 && w >= 30))) {
-                    seen++
-                    runCatching { v.setBackgroundDrawable(ColorDrawable(0xFFEDEDED.toInt())); n++ }
-                    if (seen <= 6) HLog.i("$TAG \u6df1\u8272\u5757\u5df2\u63d0\u4eae(689): " + v.javaClass.simpleName + "#" + idName(v) + " \u89c6=" + w + "x" + h + " \u539f=#" + Integer.toHexString(c))
-                }
-            }
-            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { q.add(it) }
-        }
-        if (n > 0) HLog.i("$TAG \u6df1\u8272\u5757\u63d0\u4eae\u6c47\u603b(689): \u6539=$n \u5019\u9009=$seen\uff08$reason\uff09")
-    }
-
-    /** 690：把探针行另写到 /storage/emulated/0/日志/hchat_probe.log，之后用 fs.read 一两次就能取证，不再依赖上传。 */
-    private fun installProbeFileSink690() {
-        if (probeSink690) return
-        probeSink690 = true
-        runCatching {
-            val lc = Class.forName("android.util.Log", false, context.hostClassLoader())
-            val n = XposedBridge.hookAllMethods(lc, "println", object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    val a = argsOf692(param) ?: return
-                    if (a.size < 3) return
-                    val t = a[1] as? String ?: return
-                    val m = a[2] as? String ?: return
-                    if (t.indexOf("AeonLab") < 0 && t.indexOf("aeonlab") < 0 && m.indexOf("(68") < 0 && m.indexOf("(69") < 0) return
-                    appendProbe690(t, m)
-                }
-            })
-            HLog.i("$TAG \u63a2\u9488\u6587\u4ef6\u6c47\u6c34\u5df2\u5c31\u4f4d(690): println\u547d\u4e2d=" + n)
-        }.onFailure { HLog.i("$TAG \u63a2\u9488\u6587\u4ef6\u6c47\u6c34\u5f02\u5e38(690)") }
-    }
-
-    private var probePathLogged694 = false
-    private var probeFail694 = 0
-    private var probePath694 = ""
-
-    /** 694：落盘目录改为应用专属外部目录（Android 13+ 分区存储不挡 /storage/emulated/0/日志/）。 */
-    private fun probeDir694(): java.io.File? {
-        runCatching {
-            val d = context.hostContext().getExternalFilesDir(null)
-            if (d != null) { if (!d.exists()) d.mkdirs(); return d }
-        }
-        runCatching {
-            val d = context.hostContext().filesDir
-            if (d != null) { if (!d.exists()) d.mkdirs(); return d }
-        }
-        return null
-    }
-
-    private fun appendProbe690(t: String, m: String) {
-        val now = System.currentTimeMillis()
-        if (now - lastProbeWrite690 < 500) return
-        lastProbeWrite690 = now
-        runCatching {
-            val d = probeDir694()
-            if (d == null) {
-                if (probeFail694++ <= 3) HLog.i("$TAG 探针目录不可用(694)")
-                return
-            }
-            val f = java.io.File(d, "hchat_probe.log")
-            if (f.length() > 3L * 1024 * 1024) f.delete()
-            val fm = java.text.SimpleDateFormat("MM-dd HH:mm:ss.SSS", java.util.Locale.US)
-            java.io.FileOutputStream(f, true).use {
-                it.write((fm.format(java.util.Date(now)) + " " + t + " " + m + "\n").toByteArray())
-            }
-            probePath694 = f.absolutePath
-            if (!probePathLogged694) {
-                probePathLogged694 = true
-                HLog.i("$TAG 探针文件路径(694): " + probePath694)
-            }
-        }.onFailure {
-            if (probeFail694++ <= 3) HLog.i("$TAG 探针写入失败(694): " + it.message)
-        }
-    }
-
-    // ── 692/693：宿主进程里 XC_MethodHook$MethodHookParam 被 classes3.dex 又加载了一份，
-    //    直接读写 `resultOf692(param)/args/thisObject` 会 NoSuchFieldError（每条 draw 抛一次 =>
-    //    LSPosed 每帧打整段堆栈、日志十秒滚 4MB、主线程卡顿）。
-    //    ⇒ 一律改成对实例自身 Class 反射，并吞掉异常；不在钩子体内做任何 param 字段直接访问。
-    private var skipCount692 = 0
-
-    // 698：Field 查找结果按「类名#字段名」缓存。697 每帧沿父类链 getDeclaredField（未命中抛
-    // NoSuchFieldException）是主线程饱和的直接来源（ANR: hookPullDownDraw686 占 9,667/14,699 采样）。
-    private val fieldCache698 = java.util.concurrent.ConcurrentHashMap<String, java.lang.reflect.Field>()
-    private fun fieldOf692(p: Any, name: String): java.lang.reflect.Field? {
-        val key = p.javaClass.name + "#" + name
-        fieldCache698[key]?.let { return it }
-        var c: Class<*>? = p.javaClass
-        while (c != null) {
-            val f0 = runCatching { c!!.getDeclaredField(name) }.getOrNull()
-            if (f0 != null) { runCatching { f0.isAccessible = true }; fieldCache698[key] = f0; return f0 }
-            c = c.superclass
-        }
-        return null
-    }
-
-    private fun argsOf692(param: Any?): Array<Any?> {
-        val p = param ?: return emptyArray()
-        val f = fieldOf692(p, "args") ?: return emptyArray()
-        val v = runCatching { f.get(p) }.getOrNull() ?: return emptyArray()
-        val a = runCatching { v as Array<Any?> }.getOrNull() ?: return emptyArray()
-        return a
-    }
-
-    private fun argsAt692(param: Any?, i: Int): Any? {
-        val a = argsOf692(param)
-        return if (i >= 0 && i < a.size) a[i] else null
-    }
-
-    private fun setArgs692(param: Any?, v: Any?) {
-        val p = param ?: return
-        runCatching { fieldOf692(p, "args")?.set(p, v) }
-    }
-
-    private fun setArgAt692(param: Any?, i: Int, v: Any?) {
-        val p = param ?: return
-        runCatching { val a = argsOf692(p); if (i >= 0 && i < a.size) a[i] = v }
-    }
-
-    private fun thisOf692(param: Any?): Any? {
-        val p = param ?: return null
-        val f = fieldOf692(p, "thisObject") ?: return null
-        return runCatching { f.get(p) }.getOrNull()
-    }
-
-    private fun resultOf692(param: Any?): Any? {
-        val p = param ?: return null
-        val f = fieldOf692(p, "result") ?: return null
-        return runCatching { f.get(p) }.getOrNull()
-    }
-
-    private fun setResult692(param: Any?, v: Any?) {
-        val p = param ?: return
-        runCatching { fieldOf692(p, "result")?.set(p, v) }
-    }
-
-    /** 跳过本次绘制：反射置 returnEarly=true（必须）再写 result；失败时退回反射调 setResult。 */
-    // 698：**只对 void 返回的被挂方法做跳过**，非 void（boolean/int/引用…）一律不置值、不跳过。
-    //  ① boolean 方法被置 null 会被调用方拆箱 ⇒ 693 的 NullPointerException 闪退；
-    //  ② 置 false 可能被宿主当成「未处理」触发重排 ⇒ 反复重绘；
-    //  ③ 返回类型按 Method 实例身份缓存，避免每帧反射取 returnType（697 的 ANR 根因）。
-    private val voidMethodCache698 = java.util.IdentityHashMap<java.lang.reflect.Method, Boolean>()
-    private fun isVoidMethod698(p: Any): Boolean {
-        val m = runCatching { fieldOf692(p, "method")?.get(p) as? java.lang.reflect.Method }.getOrNull() ?: return false
-        synchronized(voidMethodCache698) {
-            voidMethodCache698[m]?.let { return it }
-            val v = runCatching { m.returnType == Void.TYPE }.getOrDefault(false)
-            voidMethodCache698[m] = v
-            return v
-        }
-    }
-
-    private fun skipOnce692(param: Any?, what: String) {
-        val p = param ?: return
-        if (!isVoidMethod698(p)) return
-        skipCount692++
-        val ok = runCatching {
-            val re = fieldOf692(p, "returnEarly") ?: return@runCatching false
-            re.set(p, true)
-            fieldOf692(p, "result")?.set(p, null)
-            true
-        }.getOrDefault(false)
-        if (!ok) {
-            val ok2 = runCatching {
-                val m = p.javaClass.getMethod("setResult", Any::class.java)
-                m.invoke(p, null); true
-            }.getOrDefault(false)
-            if (!ok2 && skipCount692 <= 3) HLog.i("$TAG \u8df3\u8fc7\u7ed8\u5236(693): $what \u672a\u751f\u6548")
-        } else if (skipCount692 <= 3) {
-            HLog.i("$TAG \u8df3\u8fc7\u7ed8\u5236\u5df2\u751f\u6548(698): $what void=True")
-        }
-    }
-
-    private fun hookPullDownDraw686() {
-        if (pullDownHooked686) return
-        pullDownHooked686 = true
-        for (cn in arrayOf("com.tencent.mm.plugin.multitask.ui.bg.DynamicBgContainer",
-                           "com.tencent.mm.dynamicbackground.view.GradientColorBackgroundView",
-                           "com.tencent.mm.ui.mogic.WxViewPager")) {
-            runCatching {
-                val cls = runCatching { Class.forName(cn, false, context.hostClassLoader()) }.getOrElse { Class.forName(cn) }
-                if (cn.endsWith("WxViewPager")) {
-                    XposedBridge.hookAllMethods(cls, "draw", object : XC_MethodHook() {
-                        override fun beforeHookedMethod(param: MethodHookParam) {
-                            if (nativeOnlyMode() && masterWallpaperOn686()) skipOnce692(param, "draw")
-                        }
-                    })
-                } else {
-                    XposedBridge.hookAllMethods(cls, "draw", object : XC_MethodHook() {
-                        override fun beforeHookedMethod(param: MethodHookParam) {
-                            if (nativeOnlyMode()) skipOnce692(param, "draw")
-                        }
-                    })
-                }
-                for (m in arrayOf("onDraw", "dispatchDraw", "draw")) {
-                    runCatching {
-                        XposedBridge.hookAllMethods(cls, m, object : XC_MethodHook() {
-                            override fun beforeHookedMethod(param: MethodHookParam) {
-                                val now = System.currentTimeMillis()
-                                if (now - lastDbgDraw687 > 500) {
-                                    lastDbgDraw687 = now
-                                    val vv = thisOf692(param) as? View
-                                    // 699 停用每帧探针日志(687): HLog.i("$TAG \u4e0b\u62c9\u80cc\u666f\u7ed8\u5236(687): \u7c7b=" + (vv?.javaClass?.simpleName ?: cn) + " \u65b9\u6cd5=$m \u89c6=" + (vv?.width ?: -1) + "x" + (vv?.height ?: -1))
-                                }
-                            }
-                        })
-                    }
-                }
-                HLog.i("$TAG 动态背景层(689): 类=$cn draw声明=" + cls.declaredMethods.count { it.name == "draw" } + " onDraw声明=" + cls.declaredMethods.count { it.name == "onDraw" })
-            }.onFailure { HLog.i("$TAG 动态背景层未命中(686): $cn") }
-        }
-    }
-
     private fun installNativeModeGuards() {
-        runCatching { hookOurWallpaperDraw686() }
-        runCatching { hookPullDownDraw686() }
         if (nativeGuardsInstalled) return
         nativeGuardsInstalled = true
         runCatching {
             XposedBridge.hookAllMethods(View::class.java, "setBackgroundColor", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                        runCatching {
-                            val vv = argsAt692(param, 0) as? View
-                            if (vv != null) {
-                                val w = vv.width.coerceAtLeast(vv.measuredWidth); val hh = vv.height.coerceAtLeast(vv.measuredHeight)
-                                val dm2 = vv.resources.displayMetrics
-                                if (w >= dm2.widthPixels * 2 / 5 || hh >= dm2.heightPixels / 3) {
-                                    val now = System.currentTimeMillis()
-                                    if (now - lastWriteProbe687 > 300) {
-                                        lastWriteProbe687 = now
-                                        HLog.i("$TAG \u5e95\u8272\u5199\u5165\u7559\u75d5(687): \u89c6\u56fe=${vv.javaClass.simpleName}#${idName(vv)} \u89c6=${w}x$hh \u53c2\u6570=" + argsAt692(param, 0) + " \u4e0a\u4e0b\u6587=${vv.context?.javaClass?.simpleName}")
-                                    }
-                                }
-                            }
-                        }
                     if (!nativeOnlyMode()) return
-                    val c = argsAt692(param, 0) as? Int ?: return
+                    val c = param.args.getOrNull(0) as? Int ?: return
                     if (!isNativeDark(c)) return
-                    setArgAt692(param, 0, NATIVE_GREY)
-                    val v = thisOf692(param) as? View
+                    param.args[0] = NATIVE_GREY
+                    val v = param.thisObject as? View
                     HLog.i("$TAG 原生模式拦宿主深色底(683): ${v?.javaClass?.simpleName}#${v?.let { idName(it) }} 原=#" + Integer.toHexString(c) + " → #ffededed")
                 }
             })
             XposedBridge.hookAllMethods(View::class.java, "setBackgroundDrawable", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     if (!nativeOnlyMode()) return
-                    val d = argsAt692(param, 0) as? ColorDrawable ?: return
+                    val d = param.args.getOrNull(0) as? ColorDrawable ?: return
                     if (!isNativeDark(d.color)) return
-                    setArgAt692(param, 0, ColorDrawable(NATIVE_GREY))
+                    param.args[0] = ColorDrawable(NATIVE_GREY)
                     HLog.i("$TAG 原生模式拦宿主深色底(683): drawable 原=#" + Integer.toHexString(d.color) + " → #ffededed")
                 }
             })
@@ -2812,7 +2439,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
             HLog.i("$TAG 原生模式已开启(682): 主开关/页面开关全关 → 窗口底与装饰视图置原生灰（$reason）")
             runCatching { stripOurWallpaper(decor, reason) }
             runCatching { applyNativePages684(decor, reason) }
-            runCatching { tickNativeMode685() }
             runCatching { dumpNativeState("进入原生模式") }
             restoreNativeFillTree(decor, reason)
         } else {
@@ -2913,7 +2539,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 只对微信原生设置页生效，聊天/朋友圈/小程序与主题自己的设置页都不动。
      */
     private fun applyNativeGreyToSettingsPage(a: Activity, reason: String) {
-        if (!masterWallpaperOn686()) return  // 686ï¼ç¶æ Aä¸è®¾ç½®é¡µæ¬æ¥å°±æ­£å¸¸
         val an = a.javaClass.name
         if (an.contains(LAUNCHER_UI_CLASS) || an.startsWith("com.aeonlab")) return
         val hit = an.startsWith("com.tencent.mm.plugin.setting") || an.contains("etting")
@@ -6198,7 +5823,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     private fun sweepTick(activity: Activity, decor: ViewGroup) {
         runCatching { locateLines(activity, decor, SystemClock.uptimeMillis()) }
-        // 699 停用旧探针(主线程占用优先): runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
+        runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
         if (!decor.isAttachedToWindow) return
         val now = SystemClock.uptimeMillis()
         // 615：每帧先做最廉价的一件事——把可见页列表自己的底色拉回壁纸。
@@ -6220,7 +5845,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 617：切页过渡期间把巡检间隔压到 50ms——「我的」→「发现」时标题栏那条宿主的
         // #ffededed 只露 1~2 帧，250ms 的节流根本轮不到它（13:06 反馈）。落定后回到 250ms 省电。
         val sweeping = now - lastPagerScrollAt617 < 320L
-        // 699 停用旧探针(主线程占用优先): runCatching { probeBands624(activity, decor, now) }
+        runCatching { probeBands624(activity, decor, now) }
         runCatching { probePixelCopy626(activity, decor, now) }
         runCatching { clearSeamHairlines628(decor, now) }
         runCatching { probeStrip628(activity, now) }
@@ -6237,7 +5862,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching { probeFlashFrame630(activity, now) }
         runCatching { probeFullFrame627(activity, decor, now) }
         runCatching { traceFrame625(activity, decor, now) }
-        // 699 停用旧探针(主线程占用优先): runCatching { profileRows625(activity, decor, now) }
+        runCatching { profileRows625(activity, decor, now) }
         val interval = if (sweeping) 50L else 250L
         if (!changed && now - lastSweepAt < interval) return
         lastSweepAt = now
@@ -6312,7 +5937,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 "onScrollChanged",
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        val v = thisOf692(param) as? android.widget.AbsListView ?: return
+                        val v = param.thisObject as? android.widget.AbsListView ?: return
                         val now = SystemClock.uptimeMillis()
                         if (now - lastScrollStateLogAt < 600L) return
                         lastScrollStateLogAt = now
@@ -6330,7 +5955,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (rv != null) {
                 XposedBridge.hookAllMethods(rv, "onScrolled", object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        val v = thisOf692(param) as? ViewGroup ?: return
+                        val v = param.thisObject as? ViewGroup ?: return
                         val now = SystemClock.uptimeMillis()
                         if (now - lastScrollStateLogAt < 600L) return
                         lastScrollStateLogAt = now
@@ -6844,7 +6469,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     /** 被几何门槛拒掉的形状也留痕，避免下一轮又「静默不命中」。 */
     private fun noteRejectedBandShape(method: String, param: XC_MethodHook.MethodHookParam) {
         val sig = runCatching {
-            when (val a0 = argsAt692(param, 0)) {
+            when (val a0 = param.args.getOrNull(0)) {
                 is android.graphics.RectF -> "$method ${a0.width().toInt()}x${a0.height().toInt()}"
                 is android.graphics.Rect -> "$method ${a0.width()}x${a0.height()}"
                 is android.graphics.Path -> {
@@ -6871,20 +6496,20 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun taskBarFillIsBand(method: String, param: XC_MethodHook.MethodHookParam): Boolean {
         when (method) {
             "drawRect", "drawRoundRect" -> {
-                val a0 = argsAt692(param, 0)
+                val a0 = param.args.getOrNull(0)
                 if (a0 is android.graphics.RectF) return a0.width() >= 500f && a0.height() >= 28f
                 if (a0 is android.graphics.Rect) return a0.width() >= 500 && a0.height() >= 28
-                if (argsOf692(param).size >= 4) {
-                    val l = argsAt692(param, 0) as? Float ?: return false
-                    val top = argsAt692(param, 1) as? Float ?: return false
-                    val r = argsAt692(param, 2) as? Float ?: return false
-                    val b = argsAt692(param, 3) as? Float ?: return false
+                if (param.args.size >= 4) {
+                    val l = param.args[0] as? Float ?: return false
+                    val top = param.args[1] as? Float ?: return false
+                    val r = param.args[2] as? Float ?: return false
+                    val b = param.args[3] as? Float ?: return false
                     return (r - l) >= 500f && (b - top) >= 28f
                 }
                 return false
             }
             "drawPath" -> {
-                val path = argsAt692(param, 0) as? android.graphics.Path ?: return false
+                val path = param.args.getOrNull(0) as? android.graphics.Path ?: return false
                 val rect = android.graphics.RectF()
                 return runCatching {
                     path.computeBounds(rect, true)
@@ -7047,16 +6672,16 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         override fun beforeHookedMethod(param: MethodHookParam) {
                             val color = when (method) {
                                 "drawRGB" -> {
-                                    val r = argsAt692(param, 0) as? Int ?: return
-                                    val g = argsAt692(param, 1) as? Int ?: return
-                                    val b = argsAt692(param, 2) as? Int ?: return
+                                    val r = param.args.getOrNull(0) as? Int ?: return
+                                    val g = param.args.getOrNull(1) as? Int ?: return
+                                    val b = param.args.getOrNull(2) as? Int ?: return
                                     (0xff shl 24) or (r.coerceIn(0, 255) shl 16) or (g.coerceIn(0, 255) shl 8) or b.coerceIn(0, 255)
                                 }
-                                else -> argsAt692(param, 0) as? Int ?: return
+                                else -> param.args.getOrNull(0) as? Int ?: return
                             }
                             if (color != grey && color != purple) {
                                 if (color != white) return
-                                val cvs = thisOf692(param) as? Canvas ?: return
+                                val cvs = param.thisObject as? Canvas ?: return
                                 if (cvs.width < 800 || cvs.height < 100) return
                             }
                             if (blockTaskBarSelfDraw(param, color, "${clz.simpleName}.$method", method)) return
@@ -7073,15 +6698,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     XposedBridge.hookAllMethods(clz, method, object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
                             val color = when {
-                                argsOf692(param).lastOrNull() is Paint -> (argsOf692(param).last() as Paint).color
-                                method == "drawColor" && argsOf692(param).isNotEmpty() -> argsAt692(param, 0) as? Int ?: return
+                                param.args.lastOrNull() is Paint -> (param.args.last() as Paint).color
+                                method == "drawColor" && param.args.isNotEmpty() -> param.args[0] as? Int ?: return
                                 else -> return
                             }
                             if (color != grey && color != purple) {
                                 // 白色通道：只收大画布（宽≥800 且高≥200），避免行/小控件白底刷屏；
                                 // 17:33 截图主页顶部 0~285 纯白块，疑为列表/标题窗口自绘头部。
                                 if (color != white) return
-                                val cvs = thisOf692(param) as? Canvas ?: return
+                                val cvs = param.thisObject as? Canvas ?: return
                                 if (cvs.width < 800 || cvs.height < 100) return
                             }
                             if (blockTaskBarSelfDraw(param, color, "${clz.simpleName}.$method", method)) return
@@ -7097,9 +6722,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             XposedBridge.hookAllMethods(Canvas::class.java, "drawBitmap", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    val cvs = thisOf692(param) as? Canvas ?: return
+                    val cvs = param.thisObject as? Canvas ?: return
                     if (cvs.width < 800) return
-                    val bmp = argsOf692(param).firstOrNull() as? android.graphics.Bitmap ?: return
+                    val bmp = param.args.firstOrNull() as? android.graphics.Bitmap ?: return
                     if (bmp.width <= 0 || bmp.height <= 0) return
                     val hit = runCatching {
                         listOf(
@@ -7119,7 +6744,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             XposedBridge.hookAllMethods(android.graphics.drawable.NinePatchDrawable::class.java, "draw", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    val d = thisOf692(param) as? android.graphics.drawable.NinePatchDrawable ?: return
+                    val d = param.thisObject as? android.graphics.drawable.NinePatchDrawable ?: return
                     val r = d.bounds
                     if (r.width() < 800) return
                     val bmp = runCatching {
@@ -7147,7 +6772,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             XposedBridge.hookAllMethods(Paint::class.java, "setShader", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    val shader = argsOf692(param).firstOrNull() ?: return
+                    val shader = param.args.firstOrNull() ?: return
                     var hit: Int? = null
                     var kind = ""
                     if (shader is android.graphics.LinearGradient) {
@@ -7180,14 +6805,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             XposedBridge.hookAllMethods(Paint::class.java, "setColor", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    val color = argsOf692(param).firstOrNull() as? Int ?: return
+                    val color = param.args.firstOrNull() as? Int ?: return
                     if (color != grey && color != purple) return
                     if (isTaskBarBandColor(color) && callerIsTaskBarOnDraw()) {
                         // 680：12:25 日志 25 次命中这一条（条件成立），但只记不改 → 灰带还在。
                         // 现在把这一支画笔置透明：TaskBarBottomView.onDraw 里 setColor 是「先设色再画」，
                         // 文字/图标是另设色（纯白留给它，见 isTaskBarBandFill）→ 只弄掉底色。
                         if (isTaskBarBandFill(color)) {
-                            setArgAt692(param, 0, Color.TRANSPARENT)
+                            param.args[0] = Color.TRANSPARENT
                             taskBarBlocked679++
                             val now = SystemClock.elapsedRealtime()
                             if (now - lastTaskBarBlockLogAt >= 3000L) {
@@ -7216,7 +6841,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             XposedBridge.hookAllMethods(ColorDrawable::class.java, "draw", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    val d = thisOf692(param) as? ColorDrawable ?: return
+                    val d = param.thisObject as? ColorDrawable ?: return
                     runCatching { topBandGreyGuard(param, d) }
                         .onFailure { HLog.e("$TAG 顶带背景拦截异常(679): ${it.message}") }
                 }
@@ -7731,7 +7356,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             XposedBridge.hookAllMethods(Window::class.java, "getDecorView", object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    val d = resultOf692(param) as? View ?: return
+                    val d = param.result as? View ?: return
                     hookedDecorViews.add(d)
                 }
             })
@@ -7863,8 +7488,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (overdrawHookedClasses.contains(clz.name)) continue
             val cb = object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    val v = thisOf692(param) as? View ?: return
-                    val canvas = argsOf692(param).firstOrNull() as? Canvas ?: return
+                    val v = param.thisObject as? View ?: return
+                    val canvas = param.args.firstOrNull() as? Canvas ?: return
                     runCatching { coverListWallpaper(v, canvas) }
                 }
             }
@@ -7997,14 +7622,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
             override fun beforeHookedMethod(param: MethodHookParam) {
         if (nativeOnlyMode()) return  // 684ï¼åçæ¨¡å¼ä¸ä¿çå®¿ä¸»åçä¸éæ
         if (nativeOnlyMode()) return  // 684ï¼åçæ¨¡å¼ä¸ä¿çå®¿ä¸»åçä¸éæ
-                val view = thisOf692(param) as? View ?: return
-                val incoming = argsOf692(param).firstOrNull() as? Drawable ?: return
+                val view = param.thisObject as? View ?: return
+                val incoming = param.args.firstOrNull() as? Drawable ?: return
                 // 613 主路径：已登记视图被宿主改写的那一次调用里就换回我们的背景。
                 // beforeHookedMethod 跑在真正落库之前，宿主那层浅底根本没机会进入这一帧的
                 // display list ——「停留本页偶发闪一下」就是原来「先白一帧、下一轮 enforce 再补」的差。
                 val forced = guardedBackgroundFor(view, incoming)
                 if (forced != null) {
-                    setArgAt692(param, 0, forced)
+                    param.args[0] = forced
                     guardHits++
                     val nowMs = SystemClock.elapsedRealtime()
                     if (nowMs - lastGuardLogAt >= 3000L) {
@@ -8024,7 +7649,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             " -> #" + Integer.toHexString(color) + " 白=" + isWhite635(color))
                     }
                     if (isWhite635(color)) {
-                        setArgAt692(param, 0, ColorDrawable(Color.TRANSPARENT))
+                        param.args[0] = ColorDrawable(Color.TRANSPARENT)
                         titleWhiteBlocked635++
                         HLog.i("$TAG 标题栏白底已拦(635) " + view.javaClass.simpleName + " 累计=$titleWhiteBlocked635")
                         return
@@ -8037,7 +7662,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             " -> #" + Integer.toHexString(color) + " 白=" + isWhite635(color))
                     }
                     if (isWhite635(color)) {
-                        setArgAt692(param, 0, ColorDrawable(Color.TRANSPARENT))
+                        param.args[0] = ColorDrawable(Color.TRANSPARENT)
                         statusWhiteBlocked636++
                         HLog.i("$TAG 状态栏白底已拦(636) " + view.javaClass.simpleName + "#" + idName(view) +
                             " -> #" + Integer.toHexString(color) + " 累计=" + statusWhiteBlocked636)
@@ -8045,7 +7670,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     }
                 }
                 if (color != purple) return
-                setArgAt692(param, 0, ColorDrawable(Color.TRANSPARENT))
+                param.args[0] = ColorDrawable(Color.TRANSPARENT)
                 purpleSwapCount++
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastPurpleSwapLogAt >= 3000L) {
@@ -8056,8 +7681,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
         val colorCb = object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
-                val view = thisOf692(param) as? View ?: return
-                val color = argsOf692(param).firstOrNull() as? Int ?: return
+                val view = param.thisObject as? View ?: return
+                val color = param.args.firstOrNull() as? Int ?: return
                 if (isTitleBarView635(view)) {
                     if (barWrites635 < 40) {
                         barWrites635++
@@ -8149,12 +7774,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val callback = object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     // 早退：GradientColorBackgroundView 是叶子自绘 View，跳过它自己的绘制不影响子节点
-                    setResult692(param, null)
+                    param.result = null
                     gradientSkips++
                     val now = SystemClock.uptimeMillis()
                     if (now - lastGradientSkipLogAt >= 2000L) {
                         lastGradientSkipLogAt = now
-                        val v = thisOf692(param) as? View
+                        val v = param.thisObject as? View
                         HLog.i(
                             "$TAG 渐变背景层自绘已拦截(610): 累计 $gradientSkips 次" +
                                 " 最近=${v?.javaClass?.simpleName} ${v?.width}x${v?.height}" +
@@ -8257,7 +7882,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
             XposedBridge.hookAllMethods(cls, "onPageScrolled", object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    val pager = thisOf692(param) as? ViewGroup ?: return
+                    val pager = param.thisObject as? ViewGroup ?: return
                     // 614：进页预热改挂在这个实测有输出的回调上（onPageSelected 在真机零触发）。
                     runCatching {
                         if (lastHomePager?.get() === pager && pager.width > 0) {
@@ -8278,8 +7903,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     lastPagerScrollAt617 = now
                     runCatching {
                         if (lastHomePager?.get() === pager && pager.width > 0) {
-                            val pos = argsAt692(param, 0) as? Int ?: -1
-                            val off = argsAt692(param, 1) as? Float ?: -1f
+                            val pos = param.args.getOrNull(0) as? Int ?: -1
+                            val off = param.args.getOrNull(1) as? Float ?: -1f
                             val sx = pager.scrollX
                             val prev = lastScrollX635
                             lastScrollX635 = sx
@@ -8310,8 +7935,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     runCatching {
                         if (followLogCount < 80 && now - lastScrollProbeAt >= 120L) {
                             followLogCount++
-                            val pos = argsAt692(param, 0) as? Int
-                            val off = argsAt692(param, 1) as? Float
+                            val pos = param.args.getOrNull(0) as? Int
+                            val off = param.args.getOrNull(1) as? Float
                             HLog.i(
                                 "$TAG 划动跟随(617): position=$pos offset=$off scrollX=${pager.scrollX}" +
                                     " 平移=${-pager.scrollX}px 底衬=${pager.background?.javaClass?.simpleName}" +
@@ -8344,9 +7969,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
             // 613：切页时在目标页被看见之前把它铺好（页面内容首次 inflate 也走这里）。
             XposedBridge.hookAllMethods(cls, "onPageSelected", object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    val pager = thisOf692(param) as? ViewGroup ?: return
+                    val pager = param.thisObject as? ViewGroup ?: return
                     if (lastHomePager?.get() !== pager) return
-                    val index = (argsOf692(param).firstOrNull() as? Int) ?: return
+                    val index = (param.args.firstOrNull() as? Int) ?: return
                     val activity = lastHostActivity?.get() ?: return
                     val page = pager.getChildAt(index) ?: return
                     runCatching { prepPageNow(activity, page, index, "切页选中") }
@@ -8357,9 +7982,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
             XposedBridge.hookAllMethods(cls, "setCurrentItem", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     runCatching {
-                        val pager = thisOf692(param) as? ViewGroup ?: return
+                        val pager = param.thisObject as? ViewGroup ?: return
                         if (lastHomePager?.get() !== pager) return
-                        val target = argsOf692(param).firstOrNull() as? Int ?: return
+                        val target = param.args.firstOrNull() as? Int ?: return
                         val fromIdx = if (pager.width > 0)
                             ((pager.scrollX + pager.width / 2) / pager.width).coerceIn(0, 3) else -1
                         armBurst634(pager, fromIdx, target)
