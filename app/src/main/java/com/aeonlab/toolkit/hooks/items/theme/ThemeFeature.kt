@@ -2348,6 +2348,28 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var blockedWrites702 = 0
     private fun masterOff702(): Boolean = runCatching { nativeOnlyMode() }.getOrDefault(false)
     private fun gateWrite702(): Boolean {
+
+
+    private var installCount703 = 0
+    private var writeCount703 = 0
+    private fun snap703(): Any? = runCatching { ThemeSettings.snapshot(context.hostContext()) }.getOrNull()
+    /** 703: 挂载级门控。总开关关闭或四页全关时，壁纸层/分格底衬/行遮罩/decor 一律不安装。 */
+    private fun mountOff703(): Boolean = runCatching {
+        val s = ThemeSettings.snapshot(context.hostContext())
+        s == null || !s.enabled || (!s.pageHome && !s.pageContacts && !s.pageDiscover && !s.pageMe)
+    }.getOrDefault(true)
+    private fun mountOn703(where: String) {
+        installCount703++
+        if (installCount703 <= 8) HLog.i("$TAG 模块侧安装(703): $where 累计=$installCount703")
+    }
+    private fun writeOn703(where: String) {
+        writeCount703++
+        if (writeCount703 <= 8) HLog.i("$TAG 模块侧 View 写入(703): $where 累计=$writeCount703")
+    }
+    private fun dumpCounts703(reason: String) {
+        HLog.i("$TAG 模块侧计数(703) $reason 安装=$installCount703 View写入=$writeCount703")
+    }
+
     private var globalPass704 = 0
     private var bgBlocked704 = 0
     private var procLogged704 = false
@@ -2419,27 +2441,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (!masterOff702()) return false
         blockedWrites702++
         return true
-    }
-
-
-    private var installCount703 = 0
-    private var writeCount703 = 0
-    private fun snap703(): Any? = runCatching { ThemeSettings.snapshot(context.hostContext()) }.getOrNull()
-    /** 703: 挂载级门控。总开关关闭或四页全关时，壁纸层/分格底衬/行遮罩/decor 一律不安装。 */
-    private fun mountOff703(): Boolean = runCatching {
-        val s = ThemeSettings.snapshot(context.hostContext())
-        s == null || !s.enabled || (!s.pageHome && !s.pageContacts && !s.pageDiscover && !s.pageMe)
-    }.getOrDefault(true)
-    private fun mountOn703(where: String) {
-        installCount703++
-        if (installCount703 <= 8) HLog.i("$TAG 模块侧安装(703): $where 累计=$installCount703")
-    }
-    private fun writeOn703(where: String) {
-        writeCount703++
-        if (writeCount703 <= 8) HLog.i("$TAG 模块侧 View 写入(703): $where 累计=$writeCount703")
-    }
-    private fun dumpCounts703(reason: String) {
-        HLog.i("$TAG 模块侧计数(703) $reason 安装=$installCount703 View写入=$writeCount703")
     }
 
 
