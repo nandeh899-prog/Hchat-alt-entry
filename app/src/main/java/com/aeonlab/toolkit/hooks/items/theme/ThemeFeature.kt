@@ -2129,11 +2129,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     runCatching { w0?.setBackgroundDrawable(ColorDrawable(face)) }
                     runCatching { d0?.setBackgroundDrawable(ColorDrawable(face)) }
                 }
-                HLog.i(
-                    "$TAG 设置页铺不透明原生底(704): 类=${activity.javaClass.simpleName}" +
-                        " window=${runCatching { d0?.background?.javaClass?.simpleName }.getOrNull()}" +
-                        " decor=${runCatching { d0?.background?.javaClass?.simpleName }.getOrNull()} 色=#ffededed 本次写入=$need"
-                )
+                HLog.i("$TAG 设置页铺不透明原生底(704): 类=${activity.javaClass.simpleName} window=ColorDrawable decor=ColorDrawable 色=#ffededed 本次写入=$need")
                 return@runCatching
             }
             val path = snapshot.backgroundHome
@@ -2348,6 +2344,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var blockedWrites702 = 0
     private fun masterOff702(): Boolean = runCatching { nativeOnlyMode() }.getOrDefault(false)
     private fun gateWrite702(): Boolean {
+        if (!masterOff702()) return false
+        blockedWrites702++
+        return true
+    }
 
 
     private var installCount703 = 0
@@ -2438,11 +2438,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }.onFailure { HLog.e("$TAG 设置页窗口探针异常(704): ${it.message}") }
     }
 
-        if (!masterOff702()) return false
-        blockedWrites702++
-        return true
-    }
-
 
     /** 703：微信自己的设置界面不铺我们的窗口底/装饰底。这类页面的页面底（#EDEDED）本来就不透明、列表项只盖住一部分，一换成壁纸那一条就露出来。 */
     private fun isSettingsPage703(a: Activity): Boolean = runCatching {
@@ -2510,7 +2505,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             while (i < queue.size && i < 1500) {
                 val v = queue[i]; i++
                 val c = runCatching { (v.background as? ColorDrawable)?.color }.getOrNull()
-                runCatching { probeSettingsWindow704(a) }
+                if (c != null && isNativeDark(c)) dark++
                 if (isOurWallpaperDrawable(v.background)) wp++
                 if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
             }
@@ -2535,7 +2530,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     if (n.contains(LAUNCHER_UI_CLASS) || n.startsWith("com.aeonlab")) return
                     HLog.i("$TAG 叠加页探测(684): 类=$n")
                     if (!n.contains("etting") && !n.contains("Setting")) return
-                    runCatching { applyNativeGreyToSettingsPage(a, "onResume684") }
+                    runCatching { probeSettingsWindow704(a) }
                 }
             })
             HLog.i("$TAG 设置页钩子已就位(684)")
@@ -2710,7 +2705,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val v = queue[i]; i++
             val w = v.width.coerceAtLeast(v.measuredWidth)
             val h = v.height.coerceAtLeast(v.measuredHeight)
-                        if (v !== page && w >= dm.widthPixels * 7 / 10 && h >= 40) {
+            if (v !== page && w >= dm.widthPixels * 7 / 10 && h >= 40) {
                 val c = runCatching { (v.background as? ColorDrawable)?.color }.getOrNull()
                 if (c != null && Color.alpha(c) == 255 &&
                     ((c shr 16 and 0xFF) + (c shr 8 and 0xFF) + (c and 0xFF)) / 3 < 0x60
@@ -2730,7 +2725,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
         }
         if (fixed > 0) {
-                        HLog.i("$TAG 关页分组头兜底(704): 第 ${index + 1} 页 还原=$fixed 处（$reason）")
+            HLog.i("$TAG 关页分组头兜底(704): 第 ${index + 1} 页 还原=$fixed 处（$reason）")
         }
     }
 
@@ -2847,8 +2842,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
             // LinearLayout 1240x2310 bg=ColorDrawable#ff232323），列表分组头是原生透明行，
             // 关页时整条露成黑底（1000142860.jpg：y=1175..1250 / 1450..1540 实测 #232323）。
             // 只把「页面大小 + 不透明深色」的容器底色还原成原生灰，行/分组头/分隔线一律不碰。
-                        if (!masterOff704()) runCatching { restoreOffPageNativeFill(page, index, reason) }
-                        if (!masterOff704()) runCatching { syncNativeOnlyMode(activity, page.rootView as? ViewGroup ?: return@runCatching, "关页($reason)") }
+            if (!masterOff704()) runCatching { restoreOffPageNativeFill(page, index, reason) }
+            if (!masterOff704()) runCatching { syncNativeOnlyMode(activity, page.rootView as? ViewGroup ?: return@runCatching, "关页($reason)") }
                 .onFailure { HLog.e("$TAG 关页底色还原异常(681): ${it.message}") }
             // 671 探针：这一页被判为「关」时，把读到的开关原值打出来（证明读的是哪个值）
             if (SystemClock.uptimeMillis() - lastPageSkipProbeAt >= 5000L) {
@@ -6282,9 +6277,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }, LIFECYCLE_BUMP_DELAY_MS)
             }
         }
-                if (!masterOff704()) runCatching { installNativeModeGuards() }
-                if (!masterOff704()) runCatching { installSettingsResumeHook684() }
-                if (!masterOff704()) runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
+        if (!masterOff704()) runCatching { installNativeModeGuards() }
+        if (!masterOff704()) runCatching { installSettingsResumeHook684() }
+        if (!masterOff704()) runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
             .onFailure { HLog.e("$TAG 原生模式同步异常(682): ${it.message}") }
         bump("onCreate")
         runCatching {
