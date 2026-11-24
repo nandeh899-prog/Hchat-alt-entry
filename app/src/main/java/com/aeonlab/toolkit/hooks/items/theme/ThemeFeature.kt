@@ -6147,10 +6147,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val tick = object : Runnable {
             override fun run() {
                 if (!decor.isAttachedToWindow) return
-                // 706：不开整条逐帧巡检链，只把 633 清线链与 632 只读回读挂到这条 500ms 常驻巡检上。
-                val now706 = android.os.SystemClock.uptimeMillis()
-                runCatching { probeSeam633(activity, decor, now706) }
-                runCatching { probeLayers632(decor, now706) }
                 runCatching { enforce(activity, decor, force = true) }
                     .onFailure { HLog.e("$TAG 常驻补刷异常: ${it.message}", it) }
                 runCatching { refreshVisiblePageScrim() }
