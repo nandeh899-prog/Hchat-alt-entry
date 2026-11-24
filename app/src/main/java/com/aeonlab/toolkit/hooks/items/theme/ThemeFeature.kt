@@ -2403,8 +2403,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         if (tick691 % 4 == 0) probeBottomBand685(d, "\u5de1\u68c0(685)")  // 691：贵，降到 1/4 频率
                         tick691++
                         appendProbe690("tick(695)", "\u539f\u751f=" + nativeOnlyMode() + " \u8df3\u7ed8=" + skipCount692 + " \u76d1\u63a7=" + tick691)
-                        whitenMiniProgramLayer689(d, "\u5de1\u68c0(689)")
-                        lightenDarkBlocks689(d, "\u5de1\u68c0(689)")
+// 696 停用：该巡检写入每轮把 DynamicBgContainer/GradientColorBackgroundView 的底色写白（改=3/轮、同一 ColorDrawable 实例），但屏幕仍紫：紫是这些 View 自己 draw 出来的，与背景无关；每轮与宿主互相覆盖还带来额外失效重绘。
+// 696 停用：该巡检写入在 690 日志里命中数为 0（通讯录分组头/字母索引的灰来自 681/684 路径，未被本函数碰过），保留函数定义但不再每轮扫树。
                     }
                 }.isSuccess
                 if (!ok) { nativeTicker685 = false; return }
