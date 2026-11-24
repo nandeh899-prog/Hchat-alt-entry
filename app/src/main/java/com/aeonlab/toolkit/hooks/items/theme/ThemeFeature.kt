@@ -2402,6 +2402,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         restoreNativeFillTree(d, "\u5de1\u68c0(685)")
                         if (tick691 % 4 == 0) probeBottomBand685(d, "\u5de1\u68c0(685)")  // 691：贵，降到 1/4 频率
                         tick691++
+                        appendProbe690("tick(695)", "\u539f\u751f=" + nativeOnlyMode() + " \u8df3\u7ed8=" + skipCount692 + " \u76d1\u63a7=" + tick691)
                         whitenMiniProgramLayer689(d, "\u5de1\u68c0(689)")
                         lightenDarkBlocks689(d, "\u5de1\u68c0(689)")
                     }
@@ -2466,7 +2467,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     }
                 })
                 HLog.i("$TAG \u81ea\u5bb6\u5206\u683c\u58c1\u7eb8\u5c42(689): \u672c\u7c7b\u58f0\u660e\u547d\u4e2d=" + nOwn2)
-                runCatching { installProbeFileSink690() }
+                // 695：撤掉全局 Log.println 钩子（每个 Log 调用都要进回调，是额外开销）；证据改由巡检快照提供
             }
                     }
                     if (nativeOnlyMode()) skipOnce692(param, "draw")
