@@ -2540,17 +2540,46 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }.onFailure { HLog.i("$TAG \u63a2\u9488\u6587\u4ef6\u6c47\u6c34\u5f02\u5e38(690)") }
     }
 
+    private var probePathLogged694 = false
+    private var probeFail694 = 0
+    private var probePath694 = ""
+
+    /** 694：落盘目录改为应用专属外部目录（Android 13+ 分区存储不挡 /storage/emulated/0/日志/）。 */
+    private fun probeDir694(): java.io.File? {
+        runCatching {
+            val d = context.hostContext().getExternalFilesDir(null)
+            if (d != null) { if (!d.exists()) d.mkdirs(); return d }
+        }
+        runCatching {
+            val d = context.hostContext().filesDir
+            if (d != null) { if (!d.exists()) d.mkdirs(); return d }
+        }
+        return null
+    }
+
     private fun appendProbe690(t: String, m: String) {
         val now = System.currentTimeMillis()
-        if (now - lastProbeWrite690 < 500) return  // 691：调用线程做文件写，放稀一点
+        if (now - lastProbeWrite690 < 500) return
         lastProbeWrite690 = now
         runCatching {
-            val d = java.io.File("/storage/emulated/0/\u65e5\u5fd7")
-            if (!d.exists()) d.mkdirs()
+            val d = probeDir694()
+            if (d == null) {
+                if (probeFail694++ <= 3) HLog.i("$TAG 探针目录不可用(694)")
+                return
+            }
             val f = java.io.File(d, "hchat_probe.log")
             if (f.length() > 3L * 1024 * 1024) f.delete()
             val fm = java.text.SimpleDateFormat("MM-dd HH:mm:ss.SSS", java.util.Locale.US)
-            java.io.FileOutputStream(f, true).use { it.write((fm.format(java.util.Date(now)) + " " + t + " " + m + "\n").toByteArray()) }
+            java.io.FileOutputStream(f, true).use {
+                it.write((fm.format(java.util.Date(now)) + " " + t + " " + m + "\n").toByteArray())
+            }
+            probePath694 = f.absolutePath
+            if (!probePathLogged694) {
+                probePathLogged694 = true
+                HLog.i("$TAG 探针文件路径(694): " + probePath694)
+            }
+        }.onFailure {
+            if (probeFail694++ <= 3) HLog.i("$TAG 探针写入失败(694): " + it.message)
         }
     }
 
