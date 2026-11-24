@@ -2459,7 +2459,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  页面非纯色底探针(684) 仍报 PullDownListView#list 1240x2772 非纯色底 ⇒ 还原没覆盖「最近/小程序」层。
      *  只在状态翻转时走一次（上限 600 个视图），不逐帧、不挂钩子、不直接写宿主属性。 */
     private var miniRestore701Count = 0
-    private fun restoreNativeMiniLayer701(any: Any?) {
+    private fun restoreNativeMiniLayer701(any: Any?, extra: Any? = null) {
         runCatching {
             val r = (any as? android.view.View) ?: (any as? android.view.ViewGroup) ?: return
             var n = 0
