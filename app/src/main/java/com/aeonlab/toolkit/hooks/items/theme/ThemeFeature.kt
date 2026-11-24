@@ -2643,19 +2643,40 @@ private class ThemeRuntime(private val context: FeatureContext) {
     /** 跳过本次绘制：反射置 returnEarly=true（必须）再写 result；失败时退回反射调 setResult。 */
     private fun skipOnce692(param: Any?, what: String) {
         val p = param ?: return
+        // 697：按被挂方法的返回类型给「类型正确的值」。693 的闪退根因＝对 non-void 也置 null，
+        // 宿主对 boolean 返回值拆箱 ⇒ NullPointerException（com.tencent.mm 在 draw 链上崩）。
+        // 反射取不到返回类型时**不跳过**（宁可不改绘制，也不制造崩溃）。
+        val rt = runCatching {
+            (fieldOf692(p, "method")?.get(p) as? java.lang.reflect.Method)?.returnType
+        }.getOrNull()
+        if (rt == null) return
+        val v: Any? = when {
+            rt == Void.TYPE -> null
+            rt == java.lang.Boolean.TYPE -> false
+            rt == Integer.TYPE -> 0
+            rt == java.lang.Long.TYPE -> 0L
+            rt == java.lang.Float.TYPE -> 0.0f
+            rt == java.lang.Double.TYPE -> 0.0
+            rt == java.lang.Short.TYPE -> 0.toShort()
+            rt == java.lang.Byte.TYPE -> 0.toByte()
+            rt == Character.TYPE -> ' '
+            else -> null
+        }
         skipCount692++
         val ok = runCatching {
             val re = fieldOf692(p, "returnEarly") ?: return@runCatching false
             re.set(p, true)
-            fieldOf692(p, "result")?.set(p, null)
+            fieldOf692(p, "result")?.set(p, v)
             true
         }.getOrDefault(false)
         if (!ok) {
             val ok2 = runCatching {
                 val m = p.javaClass.getMethod("setResult", Any::class.java)
-                m.invoke(p, null); true
+                m.invoke(p, v); true
             }.getOrDefault(false)
-            if (!ok2 && skipCount692 <= 3) HLog.i("$TAG 跳过绘制(693): $what 未生效")
+            if (!ok2 && skipCount692 <= 3) HLog.i("$TAG \u8df3\u8fc7\u7ed8\u5236(693): $what \u672a\u751f\u6548")
+        } else if (skipCount692 <= 3) {
+            HLog.i("$TAG \u8df3\u8fc7\u7ed8\u5236\u5df2\u751f\u6548(697): $what \u8fd4\u56de=" + rt.name)
         }
     }
 
