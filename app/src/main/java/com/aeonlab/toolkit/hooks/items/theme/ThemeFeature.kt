@@ -1741,7 +1741,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun applyWindowBackground(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
         // 619：黑线定位探针挂在这条每次 enforce 都会走的路径上（3 秒一次、只读）
         runCatching { locateLines(activity, decor, SystemClock.uptimeMillis()) }
-        runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
+        // 699 停用旧探针(主线程占用优先): runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
         rowMaskAlpha = (snapshot.rowMaskStrength.coerceIn(0, 100) * 255) / 100
         if (snapshot.rowMaskStrength != lastAppliedRowStrength) {
             if (lastAppliedRowStrength >= 0) {
@@ -2711,7 +2711,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                                 if (now - lastDbgDraw687 > 500) {
                                     lastDbgDraw687 = now
                                     val vv = thisOf692(param) as? View
-                                    HLog.i("$TAG \u4e0b\u62c9\u80cc\u666f\u7ed8\u5236(687): \u7c7b=" + (vv?.javaClass?.simpleName ?: cn) + " \u65b9\u6cd5=$m \u89c6=" + (vv?.width ?: -1) + "x" + (vv?.height ?: -1))
+                                    // 699 停用每帧探针日志(687): HLog.i("$TAG \u4e0b\u62c9\u80cc\u666f\u7ed8\u5236(687): \u7c7b=" + (vv?.javaClass?.simpleName ?: cn) + " \u65b9\u6cd5=$m \u89c6=" + (vv?.width ?: -1) + "x" + (vv?.height ?: -1))
                                 }
                             }
                         })
@@ -6198,7 +6198,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     private fun sweepTick(activity: Activity, decor: ViewGroup) {
         runCatching { locateLines(activity, decor, SystemClock.uptimeMillis()) }
-        runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
+        // 699 停用旧探针(主线程占用优先): runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
         if (!decor.isAttachedToWindow) return
         val now = SystemClock.uptimeMillis()
         // 615：每帧先做最廉价的一件事——把可见页列表自己的底色拉回壁纸。
@@ -6220,7 +6220,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 617：切页过渡期间把巡检间隔压到 50ms——「我的」→「发现」时标题栏那条宿主的
         // #ffededed 只露 1~2 帧，250ms 的节流根本轮不到它（13:06 反馈）。落定后回到 250ms 省电。
         val sweeping = now - lastPagerScrollAt617 < 320L
-        runCatching { probeBands624(activity, decor, now) }
+        // 699 停用旧探针(主线程占用优先): runCatching { probeBands624(activity, decor, now) }
         runCatching { probePixelCopy626(activity, decor, now) }
         runCatching { clearSeamHairlines628(decor, now) }
         runCatching { probeStrip628(activity, now) }
@@ -6237,7 +6237,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching { probeFlashFrame630(activity, now) }
         runCatching { probeFullFrame627(activity, decor, now) }
         runCatching { traceFrame625(activity, decor, now) }
-        runCatching { profileRows625(activity, decor, now) }
+        // 699 停用旧探针(主线程占用优先): runCatching { profileRows625(activity, decor, now) }
         val interval = if (sweeping) 50L else 250L
         if (!changed && now - lastSweepAt < interval) return
         lastSweepAt = now
