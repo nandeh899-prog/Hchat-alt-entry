@@ -1769,7 +1769,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             return
         }
         val image = bitmap(path) ?: return
-        if (!isThemeActivity703(activity)) { restoreNativeDecorIfOurs703(activity, decor); return }
+        if (isSettingsPage703(activity)) { restoreNativeDecorIfOurs703(activity, decor); return }
         anchorWidth = decor.width.coerceAtLeast(decor.measuredWidth)
         anchorHeight = decor.height.coerceAtLeast(decor.measuredHeight)
         val drawable: Drawable = anchored(decor, image)
@@ -2107,6 +2107,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             val snapshot = ThemeSettings.snapshot(context.hostContext())
             if (!snapshot.enabled || !snapshot.backgroundEnabled) return@runCatching
+            if (isSettingsPage703(activity)) {
+                HLog.i("$TAG 设置页不铺窗口底(703): ${activity.javaClass.simpleName} 窗口底/装饰底保持宿主原样，列表容器所在页面底不透明")
+                return@runCatching
+            }
             val path = snapshot.backgroundHome
             if (path.isBlank()) return@runCatching
             val image = bitmap(path) ?: return@runCatching
@@ -2346,10 +2350,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
 
-    /** 703：只有主题页（LauncherUI）才铺 decor 壁纸。非主题页（设置页等）保持宿主原生页面底。 */
-    private fun isThemeActivity703(a: Activity): Boolean = runCatching {
+    /** 703：微信自己的设置界面不铺我们的窗口底/装饰底。这类页面的页面底（#EDEDED）本来就不透明、列表项只盖住一部分，一换成壁纸那一条就露出来。 */
+    private fun isSettingsPage703(a: Activity): Boolean = runCatching {
         val n = a.javaClass.name
-        n == LAUNCHER_UI_CLASS || n.contains("LauncherUI")
+        n.startsWith("com.tencent.mm.plugin.setting") || n.contains("Setting") || n.contains("etting")
     }.getOrDefault(false)
 
     /** 703：非主题页不铺壁纸；若此前铺过，用原底精确还原（只还原我们写过的那一层）。 */
