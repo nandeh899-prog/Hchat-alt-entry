@@ -2136,7 +2136,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * enforce（≤400ms）才补上，中间那几帧就是「停留本页也偶发闪一下」。
      */
     private fun guardedBackgroundFor(view: View, incoming: Drawable): Drawable? {
-        if (gateWrite702()) return
+        if (gateWrite702()) return null
         // 676：叠加页在前台时壁纸层已撤下，这段时间放行宿主自己写背景，别把壁纸又拉回来。
         if (wallpaperHidden) return null
         // 状态栏那条 139px 由 612 的 window.statusBarColor 通道管，绝不能被这里的「清透明」碰到。
