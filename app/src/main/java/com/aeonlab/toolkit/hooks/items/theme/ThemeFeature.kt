@@ -2554,31 +2554,43 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
     }
 
-    // ── 692：宿主进程里 XC_MethodHook$MethodHookParam 会被 classes3.dex 再加载一份，
-    //    直接写 `resultOf692(param)` 会 NoSuchFieldError（每条 draw 抛一次 => 日志暴涨 + 主线程卡顿）。
-    //    所以一律改成对实例自身 Class 反射取/设，并吞掉异常。
+    // ── 692/693：宿主进程里 XC_MethodHook$MethodHookParam 被 classes3.dex 又加载了一份，
+    //    直接读写 `resultOf692(param)/args/thisObject` 会 NoSuchFieldError（每条 draw 抛一次 =>
+    //    LSPosed 每帧打整段堆栈、日志十秒滚 4MB、主线程卡顿）。
+    //    ⇒ 一律改成对实例自身 Class 反射，并吞掉异常；不在钩子体内做任何 param 字段直接访问。
     private var skipCount692 = 0
 
     private fun fieldOf692(p: Any, name: String): java.lang.reflect.Field? {
         var c: Class<*>? = p.javaClass
         while (c != null) {
-            runCatching { val f = c!!.getDeclaredField(name); f.isAccessible = true; return f }
+            val f0 = runCatching { c!!.getDeclaredField(name) }.getOrNull()
+            if (f0 != null) { runCatching { f0.isAccessible = true }; return f0 }
             c = c.superclass
         }
         return null
     }
 
-    private fun argsOf692(param: Any?): Array<Any?>? {
-        val p = param ?: return null
-        val f = fieldOf692(p, "args") ?: return null
-        val v = runCatching { f.get(p) }.getOrNull() ?: return null
-        @Suppress("UNCHECKED_CAST")
-        return runCatching { (v as Array<Any?>) }.getOrNull()
+    private fun argsOf692(param: Any?): Array<Any?> {
+        val p = param ?: return emptyArray()
+        val f = fieldOf692(p, "args") ?: return emptyArray()
+        val v = runCatching { f.get(p) }.getOrNull() ?: return emptyArray()
+        val a = runCatching { v as Array<Any?> }.getOrNull() ?: return emptyArray()
+        return a
     }
 
     private fun argsAt692(param: Any?, i: Int): Any? {
-        val a = argsOf692(param) ?: return null
+        val a = argsOf692(param)
         return if (i >= 0 && i < a.size) a[i] else null
+    }
+
+    private fun setArgs692(param: Any?, v: Any?) {
+        val p = param ?: return
+        runCatching { fieldOf692(p, "args")?.set(p, v) }
+    }
+
+    private fun setArgAt692(param: Any?, i: Int, v: Any?) {
+        val p = param ?: return
+        runCatching { val a = argsOf692(p); if (i >= 0 && i < a.size) a[i] = v }
     }
 
     private fun thisOf692(param: Any?): Any? {
@@ -2598,17 +2610,23 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching { fieldOf692(p, "result")?.set(p, v) }
     }
 
+    /** 跳过本次绘制：反射置 returnEarly=true（必须）再写 result；失败时退回反射调 setResult。 */
     private fun skipOnce692(param: Any?, what: String) {
         val p = param ?: return
         skipCount692++
         val ok = runCatching {
-            val re692 = fieldOf692(p, "returnEarly") ?: return@runCatching false
-            re692.set(p, true)
+            val re = fieldOf692(p, "returnEarly") ?: return@runCatching false
+            re.set(p, true)
             fieldOf692(p, "result")?.set(p, null)
             true
         }.getOrDefault(false)
-        if (!ok) runCatching { (p as MethodHookParam).setResult(null) }
-        if (!ok && skipCount692 <= 3) HLog.i("$TAG \u8df3\u8fc7\u7ed8\u5236(692): $what \u672a\u751f\u6548")
+        if (!ok) {
+            val ok2 = runCatching {
+                val m = p.javaClass.getMethod("setResult", Any::class.java)
+                m.invoke(p, null); true
+            }.getOrDefault(false)
+            if (!ok2 && skipCount692 <= 3) HLog.i("$TAG 跳过绘制(693): $what 未生效")
+        }
     }
 
     private fun hookPullDownDraw686() {
@@ -2676,7 +2694,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     if (!nativeOnlyMode()) return
                     val c = argsAt692(param, 0) as? Int ?: return
                     if (!isNativeDark(c)) return
-                    argsAt692(param, 0) = NATIVE_GREY
+                    setArgAt692(param, 0, NATIVE_GREY)
                     val v = thisOf692(param) as? View
                     HLog.i("$TAG 原生模式拦宿主深色底(683): ${v?.javaClass?.simpleName}#${v?.let { idName(it) }} 原=#" + Integer.toHexString(c) + " → #ffededed")
                 }
@@ -2686,7 +2704,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     if (!nativeOnlyMode()) return
                     val d = argsAt692(param, 0) as? ColorDrawable ?: return
                     if (!isNativeDark(d.color)) return
-                    argsAt692(param, 0) = ColorDrawable(NATIVE_GREY)
+                    setArgAt692(param, 0, ColorDrawable(NATIVE_GREY))
                     HLog.i("$TAG 原生模式拦宿主深色底(683): drawable 原=#" + Integer.toHexString(d.color) + " → #ffededed")
                 }
             })
@@ -7116,7 +7134,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         // 现在把这一支画笔置透明：TaskBarBottomView.onDraw 里 setColor 是「先设色再画」，
                         // 文字/图标是另设色（纯白留给它，见 isTaskBarBandFill）→ 只弄掉底色。
                         if (isTaskBarBandFill(color)) {
-                            argsAt692(param, 0) = Color.TRANSPARENT
+                            setArgAt692(param, 0, Color.TRANSPARENT)
                             taskBarBlocked679++
                             val now = SystemClock.elapsedRealtime()
                             if (now - lastTaskBarBlockLogAt >= 3000L) {
@@ -7933,7 +7951,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 // display list ——「停留本页偶发闪一下」就是原来「先白一帧、下一轮 enforce 再补」的差。
                 val forced = guardedBackgroundFor(view, incoming)
                 if (forced != null) {
-                    argsAt692(param, 0) = forced
+                    setArgAt692(param, 0, forced)
                     guardHits++
                     val nowMs = SystemClock.elapsedRealtime()
                     if (nowMs - lastGuardLogAt >= 3000L) {
@@ -7953,7 +7971,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             " -> #" + Integer.toHexString(color) + " 白=" + isWhite635(color))
                     }
                     if (isWhite635(color)) {
-                        argsAt692(param, 0) = ColorDrawable(Color.TRANSPARENT)
+                        setArgAt692(param, 0, ColorDrawable(Color.TRANSPARENT))
                         titleWhiteBlocked635++
                         HLog.i("$TAG 标题栏白底已拦(635) " + view.javaClass.simpleName + " 累计=$titleWhiteBlocked635")
                         return
@@ -7966,7 +7984,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             " -> #" + Integer.toHexString(color) + " 白=" + isWhite635(color))
                     }
                     if (isWhite635(color)) {
-                        argsAt692(param, 0) = ColorDrawable(Color.TRANSPARENT)
+                        setArgAt692(param, 0, ColorDrawable(Color.TRANSPARENT))
                         statusWhiteBlocked636++
                         HLog.i("$TAG 状态栏白底已拦(636) " + view.javaClass.simpleName + "#" + idName(view) +
                             " -> #" + Integer.toHexString(color) + " 累计=" + statusWhiteBlocked636)
@@ -7974,7 +7992,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     }
                 }
                 if (color != purple) return
-                argsAt692(param, 0) = ColorDrawable(Color.TRANSPARENT)
+                setArgAt692(param, 0, ColorDrawable(Color.TRANSPARENT))
                 purpleSwapCount++
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastPurpleSwapLogAt >= 3000L) {
@@ -8078,7 +8096,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val callback = object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     // 早退：GradientColorBackgroundView 是叶子自绘 View，跳过它自己的绘制不影响子节点
-                    skipOnce692(param, "draw")
+                    setResult692(param, null)
                     gradientSkips++
                     val now = SystemClock.uptimeMillis()
                     if (now - lastGradientSkipLogAt >= 2000L) {
