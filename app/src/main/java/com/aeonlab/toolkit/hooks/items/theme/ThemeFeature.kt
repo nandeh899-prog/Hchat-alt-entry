@@ -2312,22 +2312,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     /** 683：原生模式下把自家壁纸层摘成原生灰（一次性，状态翻转时跑）。 */
 
-    private var lastMasterCheck702 = 0L
-    private var masterOff702Known = false
     private var blockedWrites702 = 0
-    private fun masterOff702(): Boolean {
-        val now = SystemClock.uptimeMillis()
-        if (now - lastMasterCheck702 >= 1000L) {
-            lastMasterCheck702 = now
-            val off = runCatching { val s = snap; s == null || !s.enabled }.getOrDefault(false)
-            if (off != masterOff702Known) {
-                masterOff702Known = off
-                if (off) HLog.i("$TAG \u603b\u5f00\u5173\u5df2\u5173\u95ed(702): \u96f6\u4ecb\u5165\u751f\u6548, \u6a21\u5757\u4fa7 View \u5199\u5165\u8ba1\u6570=" + blockedWrites702)
-                else HLog.i("$TAG \u603b\u5f00\u5173\u5df2\u5f00\u542f(702): \u6062\u590d\u6302\u8f7d, \u4e4b\u524d\u88ab\u62e6\u4e0b=" + blockedWrites702)
-            }
-        }
-        return masterOff702Known
-    }
+    private fun masterOff702(): Boolean = runCatching { nativeOnlyMode() }.getOrDefault(false)
     private fun gateWrite702(): Boolean {
         if (!masterOff702()) return false
         blockedWrites702++
@@ -2698,8 +2684,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
             // LinearLayout 1240x2310 bg=ColorDrawable#ff232323），列表分组头是原生透明行，
             // 关页时整条露成黑底（1000142860.jpg：y=1175..1250 / 1450..1540 实测 #232323）。
             // 只把「页面大小 + 不透明深色」的容器底色还原成原生灰，行/分组头/分隔线一律不碰。
-            // 702 restore-chain shorted: runCatching { restoreOffPageNativeFill(page, index, reason) }
-            // 702 restore-chain shorted: runCatching { syncNativeOnlyMode(activity, page.rootView as? ViewGroup ?: return@runCatching, "关页($reason)") }
+            if (false) runCatching { restoreOffPageNativeFill(page, index, reason) }
+            if (false) runCatching { syncNativeOnlyMode(activity, page.rootView as? ViewGroup ?: return@runCatching, "关页($reason)") }
                 .onFailure { HLog.e("$TAG 关页底色还原异常(681): ${it.message}") }
             // 671 探针：这一页被判为「关」时，把读到的开关原值打出来（证明读的是哪个值）
             if (SystemClock.uptimeMillis() - lastPageSkipProbeAt >= 5000L) {
@@ -6132,9 +6118,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }, LIFECYCLE_BUMP_DELAY_MS)
             }
         }
-        // 702 restore-chain shorted: runCatching { installNativeModeGuards() }
-        // 702 restore-chain shorted: runCatching { installSettingsResumeHook684() }
-        // 702 restore-chain shorted: runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
+        if (false) runCatching { installNativeModeGuards() }
+        if (false) runCatching { installSettingsResumeHook684() }
+        if (false) runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
             .onFailure { HLog.e("$TAG 原生模式同步异常(682): ${it.message}") }
         bump("onCreate")
         runCatching {
