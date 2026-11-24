@@ -527,7 +527,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun applyThemeNow(activity: Activity, decor: ViewGroup) {
-        globalPassLog704("applyThemeNow"); if (masterOff704()) { dumpCounts703("master-skip applyThemeNow("); return }
+        globalPassLog705("applyThemeNow"); if (masterOff705()) { dumpCounts703("master-skip applyThemeNow("); return }
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) {
             HLog.i("$TAG 主题未启用（读到的 enabled=false），恢复已改视图；配置=${prefsPath()}")
@@ -884,7 +884,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         snapshot: ThemeSnapshot,
         log: Boolean
     ) {
-        if (bgMountOff704()) { bgBlockedLog704("applyPageBackgrounds("); return }
+        if (bgMountOff705()) { bgBlockedLog705("applyPageBackgrounds("); return }
         if (!snapshot.backgroundEnabled) return
         val paths = snapshot.pagePaths()
         if (paths.all { it.isBlank() }) {
@@ -1741,7 +1741,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      */
     @Suppress("DEPRECATION")
     private fun applyWindowBackground(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
-        if (bgMountOff704()) { bgBlockedLog704("applyWindowBackground("); return }
+        if (bgMountOff705()) { bgBlockedLog705("applyWindowBackground("); return }
         // 619：黑线定位探针挂在这条每次 enforce 都会走的路径上（3 秒一次、只读）
         runCatching { locateLines(activity, decor, SystemClock.uptimeMillis()) }
         runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
@@ -1769,19 +1769,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             return
         }
         val image = bitmap(path) ?: return
-        if (isSettingsPage703(activity)) {
-            val face704 = 0xFFEDEDED.toInt()
-            val cur704 = runCatching { decor.background }.getOrNull()
-            val need704 = cur704 !is ColorDrawable || cur704.color != face704
-            if (need704) {
-                runCatching { restoreNativeDecorIfOurs703(activity, decor) }
-                runCatching { activity.window?.setBackgroundDrawable(ColorDrawable(face704)) }
-                runCatching { decor.setBackgroundDrawable(ColorDrawable(face704)) }
-                replacedBackgrounds.remove(decor)
-            }
-            HLog.i("$TAG 设置页铺不透明原生底(704): 类=${activity.javaClass.simpleName} window=ColorDrawable decor=ColorDrawable 色=#ffededed 本次写入=$need704")
-            return
-        }
+        if (isSettingsPage703(activity)) { restoreNativeDecorIfOurs703(activity, decor); return }
         anchorWidth = decor.width.coerceAtLeast(decor.measuredWidth)
         anchorHeight = decor.height.coerceAtLeast(decor.measuredHeight)
         val drawable: Drawable = anchored(decor, image)
@@ -2120,16 +2108,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val snapshot = ThemeSettings.snapshot(context.hostContext())
             if (!snapshot.enabled || !snapshot.backgroundEnabled) return@runCatching
             if (isSettingsPage703(activity)) {
-                val w0 = activity.window
-                val d0 = w0?.decorView as? ViewGroup
-                val cur = runCatching { d0?.background }.getOrNull()
-                val face = 0xFFEDEDED.toInt()
-                val need = cur !is ColorDrawable || cur.color != face
-                if (need) {
-                    runCatching { w0?.setBackgroundDrawable(ColorDrawable(face)) }
-                    runCatching { d0?.setBackgroundDrawable(ColorDrawable(face)) }
-                }
-                HLog.i("$TAG 设置页铺不透明原生底(704): 类=${activity.javaClass.simpleName} window=ColorDrawable decor=ColorDrawable 色=#ffededed 本次写入=$need")
+                HLog.i("$TAG 设置页不铺窗口底(703): ${activity.javaClass.simpleName} 窗口底/装饰底保持宿主原样，列表容器所在页面底不透明")
                 return@runCatching
             }
             val path = snapshot.backgroundHome
@@ -2370,73 +2349,27 @@ private class ThemeRuntime(private val context: FeatureContext) {
         HLog.i("$TAG 模块侧计数(703) $reason 安装=$installCount703 View写入=$writeCount703")
     }
 
-    private var globalPass704 = 0
-    private var bgBlocked704 = 0
-    private var procLogged704 = false
-    private var sweepPass704 = 0
-    /** 704：总开关关 = 真零介入（所有入口都停）。 */
-    private fun masterOff704(): Boolean = runCatching {
+    private var globalPass705 = 0
+    private var bgBlocked705 = 0
+    /** 705：总开关关 = 真零介入（所有入口都停）。 */
+    private fun masterOff705(): Boolean = runCatching {
         val s = ThemeSettings.snapshot(context.hostContext())
         s == null || !s.enabled
     }.getOrDefault(true)
-    /** 704：四页全关只停「背景图挂载」这一条子链，不再连带隐藏底栏/标题栏/圆角等全局功能。 */
-    private fun fourPagesOff704(): Boolean = runCatching {
+    /** 705：四页全关只停「背景图挂载」这一条子链，不再连带隐藏底栏/标题栏/圆角等全局功能。 */
+    private fun fourPagesOff705(): Boolean = runCatching {
         val s = ThemeSettings.snapshot(context.hostContext())
         s != null && !s.pageHome && !s.pageContacts && !s.pageDiscover && !s.pageMe
     }.getOrDefault(false)
-    private fun bgMountOff704(): Boolean = masterOff704() || fourPagesOff704()
-    private fun bgBlockedLog704(entry: String) {
-        bgBlocked704++
-        if (bgBlocked704 <= 8) HLog.i("$TAG 背景图挂载被拦(704): $entry 累计=$bgBlocked704")
+    private fun bgMountOff705(): Boolean = masterOff705() || fourPagesOff705()
+    private fun bgBlockedLog705(entry: String) {
+        bgBlocked705++
+        if (bgBlocked705 <= 8) HLog.i("$TAG 背景图挂载被拦(705): $entry 累计=$bgBlocked705")
     }
-    private fun globalPassLog704(entry: String) {
-        if (masterOff704()) return
-        globalPass704++
-        if (globalPass704 <= 8) HLog.i("$TAG 全局功能放行(704): $entry 四页全关=${fourPagesOff704()} 累计=$globalPass704")
-    }
-    /** 704：只读——本进程是否装了我们的钩子（用来判断设置页那个窗口在不在我们的命中范围）。 */
-    private fun probeProcessOnce704() {
-        if (procLogged704) return
-        procLogged704 = true
-        runCatching {
-            val name = runCatching { android.app.Application.getProcessName() }.getOrNull()
-                ?: runCatching { context.hostContext().packageName }.getOrNull() ?: "-"
-            HLog.i("$TAG 处理进程(704): 进程名=$name pid=${android.os.Process.myPid()} 钩子已装=true")
-        }
-    }
-    /** 704：只读——设置页窗口/装饰/内容尺寸 + 窗口是否透明 + 背景类名 + 缺口窄带真实合成色。 */
-    private fun probeSettingsWindow704(a: Activity) {
-        runCatching {
-            val w = a.window ?: return
-            val decor = w.decorView as? ViewGroup ?: return
-            val lp = w.attributes
-            val content = decor.findViewById<View>(android.R.id.content)
-            val root = (content as? ViewGroup)?.getChildAt(0)
-            val bg = runCatching { decor.background }.getOrNull()
-            val hex = (bg as? ColorDrawable)?.let { "#" + Integer.toHexString(it.color) } ?: "-"
-            val translucent = (lp.flags and android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS) != 0
-            HLog.i(
-                "$TAG 设置页窗口探针(704): 类=${a.javaClass.simpleName} 窗口LP=${lp.width}x${lp.height}" +
-                    " decor=${decor.width}x${decor.height} content=${content?.width}x${content?.height}" +
-                    " 根=${root?.javaClass?.simpleName}#${root?.let { idName(it) }} ${root?.width}x${root?.height}" +
-                    " 透明窗口=$translucent windowBg=${bg?.javaClass?.simpleName}$hex"
-            )
-            if (android.os.Build.VERSION.SDK_INT >= 26 && decor.width > 32 && decor.height > 64) {
-                val rect = android.graphics.Rect((decor.width * 3) / 4, decor.height / 2 - 20, decor.width - 2, decor.height / 2 + 20)
-                val bmp = android.graphics.Bitmap.createBitmap(
-                    rect.width().coerceAtLeast(1), rect.height().coerceAtLeast(1),
-                    android.graphics.Bitmap.Config.ARGB_8888
-                )
-                android.view.PixelCopy.request(w, rect, bmp, { rc ->
-                    runCatching {
-                        if (rc == android.view.PixelCopy.SUCCESS) {
-                            val c = bmp.getPixel(bmp.width / 2, bmp.height / 2)
-                            HLog.i("$TAG 缺口色归属(704): 采样=#" + Integer.toHexString(c) + " rect=${rect.left},${rect.top},${rect.right},${rect.bottom}")
-                        } else HLog.i("$TAG 缺口色归属(704): PixelCopy 失败 rc=$rc")
-                    }
-                }, android.os.Handler(android.os.Looper.getMainLooper()))
-            }
-        }.onFailure { HLog.e("$TAG 设置页窗口探针异常(704): ${it.message}") }
+    private fun globalPassLog705(entry: String) {
+        if (masterOff705()) return
+        globalPass705++
+        if (globalPass705 <= 8) HLog.i("$TAG 全局功能放行(705): $entry 四页全关=${fourPagesOff705()} 累计=$globalPass705")
     }
 
 
@@ -2531,7 +2464,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     if (n.contains(LAUNCHER_UI_CLASS) || n.startsWith("com.aeonlab")) return
                     HLog.i("$TAG 叠加页探测(684): 类=$n")
                     if (!n.contains("etting") && !n.contains("Setting")) return
-                    runCatching { probeSettingsWindow704(a) }
+                    runCatching { applyNativeGreyToSettingsPage(a, "onResume684") }
                 }
             })
             HLog.i("$TAG 设置页钩子已就位(684)")
@@ -2706,7 +2639,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val v = queue[i]; i++
             val w = v.width.coerceAtLeast(v.measuredWidth)
             val h = v.height.coerceAtLeast(v.measuredHeight)
-            if (v !== page && w >= dm.widthPixels * 7 / 10 && h >= 40) {
+            if (v !== page && w >= dm.widthPixels * 7 / 10 && h >= dm.heightPixels * 3 / 10) {
                 val c = runCatching { (v.background as? ColorDrawable)?.color }.getOrNull()
                 if (c != null && Color.alpha(c) == 255 &&
                     ((c shr 16 and 0xFF) + (c shr 8 and 0xFF) + (c and 0xFF)) / 3 < 0x60
@@ -2726,7 +2659,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
         }
         if (fixed > 0) {
-            HLog.i("$TAG 关页分组头兜底(704): 第 ${index + 1} 页 还原=$fixed 处（$reason）")
+            HLog.i("$TAG 关页原生灰已就位(681): 第 ${index + 1} 页 还原=$fixed 处（$reason）")
         }
     }
 
@@ -2843,8 +2776,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
             // LinearLayout 1240x2310 bg=ColorDrawable#ff232323），列表分组头是原生透明行，
             // 关页时整条露成黑底（1000142860.jpg：y=1175..1250 / 1450..1540 实测 #232323）。
             // 只把「页面大小 + 不透明深色」的容器底色还原成原生灰，行/分组头/分隔线一律不碰。
-            if (!masterOff704()) runCatching { restoreOffPageNativeFill(page, index, reason) }
-            if (!masterOff704()) runCatching { syncNativeOnlyMode(activity, page.rootView as? ViewGroup ?: return@runCatching, "关页($reason)") }
+            if (false) runCatching { restoreOffPageNativeFill(page, index, reason) }
+            if (false) runCatching { syncNativeOnlyMode(activity, page.rootView as? ViewGroup ?: return@runCatching, "关页($reason)") }
                 .onFailure { HLog.e("$TAG 关页底色还原异常(681): ${it.message}") }
             // 671 探针：这一页被判为「关」时，把读到的开关原值打出来（证明读的是哪个值）
             if (SystemClock.uptimeMillis() - lastPageSkipProbeAt >= 5000L) {
@@ -4564,7 +4497,42 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 状态机：0→测清前→(300ms)→清 Paint→(500ms)→测清后→完成。全程最多 3 次清除。
      */
     private fun probeSeam633(activity: Activity, decor: ViewGroup, now: Long) {
-        if (seamStage633 == 3) return
+    /** 705：只读——列表（含 2 级父类）里是否又出现「#000000 族且 alpha 1..80」的 Paint。 */
+    private fun hasDarkLowAlphaPaint705(list: View): Boolean {
+        var cls: Class<*>? = list.javaClass
+        var depth = 0
+        while (cls != null && depth < 3) {
+            for (f in cls.declaredFields) {
+                if (!android.graphics.Paint::class.java.isAssignableFrom(f.type)) continue
+                val pt = try { f.isAccessible = true; f.get(list) as? android.graphics.Paint } catch (t: Throwable) { null }
+                if (pt == null) continue
+                val c = pt.color
+                if (((c ushr 24) and 0xFF) in 1..80 && (c and 0xFFFFFF) == 0) {
+                    HLog.i("$TAG 列表字段(705) 命中自绘暗色 Paint: ${f.name}=#${Integer.toHexString(pt.color)} a=${pt.alpha} w=${pt.strokeWidth}")
+                    return true
+                }
+            }
+            cls = cls.superclass
+            depth++
+        }
+        return false
+    }
+
+        if (seamStage633 == 3) {
+            // 705：不再永久停手。宿主新建列表实例、或把 Paint q 写回暗色时，按 633 原判据重跑一遍（有界、节流）。
+            if (seamCycles705 >= 12) return
+            if (now - seamLastCheck705 < 1500L) return
+            seamLastCheck705 = now
+            val pg705 = lastHomePager?.get() ?: return
+            val pw705 = pg705.width
+            if (pw705 <= 0) return
+            if (((pg705.scrollX + pw705 / 2) / pw705).coerceIn(0, 3) != 0) return
+            val lv705 = findViewByClassName(decor, "ConversationListView") ?: return
+            if (!hasDarkLowAlphaPaint705(lv705)) return
+            seamCycles705++
+            seamStage633 = 0
+            HLog.i("$TAG 633 判据重新命中(705) 第${seamCycles705}次: 列表自绘暗色 Paint 又出现，重置清线状态机")
+        }
         if (seamStage633 > 0 && now < seamAt633) return
         if (seamStage633 == 0 && now - lastPagerScrollAt617 < 800L) return
         val pager = lastHomePager?.get() ?: return
@@ -6178,10 +6146,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 根因是兜底逻辑挂在 OnPreDrawListener 上——没有 invalidate 就不会触发绘制，
         // 也就永远不会跑 enforce；首帧之后只能等用户触摸。这里改成定时补刷 + 每轮结束强制重绘。
         installLifecycleBumps(activity, decor)
-        if (!masterOff704()) {
-            if (sweepPass704 < 3) { sweepPass704++; HLog.i("$TAG 逐帧巡检链放行(704): sweepTick 已恢复（633 清线/632 字段探针在该链内）") }
-            installFrameSweep(activity, decor)
-        }
+        // 702 restore-chain shorted: installFrameSweep(activity, decor)
         installScrollProbe()
         installPeriodicTick(activity, decor)
         FIRST_FRAME_DELAYS_MS.forEach { delay ->
@@ -6215,6 +6180,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun installPeriodicTick(activity: Activity, decor: ViewGroup) {
         if (!periodicTicked.add(activity)) return
         val tick = object : Runnable {
+
+                val now705 = android.os.SystemClock.uptimeMillis()
+                runCatching { probeSeam633(activity, decor, now705) }
+                runCatching { probeLayers632(decor, now705) }
             override fun run() {
                 if (!decor.isAttachedToWindow) return
                 runCatching { enforce(activity, decor, force = true) }
@@ -6264,7 +6233,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun installLifecycleBumps(activity: Activity, decor: ViewGroup) {
-        globalPassLog704("installLifecycleBumps"); if (masterOff704()) { dumpCounts703("master-skip installLifecycleBumps("); return }
+        globalPassLog705("installLifecycleBumps"); if (masterOff705()) { dumpCounts703("master-skip installLifecycleBumps("); return }
         if (!lifecycleBumped.add(activity)) return
         val bump: (String) -> Unit = { tag ->
             mainHandler.post {
@@ -6281,9 +6250,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }, LIFECYCLE_BUMP_DELAY_MS)
             }
         }
-        if (!masterOff704()) runCatching { installNativeModeGuards() }
-        if (!masterOff704()) runCatching { installSettingsResumeHook684() }
-        if (!masterOff704()) runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
+        if (false) runCatching { installNativeModeGuards() }
+        if (false) runCatching { installSettingsResumeHook684() }
+        if (false) runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
             .onFailure { HLog.e("$TAG 原生模式同步异常(682): ${it.message}") }
         bump("onCreate")
         runCatching {
@@ -6517,7 +6486,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun enforce(activity: Activity, decor: ViewGroup, force: Boolean = false) {
-        probeProcessOnce704(); globalPassLog704("enforce"); if (masterOff704()) { dumpCounts703("master-skip enforce("); return }
+        globalPassLog705("enforce"); if (masterOff705()) { dumpCounts703("master-skip enforce("); return }
         if (!decor.isAttachedToWindow) return
         val now = SystemClock.uptimeMillis()
         if (!force && now - lastEnforceAt < ENFORCE_INTERVAL_MS) return
@@ -7820,7 +7789,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  才纠正，中间那段就是用户看到的「页面切换紫色底」。这里在 setter 处直接换掉：任何 view 被设成
      *  #ff7a7396 纯色底，立即改为透明（壁纸在下面），不碰布局、不碰子 View。 */
     private fun installPurpleBackgroundSwap() {
-        globalPassLog704("installPurpleBackgroundSwap(635/636拦截)"); if (masterOff704()) { dumpCounts703("master-skip 标题栏白底已拦(635)"); return }
+        globalPassLog705("installPurpleBackgroundSwap(635/636拦截)"); if (masterOff705()) { dumpCounts703("master-skip 标题栏白底已拦(635)"); return }
         if (purpleSwapInstalled) return
         val purple = 0xff7a7396.toInt()
         val cb = object : XC_MethodHook() {
@@ -8026,7 +7995,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     /** 610：ViewPager 自身也铺一张窗口锚定壁纸，切页过渡期的空洞露壁纸而不是宿主的渐变底。 */
     private fun applyPagerUnderlay(pager: ViewGroup, path: String?, homePath: String?, log: Boolean) {
-        if (bgMountOff704()) { bgBlockedLog704("PagerStripWallpaperDrawable(pager)"); return }
+        if (bgMountOff705()) { bgBlockedLog705("PagerStripWallpaperDrawable(pager)"); return }
         if (path.isNullOrBlank()) {
             // 667：四页都关掉时把底衬摘掉，避免整页壁纸从 ViewPager 底下透出来
             val current = pagerUnderlays.remove(pager)
