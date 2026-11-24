@@ -367,9 +367,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var seamStage633 = 0
     private var seamAt633 = 0L
     private var seamClears633 = 0
-    // 705：清线状态机可重置（宿主换列表实例或把 Paint 写回暗色时重跑判据，有界、节流）
-    private var seamCycles705 = 0
-    private var seamLastCheck705 = 0L
     private var lastLayer632 = 0L
     private var lastLayer631 = 0L
     private var lastFlash630 = 0L
@@ -530,7 +527,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun applyThemeNow(activity: Activity, decor: ViewGroup) {
-        globalPassLog705("applyThemeNow"); if (masterOff705()) { dumpCounts703("master-skip applyThemeNow("); return }
+        globalPassLog704("applyThemeNow"); if (masterOff704()) { dumpCounts703("master-skip applyThemeNow("); return }
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) {
             HLog.i("$TAG 主题未启用（读到的 enabled=false），恢复已改视图；配置=${prefsPath()}")
@@ -887,7 +884,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         snapshot: ThemeSnapshot,
         log: Boolean
     ) {
-        if (bgMountOff705()) { bgBlockedLog705("applyPageBackgrounds("); return }
+        if (bgMountOff704()) { bgBlockedLog704("applyPageBackgrounds("); return }
         if (!snapshot.backgroundEnabled) return
         val paths = snapshot.pagePaths()
         if (paths.all { it.isBlank() }) {
@@ -1744,7 +1741,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      */
     @Suppress("DEPRECATION")
     private fun applyWindowBackground(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
-        if (bgMountOff705()) { bgBlockedLog705("applyWindowBackground("); return }
+        if (bgMountOff704()) { bgBlockedLog704("applyWindowBackground("); return }
         // 619：黑线定位探针挂在这条每次 enforce 都会走的路径上（3 秒一次、只读）
         runCatching { locateLines(activity, decor, SystemClock.uptimeMillis()) }
         runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
@@ -2352,27 +2349,27 @@ private class ThemeRuntime(private val context: FeatureContext) {
         HLog.i("$TAG 模块侧计数(703) $reason 安装=$installCount703 View写入=$writeCount703")
     }
 
-    private var globalPass705 = 0
-    private var bgBlocked705 = 0
-    /** 705：总开关关 = 真零介入（所有入口都停）。 */
-    private fun masterOff705(): Boolean = runCatching {
+    private var globalPass704 = 0
+    private var bgBlocked704 = 0
+    /** 704：总开关关 = 真零介入（所有入口都停）。 */
+    private fun masterOff704(): Boolean = runCatching {
         val s = ThemeSettings.snapshot(context.hostContext())
         s == null || !s.enabled
     }.getOrDefault(true)
-    /** 705：四页全关只停「背景图挂载」这一条子链，不再连带隐藏底栏/标题栏/圆角等全局功能。 */
-    private fun fourPagesOff705(): Boolean = runCatching {
+    /** 704：四页全关只停「背景图挂载」这一条子链，不再连带隐藏底栏/标题栏/圆角等全局功能。 */
+    private fun fourPagesOff704(): Boolean = runCatching {
         val s = ThemeSettings.snapshot(context.hostContext())
         s != null && !s.pageHome && !s.pageContacts && !s.pageDiscover && !s.pageMe
     }.getOrDefault(false)
-    private fun bgMountOff705(): Boolean = masterOff705() || fourPagesOff705()
-    private fun bgBlockedLog705(entry: String) {
-        bgBlocked705++
-        if (bgBlocked705 <= 8) HLog.i("$TAG 背景图挂载被拦(705): $entry 累计=$bgBlocked705")
+    private fun bgMountOff704(): Boolean = masterOff704() || fourPagesOff704()
+    private fun bgBlockedLog704(entry: String) {
+        bgBlocked704++
+        if (bgBlocked704 <= 8) HLog.i("$TAG 背景图挂载被拦(704): $entry 累计=$bgBlocked704")
     }
-    private fun globalPassLog705(entry: String) {
-        if (masterOff705()) return
-        globalPass705++
-        if (globalPass705 <= 8) HLog.i("$TAG 全局功能放行(705): $entry 四页全关=${fourPagesOff705()} 累计=$globalPass705")
+    private fun globalPassLog704(entry: String) {
+        if (masterOff704()) return
+        globalPass704++
+        if (globalPass704 <= 8) HLog.i("$TAG 全局功能放行(704): $entry 四页全关=${fourPagesOff704()} 累计=$globalPass704")
     }
 
 
@@ -4495,47 +4492,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return "凹陷=$k$dips 行=$rows"
     }
 
-    /** 705：只读——列表（含 2 级父类）里是否又出现「#000000 族且 alpha 1..80」的 Paint。 */
-    private fun hasDarkLowAlphaPaint705(list: View): Boolean {
-        var cls: Class<*>? = list.javaClass
-        var depth = 0
-        while (cls != null && depth < 3) {
-            for (f in cls.declaredFields) {
-                if (!android.graphics.Paint::class.java.isAssignableFrom(f.type)) continue
-                val pt = try { f.isAccessible = true; f.get(list) as? android.graphics.Paint } catch (t: Throwable) { null }
-                if (pt == null) continue
-                val c = pt.color
-                if (((c ushr 24) and 0xFF) in 1..80 && (c and 0xFFFFFF) == 0) {
-                    HLog.i("$TAG 列表字段(705) 命中自绘暗色 Paint: ${f.name}=#${Integer.toHexString(pt.color)} a=${pt.alpha} w=${pt.strokeWidth}")
-                    return true
-                }
-            }
-            cls = cls.superclass
-            depth++
-        }
-        return false
-    }
-
     /**
      * 633：把「#000000 族、低 alpha」的列表自带 Paint 一次性清成透明，并用 PixelCopy 清前/清后自证。
      * 状态机：0→测清前→(300ms)→清 Paint→(500ms)→测清后→完成。全程最多 3 次清除。
      */
     private fun probeSeam633(activity: Activity, decor: ViewGroup, now: Long) {
-        if (seamStage633 == 3) {
-            // 705：不再永久停手。宿主新建列表实例、或把 Paint q 写回暗色时，按 633 原判据重跑一遍（有界、节流）。
-            if (seamCycles705 >= 12) return
-            if (now - seamLastCheck705 < 1500L) return
-            seamLastCheck705 = now
-            val pg705 = lastHomePager?.get() ?: return
-            val pw705 = pg705.width
-            if (pw705 <= 0) return
-            if (((pg705.scrollX + pw705 / 2) / pw705).coerceIn(0, 3) != 0) return
-            val lv705 = findViewByClassName(decor, "ConversationListView") ?: return
-            if (!hasDarkLowAlphaPaint705(lv705)) return
-            seamCycles705++
-            seamStage633 = 0
-            HLog.i("$TAG 633 判据重新命中(705) 第${seamCycles705}次: 列表自绘暗色 Paint 又出现，重置清线状态机")
-        }
+        if (seamStage633 == 3) return
         if (seamStage633 > 0 && now < seamAt633) return
         if (seamStage633 == 0 && now - lastPagerScrollAt617 < 800L) return
         val pager = lastHomePager?.get() ?: return
@@ -6185,10 +6147,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val tick = object : Runnable {
             override fun run() {
                 if (!decor.isAttachedToWindow) return
-                // 705：633 清线链单独挂在这里（不开整条逐帧巡检链），并让 632 只读回读一次。
-                val now705 = android.os.SystemClock.uptimeMillis()
-                runCatching { probeSeam633(activity, decor, now705) }
-                runCatching { probeLayers632(decor, now705) }
+                // 706：不开整条逐帧巡检链，只把 633 清线链与 632 只读回读挂到这条 500ms 常驻巡检上。
+                val now706 = android.os.SystemClock.uptimeMillis()
+                runCatching { probeSeam633(activity, decor, now706) }
+                runCatching { probeLayers632(decor, now706) }
                 runCatching { enforce(activity, decor, force = true) }
                     .onFailure { HLog.e("$TAG 常驻补刷异常: ${it.message}", it) }
                 runCatching { refreshVisiblePageScrim() }
@@ -6236,7 +6198,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun installLifecycleBumps(activity: Activity, decor: ViewGroup) {
-        globalPassLog705("installLifecycleBumps"); if (masterOff705()) { dumpCounts703("master-skip installLifecycleBumps("); return }
+        globalPassLog704("installLifecycleBumps"); if (masterOff704()) { dumpCounts703("master-skip installLifecycleBumps("); return }
         if (!lifecycleBumped.add(activity)) return
         val bump: (String) -> Unit = { tag ->
             mainHandler.post {
@@ -6489,7 +6451,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun enforce(activity: Activity, decor: ViewGroup, force: Boolean = false) {
-        globalPassLog705("enforce"); if (masterOff705()) { dumpCounts703("master-skip enforce("); return }
+        globalPassLog704("enforce"); if (masterOff704()) { dumpCounts703("master-skip enforce("); return }
         if (!decor.isAttachedToWindow) return
         val now = SystemClock.uptimeMillis()
         if (!force && now - lastEnforceAt < ENFORCE_INTERVAL_MS) return
@@ -7792,7 +7754,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  才纠正，中间那段就是用户看到的「页面切换紫色底」。这里在 setter 处直接换掉：任何 view 被设成
      *  #ff7a7396 纯色底，立即改为透明（壁纸在下面），不碰布局、不碰子 View。 */
     private fun installPurpleBackgroundSwap() {
-        globalPassLog705("installPurpleBackgroundSwap(635/636拦截)"); if (masterOff705()) { dumpCounts703("master-skip 标题栏白底已拦(635)"); return }
+        globalPassLog704("installPurpleBackgroundSwap(635/636拦截)"); if (masterOff704()) { dumpCounts703("master-skip 标题栏白底已拦(635)"); return }
         if (purpleSwapInstalled) return
         val purple = 0xff7a7396.toInt()
         val cb = object : XC_MethodHook() {
@@ -7998,7 +7960,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     /** 610：ViewPager 自身也铺一张窗口锚定壁纸，切页过渡期的空洞露壁纸而不是宿主的渐变底。 */
     private fun applyPagerUnderlay(pager: ViewGroup, path: String?, homePath: String?, log: Boolean) {
-        if (bgMountOff705()) { bgBlockedLog705("PagerStripWallpaperDrawable(pager)"); return }
+        if (bgMountOff704()) { bgBlockedLog704("PagerStripWallpaperDrawable(pager)"); return }
         if (path.isNullOrBlank()) {
             // 667：四页都关掉时把底衬摘掉，避免整页壁纸从 ViewPager 底下透出来
             val current = pagerUnderlays.remove(pager)
