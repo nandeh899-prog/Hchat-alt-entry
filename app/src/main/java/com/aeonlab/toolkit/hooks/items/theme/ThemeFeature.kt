@@ -2373,6 +2373,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var globalPass704 = 0
     private var bgBlocked704 = 0
     private var procLogged704 = false
+    private var sweepPass704 = 0
     /** 704：总开关关 = 真零介入（所有入口都停）。 */
     private fun masterOff704(): Boolean = runCatching {
         val s = ThemeSettings.snapshot(context.hostContext())
@@ -6177,7 +6178,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 根因是兜底逻辑挂在 OnPreDrawListener 上——没有 invalidate 就不会触发绘制，
         // 也就永远不会跑 enforce；首帧之后只能等用户触摸。这里改成定时补刷 + 每轮结束强制重绘。
         installLifecycleBumps(activity, decor)
-        // 702 restore-chain shorted: installFrameSweep(activity, decor)
+        if (!masterOff704()) {
+            if (sweepPass704 < 3) { sweepPass704++; HLog.i("$TAG 逐帧巡检链放行(704): sweepTick 已恢复（633 清线/632 字段探针在该链内）") }
+            installFrameSweep(activity, decor)
+        }
         installScrollProbe()
         installPeriodicTick(activity, decor)
         FIRST_FRAME_DELAYS_MS.forEach { delay ->
