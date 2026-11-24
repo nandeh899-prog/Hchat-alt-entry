@@ -2441,6 +2441,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { applyNativePages684(decor, reason) }
             runCatching { dumpNativeState("进入原生模式") }
             restoreNativeFillTree(decor, reason)
+            restoreNativeMiniLayer701(decor, reason)
         } else {
             wallpaperHidden = false
             HLog.i("$TAG 原生模式已退出(682): 恢复页面背景（$reason）")
@@ -2452,6 +2453,31 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 682：把宿主留下的深色底还原成原生灰。只认「不透明、R=G=B 且接近 0x23、宽≥90%屏宽、高≥40px」的纯色底，
      * 覆盖 681 漏掉的行高深色条（分组头 1240x98）与页面容器；文字/图标/白卡/图片背景一律不碰。
      */
+
+    /** 701：原生模式（四页开关全关或关掉「启用页面背景」）下，把「最近/小程序」那层的自绘背景交还原生。
+     *  依据 145905 日志：状态 A 已走还原分支（原生模式页面已置不透明(684)=572、标题栏=143），但
+     *  页面非纯色底探针(684) 仍报 PullDownListView#list 1240x2772 非纯色底 ⇒ 还原没覆盖「最近/小程序」层。
+     *  只在状态翻转时走一次（上限 600 个视图），不逐帧、不挂钩子、不直接写宿主属性。 */
+    private var miniRestore701Count = 0
+    private fun restoreNativeMiniLayer701(any: Any?) {
+        runCatching {
+            val r = (any as? android.view.View) ?: (any as? android.view.ViewGroup) ?: return
+            var n = 0
+            val stack = ArrayDeque<android.view.View>()
+            stack.addLast(r)
+            while (stack.isNotEmpty() && n < 600) {
+                val v = stack.removeFirst(); n++
+                if (v is android.view.ViewGroup) { var i = 0; while (i < v.childCount) { stack.addLast(v.getChildAt(i)); i++ } }
+                val bg = v.background ?: continue
+                val cn = bg.javaClass.name
+                val ours = cn.startsWith("com.aeonlab.toolkit")
+                val mini = cn.contains("DynamicBg") || cn.contains("GradientColorBackgroundView") || cn.contains("ScreenAnchoredBitmapDrawable") || (cn.contains("NinePatchDrawable") && v.javaClass.name.contains("PullDown"))
+                if (ours || mini) { runCatching { v.background = null }; miniRestore701Count++ }
+            }
+            if (miniRestore701Count <= 6) HLog.i("$TAG \u5c0f\u7a0b\u5e8f\u5c42\u80cc\u666f\u5df2\u4ea4\u8fd8\u539f\u751f(701): \u6e05\u5e95=" + miniRestore701Count + " \u626b\u63cf=" + n)
+        }
+    }
+
     private fun restoreNativeFillTree(root: View, reason: String) {
         val dm = root.resources.displayMetrics
         val now = SystemClock.uptimeMillis()
