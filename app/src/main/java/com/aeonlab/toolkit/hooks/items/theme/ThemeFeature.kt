@@ -637,6 +637,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 这里按 1 秒节流把状态栏/导航栏重新设回透明——改的是窗口属性，不是逐帧写宿主 View 属性。
      */
     private fun assertWindowColors(activity: Activity) {
+        if (gateWrite702()) return
         if (wallpaperHidden) return
         val now = SystemClock.uptimeMillis()
         if (now - lastWindowColorAssert < 1000L) return
@@ -729,6 +730,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun hideWallpaperForOverlay(reason: String) {
+        if (gateWrite702()) return
         if (wallpaperHidden) return
         wallpaperHidden = true
         runCatching {
@@ -744,6 +746,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun restoreWallpaperAfterOverlay(reason: String) {
+        if (gateWrite702()) return
         if (!wallpaperHidden) return
         wallpaperHidden = false
         HLog.i("$TAG 壁纸层恢复(676): 原因=$reason")
@@ -2133,6 +2136,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * enforce（≤400ms）才补上，中间那几帧就是「停留本页也偶发闪一下」。
      */
     private fun guardedBackgroundFor(view: View, incoming: Drawable): Drawable? {
+        if (gateWrite702()) return
         // 676：叠加页在前台时壁纸层已撤下，这段时间放行宿主自己写背景，别把壁纸又拉回来。
         if (wallpaperHidden) return null
         // 状态栏那条 139px 由 612 的 window.statusBarColor 通道管，绝不能被这里的「清透明」碰到。
@@ -2157,6 +2161,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * （例如直接改 Drawable 颜色、或走我们没钩到的通道）在同一帧内拉回。
      */
     private fun fastAssertBackgroundsBeforeDraw() {
+        if (gateWrite702()) return
         if (wallpaperHidden) return
         if (!fastAssertLogged) {
             fastAssertLogged = true
@@ -2306,6 +2311,29 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     /** 683：原生模式下把自家壁纸层摘成原生灰（一次性，状态翻转时跑）。 */
+
+    private var lastMasterCheck702 = 0L
+    private var masterOff702Known = false
+    private var blockedWrites702 = 0
+    private fun masterOff702(): Boolean {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastMasterCheck702 >= 1000L) {
+            lastMasterCheck702 = now
+            val off = runCatching { val s = snap; s == null || !s.enabled }.getOrDefault(false)
+            if (off != masterOff702Known) {
+                masterOff702Known = off
+                if (off) HLog.i("$TAG \u603b\u5f00\u5173\u5df2\u5173\u95ed(702): \u96f6\u4ecb\u5165\u751f\u6548, \u6a21\u5757\u4fa7 View \u5199\u5165\u8ba1\u6570=" + blockedWrites702)
+                else HLog.i("$TAG \u603b\u5f00\u5173\u5df2\u5f00\u542f(702): \u6062\u590d\u6302\u8f7d, \u4e4b\u524d\u88ab\u62e6\u4e0b=" + blockedWrites702)
+            }
+        }
+        return masterOff702Known
+    }
+    private fun gateWrite702(): Boolean {
+        if (!masterOff702()) return false
+        blockedWrites702++
+        return true
+    }
+
     private fun stripOurWallpaper(decor: ViewGroup, reason: String) {
         val queue = ArrayList<View>(); queue.add(decor)
         var i = 0; var n = 0
@@ -2438,10 +2466,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { activity.window?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
             HLog.i("$TAG 原生模式已开启(682): 主开关/页面开关全关 → 窗口底与装饰视图置原生灰（$reason）")
             runCatching { stripOurWallpaper(decor, reason) }
-            runCatching { applyNativePages684(decor, reason) }
+            // 702 restore-chain shorted: runCatching { applyNativePages684(decor, reason) }
             runCatching { dumpNativeState("进入原生模式") }
-            restoreNativeFillTree(decor, reason)
-            restoreNativeMiniLayer701(decor, reason)
+            // 702 restore-chain shorted: restoreNativeFillTree(decor, reason)
+            // 702 restore-chain shorted: restoreNativeMiniLayer701(decor, reason)
         } else {
             wallpaperHidden = false
             HLog.i("$TAG 原生模式已退出(682): 恢复页面背景（$reason）")
@@ -2587,7 +2615,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { (a.window?.decorView as? ViewGroup)?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
             runCatching { (a.findViewById<View>(android.R.id.content) as? ViewGroup)?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
             HLog.i("$TAG 设置页装饰/内容底已置原生灰(682): ${a.javaClass.simpleName}")
-            runCatching { greyOutSettingsAnyDrawable(a, reason) }
+            // 702 restore-chain shorted: runCatching { greyOutSettingsAnyDrawable(a, reason) }
         }
         mainHandler.postDelayed({
             runCatching { greyOutSettingsBitmaps(a, reason) }
@@ -2670,8 +2698,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
             // LinearLayout 1240x2310 bg=ColorDrawable#ff232323），列表分组头是原生透明行，
             // 关页时整条露成黑底（1000142860.jpg：y=1175..1250 / 1450..1540 实测 #232323）。
             // 只把「页面大小 + 不透明深色」的容器底色还原成原生灰，行/分组头/分隔线一律不碰。
-            runCatching { restoreOffPageNativeFill(page, index, reason) }
-            runCatching { syncNativeOnlyMode(activity, page.rootView as? ViewGroup ?: return@runCatching, "关页($reason)") }
+            // 702 restore-chain shorted: runCatching { restoreOffPageNativeFill(page, index, reason) }
+            // 702 restore-chain shorted: runCatching { syncNativeOnlyMode(activity, page.rootView as? ViewGroup ?: return@runCatching, "关页($reason)") }
                 .onFailure { HLog.e("$TAG 关页底色还原异常(681): ${it.message}") }
             // 671 探针：这一页被判为「关」时，把读到的开关原值打出来（证明读的是哪个值）
             if (SystemClock.uptimeMillis() - lastPageSkipProbeAt >= 5000L) {
@@ -6005,7 +6033,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 根因是兜底逻辑挂在 OnPreDrawListener 上——没有 invalidate 就不会触发绘制，
         // 也就永远不会跑 enforce；首帧之后只能等用户触摸。这里改成定时补刷 + 每轮结束强制重绘。
         installLifecycleBumps(activity, decor)
-        installFrameSweep(activity, decor)
+        // 702 restore-chain shorted: installFrameSweep(activity, decor)
         installScrollProbe()
         installPeriodicTick(activity, decor)
         FIRST_FRAME_DELAYS_MS.forEach { delay ->
@@ -6104,9 +6132,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }, LIFECYCLE_BUMP_DELAY_MS)
             }
         }
-        runCatching { installNativeModeGuards() }
-        runCatching { installSettingsResumeHook684() }
-        runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
+        // 702 restore-chain shorted: runCatching { installNativeModeGuards() }
+        // 702 restore-chain shorted: runCatching { installSettingsResumeHook684() }
+        // 702 restore-chain shorted: runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
             .onFailure { HLog.e("$TAG 原生模式同步异常(682): ${it.message}") }
         bump("onCreate")
         runCatching {
