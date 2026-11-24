@@ -2590,11 +2590,16 @@ private class ThemeRuntime(private val context: FeatureContext) {
     //    ⇒ 一律改成对实例自身 Class 反射，并吞掉异常；不在钩子体内做任何 param 字段直接访问。
     private var skipCount692 = 0
 
+    // 698：Field 查找结果按「类名#字段名」缓存。697 每帧沿父类链 getDeclaredField（未命中抛
+    // NoSuchFieldException）是主线程饱和的直接来源（ANR: hookPullDownDraw686 占 9,667/14,699 采样）。
+    private val fieldCache698 = java.util.concurrent.ConcurrentHashMap<String, java.lang.reflect.Field>()
     private fun fieldOf692(p: Any, name: String): java.lang.reflect.Field? {
+        val key = p.javaClass.name + "#" + name
+        fieldCache698[key]?.let { return it }
         var c: Class<*>? = p.javaClass
         while (c != null) {
             val f0 = runCatching { c!!.getDeclaredField(name) }.getOrNull()
-            if (f0 != null) { runCatching { f0.isAccessible = true }; return f0 }
+            if (f0 != null) { runCatching { f0.isAccessible = true }; fieldCache698[key] = f0; return f0 }
             c = c.superclass
         }
         return null
@@ -2641,42 +2646,39 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     /** 跳过本次绘制：反射置 returnEarly=true（必须）再写 result；失败时退回反射调 setResult。 */
+    // 698：**只对 void 返回的被挂方法做跳过**，非 void（boolean/int/引用…）一律不置值、不跳过。
+    //  ① boolean 方法被置 null 会被调用方拆箱 ⇒ 693 的 NullPointerException 闪退；
+    //  ② 置 false 可能被宿主当成「未处理」触发重排 ⇒ 反复重绘；
+    //  ③ 返回类型按 Method 实例身份缓存，避免每帧反射取 returnType（697 的 ANR 根因）。
+    private val voidMethodCache698 = java.util.IdentityHashMap<java.lang.reflect.Method, Boolean>()
+    private fun isVoidMethod698(p: Any): Boolean {
+        val m = runCatching { fieldOf692(p, "method")?.get(p) as? java.lang.reflect.Method }.getOrNull() ?: return false
+        synchronized(voidMethodCache698) {
+            voidMethodCache698[m]?.let { return it }
+            val v = runCatching { m.returnType == Void.TYPE }.getOrDefault(false)
+            voidMethodCache698[m] = v
+            return v
+        }
+    }
+
     private fun skipOnce692(param: Any?, what: String) {
         val p = param ?: return
-        // 697：按被挂方法的返回类型给「类型正确的值」。693 的闪退根因＝对 non-void 也置 null，
-        // 宿主对 boolean 返回值拆箱 ⇒ NullPointerException（com.tencent.mm 在 draw 链上崩）。
-        // 反射取不到返回类型时**不跳过**（宁可不改绘制，也不制造崩溃）。
-        val rt = runCatching {
-            (fieldOf692(p, "method")?.get(p) as? java.lang.reflect.Method)?.returnType
-        }.getOrNull()
-        if (rt == null) return
-        val v: Any? = when {
-            rt == Void.TYPE -> null
-            rt == java.lang.Boolean.TYPE -> false
-            rt == Integer.TYPE -> 0
-            rt == java.lang.Long.TYPE -> 0L
-            rt == java.lang.Float.TYPE -> 0.0f
-            rt == java.lang.Double.TYPE -> 0.0
-            rt == java.lang.Short.TYPE -> 0.toShort()
-            rt == java.lang.Byte.TYPE -> 0.toByte()
-            rt == Character.TYPE -> ' '
-            else -> null
-        }
+        if (!isVoidMethod698(p)) return
         skipCount692++
         val ok = runCatching {
             val re = fieldOf692(p, "returnEarly") ?: return@runCatching false
             re.set(p, true)
-            fieldOf692(p, "result")?.set(p, v)
+            fieldOf692(p, "result")?.set(p, null)
             true
         }.getOrDefault(false)
         if (!ok) {
             val ok2 = runCatching {
                 val m = p.javaClass.getMethod("setResult", Any::class.java)
-                m.invoke(p, v); true
+                m.invoke(p, null); true
             }.getOrDefault(false)
             if (!ok2 && skipCount692 <= 3) HLog.i("$TAG \u8df3\u8fc7\u7ed8\u5236(693): $what \u672a\u751f\u6548")
         } else if (skipCount692 <= 3) {
-            HLog.i("$TAG \u8df3\u8fc7\u7ed8\u5236\u5df2\u751f\u6548(697): $what \u8fd4\u56de=" + rt.name)
+            HLog.i("$TAG \u8df3\u8fc7\u7ed8\u5236\u5df2\u751f\u6548(698): $what void=True")
         }
     }
 
