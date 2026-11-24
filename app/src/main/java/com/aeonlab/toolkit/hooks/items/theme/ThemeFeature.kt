@@ -367,6 +367,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var seamStage633 = 0
     private var seamAt633 = 0L
     private var seamClears633 = 0
+    // 705：清线状态机可重置（宿主换列表实例或把 Paint 写回暗色时重跑判据，有界、节流）
+    private var seamCycles705 = 0
+    private var seamLastCheck705 = 0L
     private var lastLayer632 = 0L
     private var lastLayer631 = 0L
     private var lastFlash630 = 0L
@@ -4492,11 +4495,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return "凹陷=$k$dips 行=$rows"
     }
 
-    /**
-     * 633：把「#000000 族、低 alpha」的列表自带 Paint 一次性清成透明，并用 PixelCopy 清前/清后自证。
-     * 状态机：0→测清前→(300ms)→清 Paint→(500ms)→测清后→完成。全程最多 3 次清除。
-     */
-    private fun probeSeam633(activity: Activity, decor: ViewGroup, now: Long) {
     /** 705：只读——列表（含 2 级父类）里是否又出现「#000000 族且 alpha 1..80」的 Paint。 */
     private fun hasDarkLowAlphaPaint705(list: View): Boolean {
         var cls: Class<*>? = list.javaClass
@@ -4518,6 +4516,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return false
     }
 
+    /**
+     * 633：把「#000000 族、低 alpha」的列表自带 Paint 一次性清成透明，并用 PixelCopy 清前/清后自证。
+     * 状态机：0→测清前→(300ms)→清 Paint→(500ms)→测清后→完成。全程最多 3 次清除。
+     */
+    private fun probeSeam633(activity: Activity, decor: ViewGroup, now: Long) {
         if (seamStage633 == 3) {
             // 705：不再永久停手。宿主新建列表实例、或把 Paint q 写回暗色时，按 633 原判据重跑一遍（有界、节流）。
             if (seamCycles705 >= 12) return
