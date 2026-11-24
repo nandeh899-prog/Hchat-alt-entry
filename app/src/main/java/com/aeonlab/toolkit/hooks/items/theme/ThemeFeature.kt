@@ -6180,12 +6180,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun installPeriodicTick(activity: Activity, decor: ViewGroup) {
         if (!periodicTicked.add(activity)) return
         val tick = object : Runnable {
-
+            override fun run() {
+                if (!decor.isAttachedToWindow) return
+                // 705：633 清线链单独挂在这里（不开整条逐帧巡检链），并让 632 只读回读一次。
                 val now705 = android.os.SystemClock.uptimeMillis()
                 runCatching { probeSeam633(activity, decor, now705) }
                 runCatching { probeLayers632(decor, now705) }
-            override fun run() {
-                if (!decor.isAttachedToWindow) return
                 runCatching { enforce(activity, decor, force = true) }
                     .onFailure { HLog.e("$TAG 常驻补刷异常: ${it.message}", it) }
                 runCatching { refreshVisiblePageScrim() }
