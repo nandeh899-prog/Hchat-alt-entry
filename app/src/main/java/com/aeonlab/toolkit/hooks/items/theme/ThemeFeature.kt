@@ -2479,19 +2479,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
             HLog.i("$TAG \u4e0b\u62c9\u80cc\u666f(688): \u7c7b=$cn \u672c\u7c7b\u58f0\u660e\u547d\u4e2d=$hit [$names]")
         }
-        var vhit = 0
-        for (m in arrayOf("onDraw", "dispatchDraw", "draw")) {
-            runCatching {
-                vhit += XposedBridge.hookAllMethods(android.view.View::class.java, m, object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val cn = param.thisObject?.javaClass?.name ?: return
-                        if (cn.indexOf("DynamicBg") < 0 && cn.indexOf("GradientColor") < 0 && cn.indexOf("multitask.ui.bg") < 0) return
-                        okDraw688(cn, m, param)
-                    }
-                }).size
-            }.onFailure { }
-        }
-        HLog.i("$TAG \u4e0b\u62c9\u80cc\u666f\u5168\u5c40\u7f51(688): View\u65b9\u6cd5\u547d\u4e2d=$vhit")
     }
 
     private fun okDraw688(cn: String, m: String, param: MethodHookParam) {
