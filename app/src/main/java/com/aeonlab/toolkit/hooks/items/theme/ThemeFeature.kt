@@ -1769,6 +1769,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             return
         }
         val image = bitmap(path) ?: return
+        if (!isThemeActivity703(activity)) { restoreNativeDecorIfOurs703(activity, decor); return }
         anchorWidth = decor.width.coerceAtLeast(decor.measuredWidth)
         anchorHeight = decor.height.coerceAtLeast(decor.measuredHeight)
         val drawable: Drawable = anchored(decor, image)
@@ -2342,6 +2343,46 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
     private fun dumpCounts703(reason: String) {
         HLog.i("$TAG 模块侧计数(703) $reason 安装=$installCount703 View写入=$writeCount703")
+    }
+
+
+    /** 703：只有主题页（LauncherUI）才铺 decor 壁纸。非主题页（设置页等）保持宿主原生页面底。 */
+    private fun isThemeActivity703(a: Activity): Boolean = runCatching {
+        val n = a.javaClass.name
+        n == LAUNCHER_UI_CLASS || n.contains("LauncherUI")
+    }.getOrDefault(false)
+
+    /** 703：非主题页不铺壁纸；若此前铺过，用原底精确还原（只还原我们写过的那一层）。 */
+    private fun restoreNativeDecorIfOurs703(activity: Activity, decor: ViewGroup) {
+        runCatching {
+            val prev = replacedBackgrounds.remove(decor)
+            if (prev != null && decor.background !== prev) {
+                decor.setBackgroundDrawable(prev)
+                HLog.i("$TAG 非主题页还原原生页面底(703): ${activity.javaClass.simpleName} 视=${decor.width}x${decor.height} 原=${prev.javaClass.simpleName}")
+            } else {
+                HLog.i("$TAG 非主题页不铺壁纸(703): ${activity.javaClass.simpleName} decorBg=${decor.background?.javaClass?.simpleName ?: "null"}")
+            }
+            dumpNonThemeContainers703(decor, activity)
+        }
+    }
+
+    /** 703 取证：列出比屏宽窄、高度>=40px 的容器（设置页那条右侧缺口应当被点名）。只读。 */
+    private fun dumpNonThemeContainers703(root: ViewGroup, activity: Activity) {
+        runCatching {
+            val screen = root.width
+            val hits = ArrayList<String>()
+            val q = ArrayDeque<android.view.View>()
+            q.add(root)
+            var seen = 0
+            while (q.isNotEmpty() && seen < 600) {
+                val v = q.removeFirst(); seen++
+                if (v.width in 1 until (screen - 4) && v.height >= 40) {
+                    hits.add("[${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} bg=${v.background?.javaClass?.simpleName ?: "null"}]")
+                }
+                if (v is ViewGroup) for (i in 0 until v.childCount) q.add(v.getChildAt(i))
+            }
+            HLog.i("$TAG 非主题页容器转储(703): ${activity.javaClass.simpleName} 屏宽=$screen 扫描=$seen 窄容器=${hits.size} ${hits.take(8).joinToString(" ")}")
+        }
     }
 
     private fun stripOurWallpaper(decor: ViewGroup, reason: String) {
