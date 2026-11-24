@@ -2260,6 +2260,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastDbgDraw687 = 0L
     private var lastOwnWallpaperLog687 = 0L
     private var lastPagerStrip689 = 0L
+    private var probeSink690 = false
+    private var lastProbeWrite690 = 0L
     private var settingsHook684 = false
 
     /**
@@ -2462,6 +2464,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     }
                 })
                 HLog.i("$TAG \u81ea\u5bb6\u5206\u683c\u58c1\u7eb8\u5c42(689): \u672c\u7c7b\u58f0\u660e\u547d\u4e2d=" + nOwn2)
+                runCatching { installProbeFileSink690() }
             }
                     }
                     if (nativeOnlyMode()) param.result = null
@@ -2510,6 +2513,40 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { q.add(it) }
         }
         if (n > 0) HLog.i("$TAG \u6df1\u8272\u5757\u63d0\u4eae\u6c47\u603b(689): \u6539=$n \u5019\u9009=$seen\uff08$reason\uff09")
+    }
+
+    /** 690：把探针行另写到 /storage/emulated/0/日志/hchat_probe.log，之后用 fs.read 一两次就能取证，不再依赖上传。 */
+    private fun installProbeFileSink690() {
+        if (probeSink690) return
+        probeSink690 = true
+        runCatching {
+            val lc = Class.forName("android.util.Log", false, context.hostClassLoader())
+            val n = XposedBridge.hookAllMethods(lc, "println", object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val a = param.args ?: return
+                    if (a.size < 3) return
+                    val t = a[1] as? String ?: return
+                    val m = a[2] as? String ?: return
+                    if (t.indexOf("AeonLab") < 0 && t.indexOf("aeonlab") < 0 && m.indexOf("(68") < 0 && m.indexOf("(69") < 0) return
+                    appendProbe690(t, m)
+                }
+            })
+            HLog.i("$TAG \u63a2\u9488\u6587\u4ef6\u6c47\u6c34\u5df2\u5c31\u4f4d(690): println\u547d\u4e2d=" + n)
+        }.onFailure { HLog.i("$TAG \u63a2\u9488\u6587\u4ef6\u6c47\u6c34\u5f02\u5e38(690)") }
+    }
+
+    private fun appendProbe690(t: String, m: String) {
+        val now = System.currentTimeMillis()
+        if (now - lastProbeWrite690 < 120) return
+        lastProbeWrite690 = now
+        runCatching {
+            val d = java.io.File("/storage/emulated/0/\u65e5\u5fd7")
+            if (!d.exists()) d.mkdirs()
+            val f = java.io.File(d, "hchat_probe.log")
+            if (f.length() > 3L * 1024 * 1024) f.delete()
+            val fm = java.text.SimpleDateFormat("MM-dd HH:mm:ss.SSS", java.util.Locale.US)
+            java.io.FileOutputStream(f, true).use { it.write((fm.format(java.util.Date(now)) + " " + t + " " + m + "\n").toByteArray()) }
+        }
     }
 
     private fun hookPullDownDraw686() {
