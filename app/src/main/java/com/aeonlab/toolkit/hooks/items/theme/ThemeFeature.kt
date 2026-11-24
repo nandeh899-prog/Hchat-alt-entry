@@ -2259,6 +2259,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastWriteProbe687 = 0L
     private var lastDbgDraw687 = 0L
     private var lastOwnWallpaperLog687 = 0L
+    private var suspect688 = false
+    private var suspectCall688 = 0
     private var settingsHook684 = false
 
     /**
@@ -2397,6 +2399,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         applyNativePages684(d, "\u5de1\u68c0(685)")
                         restoreNativeFillTree(d, "\u5de1\u68c0(685)")
                         probeBottomBand685(d, "\u5de1\u68c0(685)")
+                        applyOpaqueToSuspects688(d, "\u5de1\u68c0(688)")
                     }
                 }.isSuccess
                 if (!ok) { nativeTicker685 = false; return }
@@ -2439,7 +2442,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         wallpaperDrawHooked686 = true
         runCatching {
             val cls = Class.forName("com.aeonlab.toolkit.hooks.items.theme.ScreenAnchoredBitmapDrawable")
-            XposedBridge.hookAllMethods(cls, "draw", object : XC_MethodHook() {
+            val nOwn = XposedBridge.hookAllMethods(cls, "draw", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     val dw = param.args.getOrNull(0)
                     val now = System.currentTimeMillis()
@@ -2450,11 +2453,76 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     if (nativeOnlyMode()) param.result = null
                 }
             })
-            HLog.i("$TAG 自家壁纸层绘制已接管(686)")
+            HLog.i("$TAG \u81ea\u5bb6\u58c1\u7eb8\u5c42(688): \u672c\u7c7b\u58f0\u660e\u547d\u4e2d=" + nOwn)
         }.onFailure { HLog.e("$TAG 自家壁纸层接管异常(686): ${it.message}") }
     }
 
     /** 686：下拉「最近」那层动态背景（深紫）在原生模式下一律不画。 */
+    /** 688：先证明钩子到底挂上没有——hookAllMethods 只挂「该类自己声明」的方法，不挂继承来的。
+     *  所以：①按类挂 3 个方法并打印真实命中的方法名；②再挂 View.draw/onDraw/dispatchDraw，用类名过滤后统计调用。 */
+    private fun hookSuspectDraw688() {
+        if (suspect688) return
+        suspect688 = true
+        for (cn in arrayOf("com.tencent.mm.plugin.multitask.ui.bg.DynamicBgContainer", "com.tencent.mm.dynamicbackground.view.GradientColorBackgroundView", "com.tencent.mm.ui.mogic.WxViewPager")) {
+            var hit = 0; val names = StringBuilder()
+            for (m in arrayOf("onDraw", "dispatchDraw", "draw")) {
+                runCatching {
+                    val cls = Class.forName(cn)
+                    val n = XposedBridge.hookAllMethods(cls, m, object : XC_MethodHook() {
+                        override fun beforeHookedMethod(param: MethodHookParam) {
+                            okDraw688(cn, m, param)
+                        }
+                    }).size
+                    hit += n
+                    if (n > 0) names.append(m).append("x").append(n).append(" ")
+                }.onFailure { }
+            }
+            HLog.i("$TAG \u4e0b\u62c9\u80cc\u666f(688): \u7c7b=$cn \u672c\u7c7b\u58f0\u660e\u547d\u4e2d=$hit [$names]")
+        }
+        var vhit = 0
+        for (m in arrayOf("onDraw", "dispatchDraw", "draw")) {
+            runCatching {
+                vhit += XposedBridge.hookAllMethods(android.view.View::class.java, m, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val cn = param.thisObject?.javaClass?.name ?: return
+                        if (cn.indexOf("DynamicBg") < 0 && cn.indexOf("GradientColor") < 0 && cn.indexOf("multitask.ui.bg") < 0) return
+                        okDraw688(cn, m, param)
+                    }
+                }).size
+            }.onFailure { }
+        }
+        HLog.i("$TAG \u4e0b\u62c9\u80cc\u666f\u5168\u5c40\u7f51(688): View\u65b9\u6cd5\u547d\u4e2d=$vhit")
+    }
+
+    private fun okDraw688(cn: String, m: String, param: MethodHookParam) {
+        suspectCall688++
+        val now = System.currentTimeMillis()
+        if (now - lastDbgDraw687 > 600) {
+            lastDbgDraw687 = now
+            val v = param.thisObject as? View
+            HLog.i("$TAG \u4e0b\u62c9\u80cc\u666f\u8c03\u7528(688): \u7c7b=" + cn.substringAfterLast('.') + " \u65b9\u6cd5=$m \u89c6=" + (v?.width ?: -1) + "x" + (v?.height ?: -1) + " \u7d2f\u8ba1=" + suspectCall688)
+        }
+    }
+
+    /** 688：巡检里直接把这些「下拉/动态背景」容器的底换成不透明白（幂等），不再指望 draw 级拦截。 */
+    private fun applyOpaqueToSuspects688(decor: ViewGroup, reason: String) {
+        val q = ArrayList<View>(); q.add(decor); var i = 0; var n = 0
+        while (i < q.size && i < 1500) {
+            val v = q[i]; i++
+            val cn = v.javaClass.name
+            if (cn.indexOf("DynamicBg") >= 0 || cn.indexOf("GradientColor") >= 0 || cn.indexOf("multitask.ui.bg") >= 0) {
+                runCatching {
+                    val bg = v.background
+                    if (bg == null || bg !is ColorDrawable || (bg as ColorDrawable).color != 0xFFFFFFFF.toInt()) {
+                        v.setBackgroundDrawable(ColorDrawable(0xFFFFFFFF.toInt())); n++
+                    }
+                }
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { q.add(it) }
+        }
+        if (n > 0) HLog.i("$TAG \u4e0b\u62c9\u80cc\u666f\u5df2\u7f6e\u4e0d\u900f(688): \u6539=$n \u5904\uff08$reason\uff09")
+    }
+
     private fun hookPullDownDraw686() {
         if (pullDownHooked686) return
         pullDownHooked686 = true
@@ -2498,6 +2566,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun installNativeModeGuards() {
         runCatching { hookOurWallpaperDraw686() }
         runCatching { hookPullDownDraw686() }
+        runCatching { hookSuspectDraw688() }
         if (nativeGuardsInstalled) return
         nativeGuardsInstalled = true
         runCatching {
