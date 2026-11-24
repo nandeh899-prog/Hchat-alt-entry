@@ -2262,6 +2262,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastPagerStrip689 = 0L
     private var probeSink690 = false
     private var lastProbeWrite690 = 0L
+    private var tick691 = 0
     private var settingsHook684 = false
 
     /**
@@ -2399,16 +2400,17 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     if (d != null) {
                         applyNativePages684(d, "\u5de1\u68c0(685)")
                         restoreNativeFillTree(d, "\u5de1\u68c0(685)")
-                        probeBottomBand685(d, "\u5de1\u68c0(685)")
+                        if (tick691 % 4 == 0) probeBottomBand685(d, "\u5de1\u68c0(685)")  // 691：贵，降到 1/4 频率
+                        tick691++
                         whitenMiniProgramLayer689(d, "\u5de1\u68c0(689)")
                         lightenDarkBlocks689(d, "\u5de1\u68c0(689)")
                     }
                 }.isSuccess
                 if (!ok) { nativeTicker685 = false; return }
-                h.postDelayed(this, 900)
+                h.postDelayed(this, 5000)  // 691
             }
         }
-        h.postDelayed(r, 900)
+        h.postDelayed(r, 5000)  // 691：900ms 太密（主线程整树走查×5），放到 5s
         HLog.i("$TAG \u539f\u751f\u6a21\u5f0f\u5de1\u68c0\u5df2\u542f\u52a8(685)")
     }
 
@@ -2481,7 +2483,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         while (i < q.size && i < 3000) {
             val v = q[i]; i++
             val cn = v.javaClass.name
-            if (cn.indexOf("DynamicBg") >= 0 || cn.indexOf("GradientColor") >= 0 || cn.indexOf("multitask.ui.bg") >= 0 || cn.indexOf("dynamicbackground") >= 0) {
+            val isBgRole = cn.indexOf("DynamicBg") >= 0 || cn.indexOf("GradientColor") >= 0 || cn.indexOf("multitask.ui.bg") >= 0 || cn.indexOf("dynamicbackground") >= 0 ||
+                (cn.indexOf("multitask") >= 0 && (cn.indexOf("Bg") >= 0 || cn.indexOf("Background") >= 0 || cn.indexOf("Container") >= 0)) ||
+                (cn.indexOf("appbrand") >= 0 && cn.indexOf("Background") >= 0)
+            if (isBgRole) {
                 val bg = v.background
                 if (bg == null || bg !is ColorDrawable || (bg as ColorDrawable).color != 0xFFFFFFFF.toInt()) {
                     runCatching { v.setBackgroundDrawable(ColorDrawable(0xFFFFFFFF.toInt())); n++ }
@@ -2537,7 +2542,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     private fun appendProbe690(t: String, m: String) {
         val now = System.currentTimeMillis()
-        if (now - lastProbeWrite690 < 120) return
+        if (now - lastProbeWrite690 < 500) return  // 691：调用线程做文件写，放稀一点
         lastProbeWrite690 = now
         runCatching {
             val d = java.io.File("/storage/emulated/0/\u65e5\u5fd7")
