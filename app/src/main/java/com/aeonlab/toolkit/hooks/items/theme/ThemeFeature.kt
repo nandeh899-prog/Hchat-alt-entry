@@ -2438,6 +2438,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (wallpaperDrawHooked686) return
         wallpaperDrawHooked686 = true
         runCatching {
+            val cls = Class.forName("com.aeonlab.toolkit.hooks.items.theme.ScreenAnchoredBitmapDrawable")
+            XposedBridge.hookAllMethods(cls, "draw", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
                     val dw = param.args.getOrNull(0)
                     val now = System.currentTimeMillis()
                     if (now - lastOwnWallpaperLog687 > 500) {
