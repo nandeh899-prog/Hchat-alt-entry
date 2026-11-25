@@ -1607,6 +1607,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                         if (container || scrimmed) {
                             view.background = ColorDrawable(Color.TRANSPARENT)
                             clearedViews.add(view)
+                            // 710：同一视图不能再留行遮罩登记，否则两表互相覆盖（详见 desiredBackgroundFor）。
+                            rowScrimDrawables.remove(view)
                             counters[0]++
                             if (log && sample.size < 120) {
                                 sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→置透明")
@@ -1619,6 +1621,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             val insetRow = InsetDrawable(ColorDrawable(scrim), 0, 0, 0, gapPx)
                             view.background = insetRow
                             rowScrimDrawables[view] = insetRow
+                            clearedViews.remove(view)
                             rowPaddingKept[view] = keptPadding
                             applyKeptPadding(view, keptPadding)
                             counters[1]++
@@ -1805,6 +1808,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
     @Suppress("DEPRECATION")
     private fun applyWindowBackground(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
         if (mountOff703()) { dumpCounts703("mount-skip applyWindowBackground("); return }
+        // 710：叠加页（微信设置页 / 小程序）在前台时壁纸层已撤下，enforce 每 400ms 跑一次会把壁纸
+        // 重新铺回 decor+窗口底，结果叠加页又一帧一帧透出壁纸。这里直接不铺。
+        if (wallpaperHidden) return
         // 619：黑线定位探针挂在这条每次 enforce 都会走的路径上（3 秒一次、只读）
         runCatching { locateLines(activity, decor, SystemClock.uptimeMillis()) }
         runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
@@ -2037,6 +2043,46 @@ private class ThemeRuntime(private val context: FeatureContext) {
             HLog.i("$TAG 标题卡清空0处，decor 顶部带底色视图转储 ${rows.size} 条")
             rows.forEach { HLog.i("$TAG   标题区: $it") }
         }
+        // 710：状态栏那条「黄色渐变」——678 的顶带清底只认 #E0..#FF 的浅灰/白 .9，黄色渐变
+        // （GradientDrawable / 非纯色）全部落空，所以日志一直是 `标题卡片区域已全透明: 清空 0 处`。
+        // 这里补一趟：贴着屏幕最顶端、整宽、高度≈状态栏、底色不是我们自己的壁纸 → 一律清透明，
+        // 并把类名与底色打出来（这次就能看清那条渐变到底挂在谁身上）。
+        var statusBandCleared = 0
+        runCatching {
+            val decorW = decor.width.coerceAtLeast(decor.measuredWidth)
+            if (decorW > 0) {
+                val statusH = runCatching {
+                    val resId = decor.resources.getIdentifier("status_bar_height", "dimen", "android")
+                    if (resId != 0) decor.resources.getDimensionPixelSize(resId) else 0
+                }.getOrDefault(0).let { if (it > 0) it else (decor.resources.displayMetrics.density * 32f).toInt() }
+                fun walkBand(v: View, d: Int) {
+                    if (d > 16) return
+                    val w = v.width.coerceAtLeast(v.measuredWidth)
+                    val h = v.height.coerceAtLeast(v.measuredHeight)
+                    val bg = v.background
+                    if (v !== decor && v.id != android.R.id.statusBarBackground &&
+                        v !is android.widget.ImageView && bg != null &&
+                        w >= decorW * 0.9f && h in 1..(statusH * 2) &&
+                        !isOurWallpaperDrawable(bg) &&
+                        bg !is ScreenAnchoredBitmapDrawable && bg !is PagerStripWallpaperDrawable &&
+                        !homeImageHosts.containsKey(v) && absTopOfView(v) <= statusH / 2
+                    ) {
+                        if (!replacedBackgrounds.containsKey(v)) replacedBackgrounds[v] = bg
+                        v.setBackgroundColor(Color.TRANSPARENT)
+                        clearedViews.add(v)
+                        rowScrimDrawables.remove(v)
+                        statusBandCleared++
+                        HLog.i(
+                            "$TAG 状态栏条底色已清(710): ${v.javaClass.simpleName}#${idName(v)} ${w}x$h" +
+                                " top=${absTopOfView(v)} bg=${descDrawable(bg)}"
+                        )
+                    }
+                    if (v is ViewGroup) for (i in 0 until v.childCount) walkBand(v.getChildAt(i) ?: continue, d + 1)
+                }
+                walkBand(decor, 0)
+            }
+        }.onFailure { HLog.e("$TAG 状态栏条清底异常(710): ${it.message}") }
+        if (statusBandCleared > 0) HLog.i("$TAG 状态栏条合计已清(710): $statusBandCleared 处（状态栏区域应完全透出壁纸）")
         HLog.i(
             "$TAG 标题卡片区域已全透明: 清空 $cleared 处底色 + 标题栏内 $barCleared 处 [${names.joinToString("/")}]" +
                 " 状态栏全沉浸: 图标=${if (darkIcons) "深色" else "浅色"}" +
@@ -2215,6 +2261,33 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 每 1~3 秒复现一次——宿主回收/重绑列表与容器时先写自己的浅底，我们的重压要等下一轮
      * enforce（≤400ms）才补上，中间那几帧就是「停留本页也偶发闪一下」。
      */
+    /**
+     * 710：某个视图「应该」是什么背景——唯一真相源。
+     *
+     * 优先级：页面底图 > 首页实心图片层 > 分格底衬 > 行遮罩 > 清透明。
+     * 写入拦截（[guardedBackgroundFor]）、逐帧断言（[fastAssertBackgroundsBeforeDraw]）、
+     * enforce 里的重压（[reassertRowScrims] / [reassertClearedBackgrounds]）全部只读这里，
+     * 不再各自维护一套判断，杜绝「两个登记表给出相反答案 → 每帧互写」的死循环。
+     */
+    private fun desiredBackgroundFor(view: View): Drawable? {
+        pageDrawables[view]?.let { return it }
+        homeImageDrawables[view]?.let { return it }
+        if (view is ViewGroup) pagerUnderlays[view]?.let { return it }
+        rowScrimDrawables[view]?.let { return it }
+        if (clearedViews.contains(view)) return guardTransparent
+        return null
+    }
+    /** 710：这个视图是否属于「已被用户关掉背景」的页面（宿主再写深色底时要还原成原生灰）。 */
+    private fun inOffPage710(view: View): Boolean {
+        if (offPageNative710.isEmpty()) return false
+        var cur: View? = view
+        var guard = 0
+        while (cur != null && guard++ < 24) {
+            if (offPageNative710.contains(cur)) return true
+            cur = cur.parent as? View
+        }
+        return false
+    }
     private fun guardedBackgroundFor(view: View, incoming: Drawable): Drawable? {
         if (gateWrite702()) return null
         // 676：叠加页在前台时壁纸层已撤下，这段时间放行宿主自己写背景，别把壁纸又拉回来。
@@ -2222,14 +2295,20 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 状态栏那条 139px 由 612 的 window.statusBarColor 通道管，绝不能被这里的「清透明」碰到。
         if (view.id == android.R.id.statusBarBackground) return null
         try {
-            pageDrawables[view]?.let { if (it !== incoming) return it }
-            homeImageDrawables[view]?.let { if (it !== incoming) return it }
-            if (view is ViewGroup) pagerUnderlays[view]?.let { if (it !== incoming) return it }
-            rowScrimDrawables[view]?.let { if (it !== incoming) return it }
-            if (clearedViews.contains(view)) {
-                val transparent = incoming is ColorDrawable && Color.alpha(incoming.color) == 0
-                if (!transparent) return guardTransparent
+            // 710：通讯录这类「用户关掉背景图」的页面，宿主会把整页容器写成 #ff232323 深色底。
+            // 在写入处直接换成原生灰，比事后巡检早一帧，也不会和别的登记表打架。
+            if (incoming is ColorDrawable && isNativeDark(incoming.color) && inOffPage710(view)) {
+                return ColorDrawable(NATIVE_GREY)
             }
+            // 710：改成单一真相源。原来这里是「逐条 if 不匹配就 return」，一旦同一个 View 同时被登记到
+            // rowScrimDrawables（要行遮罩）和 clearedViews（要透明），写行遮罩时会被 clearedViews 判成
+            // 「不透明 → 换 guardTransparent」，于是引用永远对不上、每帧重写一次：
+            // 真机日志 `背景写入已拦回(613): 累计 2238966 次`（30 万涨到 223 万）、
+            // `通栏行遮罩被宿主覆盖，已重压: 12 个` 与 `已清底视图被宿主重新上色，重新清透明: 12 个`
+            // 互相覆盖，setBackgroundDrawable 每次 requestLayout+invalidate → 页面持续闪烁、图标错位。
+            val want = desiredBackgroundFor(view) ?: return null
+            if (want === incoming) return null
+            return want
         } catch (t: Throwable) {
             // 拦截本身绝不能影响宿主设置背景
         }
@@ -2248,27 +2327,22 @@ private class ThemeRuntime(private val context: FeatureContext) {
             HLog.i("$TAG 逐帧背景断言已生效(613): 每帧绘制前把被宿主改写的页面/容器/行底色拉回")
         }
         var fixed = 0
-        for ((page, drawable) in pageDrawables.entries.toList()) {
-            if (!page.isAttachedToWindow || page.background === drawable) continue
-            runCatching { page.setBackgroundDrawable(drawable) }.onSuccess { fixed++ }
+        // 710：合并成一次遍历 + 单一真相源。原来分五趟各自判断，行视图同时命中
+        // rowScrimDrawables 与 clearedViews 时，两趟会互相把对方刚写的背景改回去，
+        // 于是每一帧都要写、每一帧都 invalidate（真机 `背景写入已拦回` 30 万→223 万）。
+        val candidates = LinkedHashSet<View>()
+        runCatching {
+            candidates.addAll(pageDrawables.keys.toList())
+            candidates.addAll(homeImageDrawables.keys.toList())
+            candidates.addAll(pagerUnderlays.keys.toList())
+            candidates.addAll(rowScrimDrawables.keys.toList())
+            candidates.addAll(clearedViews.toList())
         }
-        for ((host, drawable) in homeImageDrawables.entries.toList()) {
-            if (!host.isAttachedToWindow || host.background === drawable) continue
-            runCatching { host.setBackgroundDrawable(drawable) }.onSuccess { fixed++ }
-        }
-        for ((pager, drawable) in pagerUnderlays.entries.toList()) {
-            if (!pager.isAttachedToWindow || pager.background === drawable) continue
-            runCatching { pager.setBackgroundDrawable(drawable) }.onSuccess { fixed++ }
-        }
-        for (view in clearedViews.toList()) {
+        for (view in candidates) {
             if (!view.isAttachedToWindow) continue
-            val bg = view.background
-            if (bg is ColorDrawable && Color.alpha(bg.color) == 0) continue
-            runCatching { view.background = guardTransparent }.onSuccess { fixed++ }
-        }
-        for ((view, drawable) in rowScrimDrawables.entries.toList()) {
-            if (!view.isAttachedToWindow || view.background === drawable) continue
-            runCatching { view.background = drawable }.onSuccess { fixed++ }
+            val want = desiredBackgroundFor(view) ?: continue
+            if (view.background === want) continue
+            runCatching { view.setBackgroundDrawable(want) }.onSuccess { fixed++ }
         }
         if (fixed > 0 && SystemClock.uptimeMillis() - lastGuardLogAt >= 5000L) {
             lastGuardLogAt = SystemClock.uptimeMillis()
@@ -2325,6 +2399,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
     // 681：关页原生灰还原 / 微信原生设置页灰底还原
     private val NATIVE_GREY = 0xffededed.toInt()
     private val offPageFillAt: MutableMap<View, Long> = java.util.HashMap()
+    /** 710：已经按「关页」还原成原生灰的页面（宿主再写深色底时要在写入处换成原生灰）。 */
+    private val offPageNative710: MutableSet<View> = java.util.Collections.synchronizedSet(
+        java.util.Collections.newSetFromMap(java.util.WeakHashMap<View, Boolean>())
+    )
     private var offPageFillCount = 0
     private var lastOffPageFillLogAt = 0L
     private val settingsGreyAt: MutableMap<Activity, Long> = WeakHashMap()
@@ -2516,18 +2594,67 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (settingsHook684) return
         settingsHook684 = true
         runCatching {
+            // 710：设置页透壁纸的真正成因（真机日志推出来）：
+            //   `开始应用主题：页面=` 25 次全是 LauncherUI、`窗口获焦/失焦` 一条没有、
+            //   `还原窗口底(710)=0` —— 说明 676 那套 `addOnWindowFocusChangeListener` 在 Android 15 上
+            //   从未回调，设置页（独立 Activity）也就从来没被识别成「叠加页」。
+            // 这里改为钩 Activity#onResume（进程内所有 Activity 都会走），进入叠加页就撤壁纸、
+            // 回到 LauncherUI 再补铺，不依赖窗口焦点事件。
             XposedBridge.hookAllMethods(Activity::class.java, "onResume", object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
                     val a = param.thisObject as? Activity ?: return
                     val n = a.javaClass.name
-                    if (n.contains(LAUNCHER_UI_CLASS) || n.startsWith("com.aeonlab")) return
-                    HLog.i("$TAG 叠加页探测(684): 类=$n")
-                    if (!n.contains("etting") && !n.contains("Setting")) return
-                    runCatching { applyNativeGreyToSettingsPage(a, "onResume684") }
+                    if (n.startsWith("com.aeonlab")) return
+                    if (n.contains(LAUNCHER_UI_CLASS)) {
+                        runCatching { revealDecorWallpaper710("宿主 onResume710") }
+                            .onFailure { HLog.e("$TAG 叠加页退出补壁纸异常(710): ${it.message}") }
+                        return
+                    }
+                    HLog.i("$TAG 叠加页探测(710): 类=$n → 撤下 decor/窗口壁纸")
+                    runCatching { hideDecorWallpaper710("叠加页 ${a.javaClass.simpleName}") }
+                        .onFailure { HLog.e("$TAG 叠加页撤壁纸异常(710): ${it.message}") }
+                    if (n.contains("etting") || n.contains("Setting")) {
+                        runCatching { applyNativeGreyToSettingsPage(a, "onResume710") }
+                            .onFailure { HLog.e("$TAG 设置页灰底异常(710): ${it.message}") }
+                    }
                 }
             })
-            HLog.i("$TAG 设置页钩子已就位(684)")
+            HLog.i("$TAG 叠加页钩子已就位(710)：Activity#onResume（设置页/小程序等叠加页进入即撤壁纸）")
         }.onFailure { HLog.e("$TAG 设置页钩子异常(684): ${it.message}") }
+    }
+    /**
+     * 710：叠加页在前台时，把 decor 与窗口底那层壁纸还原成原值（不是全局原生灰）。
+     *
+     * 679/703 的教训：`restoreTouchedViews()` 会顺手把底栏、标题栏、页面底图全部还原，
+     * 叠加页退出后又要整树重铺一遍，用户能看到明显闪一下。这里只撤「最外面那两层」，
+     * 页面内容不动（反正被叠加页盖住），返回时 applyThemeNow 重铺一次即可。
+     */
+    private fun hideDecorWallpaper710(reason: String) {
+        if (gateWrite702()) return
+        if (wallpaperHidden) return
+        wallpaperHidden = true
+        val act = lastHostActivity?.get()
+        runCatching {
+            val dec = act?.window?.decorView as? ViewGroup
+            if (dec != null) {
+                val prev = replacedBackgrounds.remove(dec)
+                runCatching { dec.setBackgroundDrawable(prev ?: ColorDrawable(NATIVE_GREY)) }
+            }
+            act?.window?.let { w ->
+                if (replacedWindowBackgrounds.containsKey(w)) {
+                    val prev = replacedWindowBackgrounds.remove(w)
+                    runCatching { w.setBackgroundDrawable(prev) }
+                }
+            }
+        }.onFailure { HLog.e("$TAG 叠加页撤壁纸失败(710): ${it.message}") }
+        HLog.i("$TAG 叠加页已撤壁纸(710): decor/窗口底还原原生，页面内容保持不动（$reason）")
+    }
+    /** 710：叠加页退出、宿主回到前台时，把壁纸重新铺回去（走一次完整 applyThemeNow）。 */
+    private fun revealDecorWallpaper710(reason: String) {
+        if (!wallpaperHidden) return
+        wallpaperHidden = false
+        HLog.i("$TAG 叠加页已退出(710): 重新铺窗口底与装饰底（$reason）")
+        scheduleReapply("叠加页退出710")
     }
 
     private fun installNativeModeGuards() {
@@ -2698,7 +2825,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
             val v = queue[i]; i++
             val w = v.width.coerceAtLeast(v.measuredWidth)
             val h = v.height.coerceAtLeast(v.measuredHeight)
-            if (v !== page && w >= dm.widthPixels * 7 / 10 && h >= dm.heightPixels * 3 / 10) {
+            // 710：页面容器自己也算——关页时整片黑底正是长在它身上的；此前 `v !== page` 把它排除掉了。
+            if (w >= dm.widthPixels * 7 / 10 && h >= dm.heightPixels * 3 / 10) {
                 val c = runCatching { (v.background as? ColorDrawable)?.color }.getOrNull()
                 if (c != null && Color.alpha(c) == 255 &&
                     ((c shr 16 and 0xFF) + (c shr 8 and 0xFF) + (c and 0xFF)) / 3 < 0x60
@@ -2718,7 +2846,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
         }
         if (fixed > 0) {
-            HLog.i("$TAG 关页原生灰已就位(681): 第 ${index + 1} 页 还原=$fixed 处（$reason）")
+            // 710：关页这一页不能再留在「铺图 / 清透明 / 行遮罩」任何登记表里，
+            // 否则 desiredBackgroundFor 会先把页面底图又塞回去，刚还原的原生灰下一帧就被覆盖。
+            pageDrawables.remove(page)
+            pageScrim.remove(page)
+            rowScrimDrawables.remove(page)
+            clearedViews.remove(page)
+            offPageNative710.add(page)
+            HLog.i("$TAG 关页原生灰已就位(710): 第 ${index + 1} 页 还原=$fixed 处（$reason）")
         }
     }
 
@@ -2835,9 +2970,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
             // LinearLayout 1240x2310 bg=ColorDrawable#ff232323），列表分组头是原生透明行，
             // 关页时整条露成黑底（1000142860.jpg：y=1175..1250 / 1450..1540 实测 #232323）。
             // 只把「页面大小 + 不透明深色」的容器底色还原成原生灰，行/分组头/分隔线一律不碰。
-            if (false) runCatching { restoreOffPageNativeFill(page, index, reason) }
-            if (false) runCatching { syncNativeOnlyMode(activity, page.rootView as? ViewGroup ?: return@runCatching, "关页($reason)") }
-                .onFailure { HLog.e("$TAG 关页底色还原异常(681): ${it.message}") }
+            // 710：用户把这一页的背景开关关掉时，宿主给整页容器留的是不透明深色底（通讯录 #ff232323），
+            // 分组头是原生透明行，于是整条露成黑底。这里只修「这一页内部、页面大小、不透明深色」的容器。
+            runCatching { restoreOffPageNativeFill(page, index, reason) }
+                .onFailure { HLog.e("$TAG 关页底色还原异常(710): ${it.message}") }
+            // syncNativeOnlyMode 会把 decor / 窗口底全局刷成 #EDEDED，等于把其他页面的壁纸一起废掉，
+            // 所以关单页时绝不走它（682 的全局原生模式另有入口）。
             // 671 探针：这一页被判为「关」时，把读到的开关原值打出来（证明读的是哪个值）
             if (SystemClock.uptimeMillis() - lastPageSkipProbeAt >= 5000L) {
                 lastPageSkipProbeAt = SystemClock.uptimeMillis()
@@ -6358,7 +6496,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
         }
         if (false) runCatching { installNativeModeGuards() }
-        if (false) runCatching { installSettingsResumeHook684() }
+        // 710：设置页/小程序等叠加页的壁纸撤销链路改由 Activity#onResume 驱动（焦点监听在 Android 15 不回调）。
+        runCatching { installSettingsResumeHook684() }
         if (false) runCatching { syncNativeOnlyMode(activity, decor, "生命周期补刷(onCreate)") }
             .onFailure { HLog.e("$TAG 原生模式同步异常(682): ${it.message}") }
         bump("onCreate")
@@ -6516,10 +6655,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
     /** 5.5.73：宿主把通栏行的白底写回来后重压遮罩（发现页分组行、我页顶部块都是这条路）。 */
     private fun reassertRowScrims() {
         var fixed = 0
-        for ((view, drawable) in rowScrimDrawables.entries.toList()) {
+        for ((view, _) in rowScrimDrawables.entries.toList()) {
             if (!view.isAttachedToWindow) continue
-            if (view.background === drawable) continue
-            runCatching { view.background = drawable }
+            val want = desiredBackgroundFor(view) ?: continue
+            if (view.background === want) continue
+            runCatching { view.setBackgroundDrawable(want) }
             rowPaddingKept[view]?.let { applyKeptPadding(view, it) }
             fixed++
         }
@@ -6536,10 +6676,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val now = SystemClock.uptimeMillis()
         for (view in clearedViews.toList()) {
             if (!view.isAttachedToWindow) continue
-            val bg = view.background
-            val alreadyTransparent = bg is ColorDrawable && Color.alpha(bg.color) == 0
-            if (alreadyTransparent) continue
-            runCatching { view.background = ColorDrawable(Color.TRANSPARENT) }
+            val want = desiredBackgroundFor(view)
+            if (want == null || view.background === want) continue
+            if (want is ColorDrawable && Color.alpha(want.color) == 0) {
+                val bg = view.background
+                if (bg is ColorDrawable && Color.alpha(bg.color) == 0) continue
+            }
+            runCatching { view.setBackgroundDrawable(want) }
             fixed++
         }
         if (fixed > 0 && now - lastClearReassertLogAt >= 3000L) {
@@ -6917,7 +7060,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 rowScrimDrawables[owner] = inset
                 rowPaddingKept[owner] = kept
                 applyKeptPadding(owner, kept)
-                clearedViews.add(owner)
+                // 710：行遮罩与「清透明」只能登记一个，否则两个表互相覆盖（详见 desiredBackgroundFor）。
+                clearedViews.remove(owner)
                 rowWhiteByPainterCount++
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastRowWhiteByPainterLogAt >= 2000L) {

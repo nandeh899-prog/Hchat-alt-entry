@@ -2120,3 +2120,56 @@ DexClub 横向核验如下，表内混淆名称仅作 APK 证据，运行时代�
 共享入口使用 `DexKitBridge.createManaged(...)`，仅缓存轻量 Java 对象；实际查询才加载 native 实例，最后一次查询结束后空闲 30 秒释放。后续功能、脚本及旧查询结果的懒加载会按需恢复；回收和查询使用同一串行锁，永久 `close()` 后不可恢复。主进程和启用相关早期功能的子进程均覆盖，不关闭原有功能。定位缓存命中且无需 native 查询时，不再提前创建分析实例。
 
 补丁源码、输入身份保护、原 API/native 库兼容核验与构建方式见 `third_party/dexkit-memory/README.md`。空闲回收不再输出 `[Hchat:DexMemory]` 提示，按需加载与空闲释放逻辑保持不变。回归通过不等于实机内存降幅。
+
+## 主题：叠加页/关页/闪烁修正（710）
+
+本次仍只动 `app/src/main/java/com/aeonlab/toolkit/hooks/items/theme/ThemeFeature.kt`，不新增功能开关，默认行为随现有主题设置生效。
+
+### 1. 背景登记表「单一真相源」
+
+真机日志（999 分身，`/data/adb/lspd/log/modules_*.log`）显示：
+`背景写入已拦回(613)` 累计从 30 万涨到 **223 万**，同时每秒出现
+`通栏行遮罩被宿主覆盖，已重压: 12 个` 与 `已清底视图被宿主重新上色，重新清透明: 12 个`。
+
+根因是同一个 View 被 `clearWhiteRowByPainter()` 同时登记进
+`rowScrimDrawables`（要行遮罩）和 `clearedViews`（要透明），而 `guardedBackgroundFor()`
+是「逐条 if 不匹配就 return」，写行遮罩时被 `clearedViews` 判成不透明、换成 `guardTransparent`，
+引用永远对不上 → 每帧重写 → 每次 `setBackgroundDrawable` 都 `requestLayout()+invalidate()`
+→ 页面持续闪烁、条目重排（发现页/我的页图标错位）。
+
+修正：
+
+- 新增 `desiredBackgroundFor(view)`：优先级 页面底图 > 首页实心图片层 > 分格底衬 > 行遮罩 > 清透明，
+  写入拦截、逐帧断言、enforce 重压**全部只读这一处**；
+- `rowScrimDrawables` 与 `clearedViews` 互斥登记（后写入的一方负责移除另一方）；
+- `fastAssertBackgroundsBeforeDraw()` 由五趟独立遍历合并为一趟。
+
+### 2. 关页（不开背景图）的深色底
+
+通讯录页关闭背景图后整片 `#ff232323` 黑底：`prepPageNow()` 的关页分支此前被 `if (false)` 短路，
+且 `restoreOffPageNativeFill()` 用 `v !== page` 把页面容器本身排除了。现在：
+
+- 恢复调用 `restoreOffPageNativeFill()`（**只**作用于该页内部页面大小的不透明深色容器，
+  不再调用会全局刷 `#EDEDED` 的 `syncNativeOnlyMode()`，避免破坏其他页壁纸）；
+- 页面容器本身也纳入判据；
+- 还原后把该页从 `pageDrawables / pageScrim / rowScrimDrawables / clearedViews` 注销并记入
+  `offPageNative710`，宿主再写深色底时在 `setBackgroundDrawable` 写入处直接换成原生灰。
+
+### 3. 微信原生设置页透壁纸
+
+`绘制/焦点` 链路在 Android 15 上不成立：`开始应用主题` 全部是 `LauncherUI`、`窗口获焦/失焦`
+一条日志都没有、`还原窗口底(710)=0` —— `addOnWindowFocusChangeListener` 从未回调。
+
+改为挂 `Activity#onResume`（进程内所有 Activity 都会走）：
+
+- 非 `LauncherUI` → `hideDecorWallpaper710()`：只把 `decor` 与窗口底那两层壁纸还原成原值，
+  页面内容不动（避免 `restoreTouchedViews()` 整树还原后再整树重铺的闪烁）；
+- 回到 `LauncherUI` → `revealDecorWallpaper710()`：清 `wallpaperHidden` 并 `scheduleReapply()`；
+- `applyWindowBackground()` 在 `wallpaperHidden` 期间直接返回，防止 enforce 每 400ms 把壁纸铺回去。
+
+### 4. 状态栏那条「黄色渐变」
+
+678 的顶带清底只认 `#E0..#FF` 的浅灰/白 `.9`，日志长期是 `标题卡片区域已全透明: 清空 0 处`。
+`applyImmersiveStatusBar()` 新增一趟：贴着屏幕最顶端（`top <= statusH/2`）、整宽（≥90%）、
+高度 ≈ 状态栏（≤2×statusH）、底色不是自家壁纸层的视图一律清成透明，并打印类名与底色
+（`状态栏条底色已清(710)`），便于下一轮确认那条渐变到底挂在谁身上。
