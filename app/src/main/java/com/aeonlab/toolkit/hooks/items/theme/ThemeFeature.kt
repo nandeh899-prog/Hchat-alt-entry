@@ -510,6 +510,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
         installed = true
         HLog.i("$TAG 主题 Hook 已挂载（页面=${LAUNCHER_UI_CLASS}，微信版本=${hostVersion()}）")
         installGreyPainterProbe()
+        // 710：叠加页（微信设置页等）的壁纸撤销改由 Activity#onResume 驱动，
+        // 且挂在 mount() 里——它原来藏在 installLifecycleBumps() 里，
+        // 真机 17:48/18:09 两次会话都拿不到 `叠加页钩子已就位`，说明那条链路根本没跑到。
+        runCatching { installSettingsResumeHook684() }
+            .onFailure { HLog.e("$TAG 叠加页钩子安装异常(710): ${it.message}") }
         installPurpleBackgroundSwap()
         installGradientDrawKiller()
         installPagerScrollProbe()
@@ -1054,10 +1059,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
             pageDrawables[page] = guardTransparent
             page.setBackgroundDrawable(guardTransparent)
         }
-        HLog.i(
-            "$TAG 壁纸层归属(616): 第 ${if (isHome) 1 else 0}层 page=${page.javaClass.simpleName}#${idName(page)}" +
-                " 画壁纸=${isHome} static=(0,0) 期望 — 非首页统一由 decor/底衬透出"
-        )
+        if (SystemClock.uptimeMillis() - lastWallpaperOwnerLogAt >= 3000L) {
+            lastWallpaperOwnerLogAt = SystemClock.uptimeMillis()
+            HLog.i(
+                "$TAG 壁纸层归属(616): 第 ${if (isHome) 1 else 0}层 page=${page.javaClass.simpleName}#${idName(page)}" +
+                    " 画壁纸=${isHome} static=(0,0) 期望 — 非首页统一由 decor/底衬透出"
+            )
+        }
         // 614：宿主给页面壳设过 setWillNotDraw(true)（真机探针里四页 wnd=true），
         // 那会让 ViewGroup 直接跳过背景绘制——页面层铺的图其实没画出来。
         runCatching { if (page is ViewGroup && page.willNotDraw()) page.setWillNotDraw(false) }
@@ -1221,7 +1229,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  只定期如实记录 ActionBar 内部字段与 jlt 父链，等待截图对时裁决谁在画 0..149 的灰。 */
     private fun titleBarProbe(decor: ViewGroup, now: Long) {
         if (now - lastBarProbeAt < topDumpIntervalMs) return
-        lastBarProbeAt621 = now
+        // 710：这里原来判 lastBarProbeAt、写 lastBarProbeAt621，两个变量不是同一个，
+        // 于是节流永远不生效，每轮 enforce 都打一屏「灰条探针/ActionBar 子树转储」，
+        // 日志文件 20 分钟就滚一次（真机 82 条/分钟）。
+        lastBarProbeAt = now
         runCatching {
             fun descD(d: android.graphics.drawable.Drawable?): String = when (d) {
                 null -> "null"
@@ -2062,6 +2073,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     val bg = v.background
                     if (v !== decor && v.id != android.R.id.statusBarBackground &&
                         v !is android.widget.ImageView && bg != null &&
+                        !(bg is ColorDrawable && Color.alpha(bg.color) == 0) &&
                         w >= decorW * 0.9f && h in 1..(statusH * 2) &&
                         !isOurWallpaperDrawable(bg) &&
                         bg !is ScreenAnchoredBitmapDrawable && bg !is PagerStripWallpaperDrawable &&
@@ -2277,6 +2289,22 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (clearedViews.contains(view)) return guardTransparent
         return null
     }
+    /**
+     * 710：两张背景是否「视觉上等价到不需要再写一次」。
+     *
+     * 同一个引用当然算；两个全透明的 ColorDrawable 也算（透明换透明没有任何视觉变化，
+     * 但 setBackgroundDrawable 仍会 requestLayout，正是闪烁死循环的燃料）。
+     */
+    private fun sameBackground(current: Drawable?, want: Drawable): Boolean {
+        if (current === want) return true
+        if (current is ColorDrawable && want is ColorDrawable) {
+            val a = Color.alpha(current.color)
+            val b = Color.alpha(want.color)
+            if (a == 0 && b == 0) return true
+            if (a == 255 && b == 255 && current.color == want.color) return true
+        }
+        return false
+    }
     /** 710：这个视图是否属于「已被用户关掉背景」的页面（宿主再写深色底时要还原成原生灰）。 */
     private fun inOffPage710(view: View): Boolean {
         if (offPageNative710.isEmpty()) return false
@@ -2408,6 +2436,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private val settingsGreyAt: MutableMap<Activity, Long> = WeakHashMap()
     // 682：主开关/四页全关时切「原生模式」用的状态与探针
     private var lastNativeModeCheckAt = 0L
+    /** 710：壁纸层归属日志节流（applyPageBitmap 每次重铺都会调，不节流会刷满日志）。 */
+    private var lastWallpaperOwnerLogAt = 0L
     private var nativeModeOn = false
     private var lastNativeFillAt = 0L
     private var nativeFillCount = 0
@@ -8061,6 +8091,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 // display list ——「停留本页偶发闪一下」就是原来「先白一帧、下一轮 enforce 再补」的差。
                 val forced = guardedBackgroundFor(view, incoming)
                 if (forced != null) {
+                    // 710：宿主那次写入要落库的，正好就是我们要保持的那张 → 直接吞掉整次调用。
+                    // 不这么做的话，View.setBackgroundDrawable() 无论如何都会 requestLayout()+invalidate()，
+                    // 宿主下一帧重绑列表又写一次，于是「宿主写白 → 我们换回 → 重排 → 宿主再写白」
+                    // 变成帧率级死循环（真机实测 ~1500 次/秒 ≈ 120fps × 12 行，累计 352 万次），
+                    // 表现就是发现页/我的页持续闪烁、条目图标错位。
+                    if (sameBackground(view.background, forced)) {
+                        param.setResult(null)
+                        return
+                    }
                     param.args[0] = forced
                     guardHits++
                     val nowMs = SystemClock.elapsedRealtime()
@@ -8144,6 +8183,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
                 if (color == Color.TRANSPARENT) return
                 val forced = guardedBackgroundFor(view, ColorDrawable(color)) ?: return
+                // 710：已经是我们想要的那张就只吞掉这次写入，不要再 setBackgroundDrawable 一次
+                // （每次 setBackgroundDrawable 都会 requestLayout，宿主重绑后又写 → 帧率级死循环）。
+                if (sameBackground(view.background, forced)) {
+                    param.setResult(null)
+                    return
+                }
                 // setBackgroundColor 只吃 int，这里阻断它并把已登记的背景重新压回
                 param.setResult(null)
                 colorGuardHits++
