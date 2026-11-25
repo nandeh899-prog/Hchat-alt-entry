@@ -2630,27 +2630,45 @@ private class ThemeRuntime(private val context: FeatureContext) {
             //   从未回调，设置页（独立 Activity）也就从来没被识别成「叠加页」。
             // 这里改为钩 Activity#onResume（进程内所有 Activity 都会走），进入叠加页就撤壁纸、
             // 回到 LauncherUI 再补铺，不依赖窗口焦点事件。
+            // 710 二轮：`Activity#onResume` 这条路在微信里没触发（钩子装上、日志为 0），
+            // 微信的 Activity 基类覆盖了 onResume，未必调 super。改成钩
+            // Instrumentation#callActivityOnResume —— ActivityThread 对**每一个** Activity 恢复都会走它，
+            // 与宿主继承结构无关。
+            XposedBridge.hookAllMethods(
+                android.app.Instrumentation::class.java,
+                "callActivityOnResume",
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        val a = param.args.getOrNull(0) as? Activity ?: return
+                        runCatching { onOverlayActivityResumed710(a) }
+                            .onFailure { HLog.e("$TAG 叠加页处理异常(710): ${it.message}") }
+                    }
+                }
+            )
+            // 保留 Activity#onResume 作为双保险（不重复处理：内部有 wallpaperHidden 状态机）。
             XposedBridge.hookAllMethods(Activity::class.java, "onResume", object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
                     val a = param.thisObject as? Activity ?: return
-                    val n = a.javaClass.name
-                    if (n.startsWith("com.aeonlab")) return
-                    if (n.contains(LAUNCHER_UI_CLASS)) {
-                        runCatching { revealDecorWallpaper710("宿主 onResume710") }
-                            .onFailure { HLog.e("$TAG 叠加页退出补壁纸异常(710): ${it.message}") }
-                        return
-                    }
-                    HLog.i("$TAG 叠加页探测(710): 类=$n → 撤下 decor/窗口壁纸")
-                    runCatching { hideDecorWallpaper710("叠加页 ${a.javaClass.simpleName}") }
-                        .onFailure { HLog.e("$TAG 叠加页撤壁纸异常(710): ${it.message}") }
-                    if (n.contains("etting") || n.contains("Setting")) {
-                        runCatching { applyNativeGreyToSettingsPage(a, "onResume710") }
-                            .onFailure { HLog.e("$TAG 设置页灰底异常(710): ${it.message}") }
-                    }
+                    runCatching { onOverlayActivityResumed710(a) }
+                        .onFailure { HLog.e("$TAG 叠加页处理异常(710b): ${it.message}") }
                 }
             })
-            HLog.i("$TAG 叠加页钩子已就位(710)：Activity#onResume（设置页/小程序等叠加页进入即撤壁纸）")
+            HLog.i("$TAG 叠加页钩子已就位(710)：Instrumentation#callActivityOnResume + Activity#onResume")
         }.onFailure { HLog.e("$TAG 设置页钩子异常(684): ${it.message}") }
+    }
+    /** 710：某个 Activity 恢复到前台时的统一处理（叠加页撤壁纸 / 宿主回来补铺 / 设置页灰底）。 */
+    private fun onOverlayActivityResumed710(a: Activity) {
+        val n = a.javaClass.name
+        if (n.startsWith("com.aeonlab")) return
+        if (n.contains(LAUNCHER_UI_CLASS)) {
+            revealDecorWallpaper710("宿主 resumed710")
+            return
+        }
+        HLog.i("$TAG 叠加页探测(710): 类=$n → 撤下 decor/窗口壁纸")
+        hideDecorWallpaper710("叠加页 ${a.javaClass.simpleName}")
+        if (n.contains("etting") || n.contains("Setting")) {
+            applyNativeGreyToSettingsPage(a, "resumed710")
+        }
     }
     /**
      * 710：叠加页在前台时，把 decor 与窗口底那层壁纸还原成原值（不是全局原生灰）。
@@ -6773,6 +6791,17 @@ private class ThemeRuntime(private val context: FeatureContext) {
         lastEnforceAt = now
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) return
+        // 710：叠加页兜底巡检——钩子（Instrumentation/Activity#onResume）万一在某些 ROM 上不生效，
+        // 这里每轮也看一眼「当前有没有非 Launcher 的可见 Activity」，有就撤壁纸，回来就补铺。
+        runCatching {
+            val overlay = overlayActivity()
+            if (overlay != null && !wallpaperHidden) {
+                HLog.i("$TAG 叠加页巡检(710): 前台叠加页=${overlay.javaClass.simpleName} → 撤壁纸")
+                hideDecorWallpaper710("巡检 ${overlay.javaClass.simpleName}")
+            } else if (overlay == null && wallpaperHidden) {
+                revealDecorWallpaper710("巡检：回到宿主")
+            }
+        }.onFailure { HLog.e("$TAG 叠加页巡检异常(710): ${it.message}") }
         if (snapshot.backgroundEnabled) reassertImmersive(activity, decor, force)
         if (snapshot.backgroundEnabled) {
             reassertClearedBackgrounds()
