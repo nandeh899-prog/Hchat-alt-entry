@@ -2233,6 +2233,15 @@ y=2592..2772 整宽纯 `#EDEDED`。这条带本来就是原生底栏占的位置
 页面背景开着时壁纸层把这段盖住了，所以只有关掉页面背景才现形 —— 与用户「背景图开时没有」完全一致。
 
 修法：`enforce()` 每轮检查 `!snapshot.backgroundEnabled && snapshot.tabHideNative && !snapshot.tabEnabled`
-（关背景 + 隐藏原生底栏 + 没开自定义底栏 ⇒ 这段必然空着），成立就把 `decor` 与 `window` 的
-背景改成白色（与列表同色），不成立且之前改过就还原原生灰。用 `bottomStripWhitened710` 记状态，
-并且每轮校验当前底色，宿主改回灰时会被重新压白。日志：`底部空档底色改白(710d)` / `还原原生灰(710d)`。
+（关背景 + 隐藏原生底栏 + 没开自定义底栏 ⇒ 这段必然空着）。第一版把 `decor`/`window` 底色改白，
+真机 1010 复测：首页那条确实白了，但**通讯录仍是 #EDEDED** —— 说明灰不是窗口底画的。
+
+用 `dumpsys activity top` 打全量视图树（含 GONE 视图与坐标）后定位到了：
+`LauncherUIBottomTabView{ G.E...... 0,2598-1240,2772 #huj}` 正是被我们置 GONE 的那个原生底栏，
+它的范围与灰带逐像素吻合；而它上层 `CustomViewPager{kod}`（`VFED` `0,0-1240,2772`）才是真正
+托底的容器（通讯录页的 `MMWeUIBounceView` 只到 2598，下面就是 pager 自己的底色）。
+
+所以最终做法是按**当前页**给 pager 刷底色：`scrollX/width` 算出页序，发现页（2）保持原生灰
+（它的列表本来就是灰底，刷白会出现横向接缝），其余页刷白（列表本来是白底）。
+pager 引用缓存在 `stripPager710`（只认宽高都 ≥90% 屏的 ViewPager），底色记在 `bottomStripColor710`，
+每轮校验，宿主改回灰会被重新刷回。日志：`底部空档底色已铺(710d)` / `还原原生灰(710d)`。

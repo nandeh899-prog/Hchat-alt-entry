@@ -2740,8 +2740,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 让设置页那些留白处透出灰底而不是壁纸；离开设置页再整体铺回。
      */
     private val settingsLikeHidden710 = java.util.concurrent.atomic.AtomicBoolean(false)
-    /** 710d：窗口底是否已被我们改成白色（用于「隐藏原生底栏后那条灰」）。 */
-    private var bottomStripWhitened710 = false
+    /** 710d：底部空档当前铺的底色（0=未铺），避免每轮重复写背景。 */
+    private var bottomStripColor710 = 0
+    /** 710d：缓存首页 ViewPager 引用，省掉每轮的整树搜索。 */
+    private var stripPager710: ViewGroup? = null
 
     /** 710d：底栏那段是否必然空着——隐藏了原生底栏、同时没开自定义底栏。 */
     private fun bottomStripEmpty710(snapshot: ThemeSnapshot): Boolean =
@@ -7025,23 +7027,33 @@ private class ThemeRuntime(private val context: FeatureContext) {
         runCatching {
             val want = !snapshot.backgroundEnabled && bottomStripEmpty710(snapshot)
             if (want) {
-                val white = 0xffffffff.toInt()
-                val cur = (decor.background as? ColorDrawable)?.color
-                if (cur != white) {
-                    decor.setBackgroundDrawable(ColorDrawable(white))
-                    activity.window?.setBackgroundDrawable(ColorDrawable(white))
-                    if (!bottomStripWhitened710) {
-                        HLog.i(
-                            "$TAG 底部空档底色改白(710d): 隐藏底栏=%s 自定义底栏=%s（巡检）"
-                                .format(snapshot.tabHideNative, snapshot.tabEnabled)
-                        )
-                    }
+                // 谁在托底：那 174px 就是被置 GONE 的 LauncherUIBottomTabView 自己的位置，
+                // 露出来的是它上层 CustomViewPager(#kod) 的底色。所以把 pager 底色按当前页涂：
+                // 首页/通讯录（白底列表）→ 白；发现页（原生灰底）→ 原生灰，避免出现横向接缝。
+                val pager = stripPager710?.takeIf { it.isAttachedToWindow && it.isShown }
+                    ?: findHomePager(decor, false)?.takeIf { p ->
+                        val dm = activity.resources.displayMetrics
+                        p.width >= dm.widthPixels * 0.9 && p.height >= dm.heightPixels * 0.9
+                    }?.also { stripPager710 = it }
+                val idx = if (pager != null && pager.width > 0) {
+                    (pager.scrollX + pager.width / 2) / pager.width
+                } else -1
+                val target = if (idx == 2) NATIVE_GREY else 0xffffffff.toInt()
+                val cur = (pager?.background as? ColorDrawable)?.color
+                if (target != bottomStripColor710 || cur != target) {
+                    bottomStripColor710 = target
+                    runCatching { decor.setBackgroundDrawable(ColorDrawable(target)) }
+                    runCatching { activity.window?.setBackgroundDrawable(ColorDrawable(target)) }
+                    runCatching { pager?.setBackgroundDrawable(ColorDrawable(target)) }
+                    HLog.i(
+                        "$TAG 底部空档底色已铺(710d): color=#%08X 页序=$idx 隐藏底栏=%s 自定义底栏=%s（巡检）"
+                            .format(target, idx, snapshot.tabHideNative, snapshot.tabEnabled)
+                    )
                 }
-                bottomStripWhitened710 = true
-            } else if (bottomStripWhitened710) {
-                bottomStripWhitened710 = false
-                decor.setBackgroundDrawable(ColorDrawable(NATIVE_GREY))
-                activity.window?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY))
+            } else if (bottomStripColor710 != 0) {
+                bottomStripColor710 = 0
+                runCatching { decor.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                runCatching { activity.window?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
                 HLog.i("$TAG 底部空档底色还原原生灰(710d)（巡检）")
             }
         }.onFailure { HLog.e("$TAG 底部空档底色切换异常(710d): ${it.message}") }
