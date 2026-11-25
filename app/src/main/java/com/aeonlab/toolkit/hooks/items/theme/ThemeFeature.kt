@@ -2184,9 +2184,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
             // 710：写 window 底之前先登记原值，否则设置页 / 非主题页只还原 decor、window 那层壁纸仍会透出来。
             if (!replacedWindowBackgrounds.containsKey(window)) {
-                // Window 只有 getBackground()、没有配对的 setBackground，Kotlin 不会合成属性，必须显式调用。
-                @Suppress("DEPRECATION")
-                val prevWindowBackground = runCatching { window.getBackground() }.getOrNull()
+                // compileSdk 37 的 android.view.Window 已无 getBackground()（CI 实测 Unresolved reference），
+                // 只能从实现类（PhoneWindow）里读 mBackgroundDrawable；读不到就按 null 记，还原时等同透明底。
+                val prevWindowBackground = runCatching {
+                    KavaReflector.findFieldRecursive(window.javaClass, "mBackgroundDrawable")?.get(window) as? Drawable
+                }.getOrNull()
                 replacedWindowBackgrounds[window] = prevWindowBackground
             }
             window.setBackgroundDrawable(drawable)
