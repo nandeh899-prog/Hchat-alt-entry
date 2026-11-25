@@ -527,7 +527,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun applyThemeNow(activity: Activity, decor: ViewGroup) {
-        globalPassLog704("applyThemeNow"); if (masterOff704()) { dumpCounts703("master-skip applyThemeNow("); return }
+        if (mountOff703()) { dumpCounts703("mount-skip applyPageBackgrounds("); return }
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) {
             HLog.i("$TAG 主题未启用（读到的 enabled=false），恢复已改视图；配置=${prefsPath()}")
@@ -884,7 +884,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         snapshot: ThemeSnapshot,
         log: Boolean
     ) {
-        if (bgMountOff704()) { bgBlockedLog704("applyPageBackgrounds("); return }
+        if (mountOff703()) { dumpCounts703("mount-skip applyPageBackgrounds("); return }
         if (!snapshot.backgroundEnabled) return
         val paths = snapshot.pagePaths()
         if (paths.all { it.isBlank() }) {
@@ -1741,7 +1741,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      */
     @Suppress("DEPRECATION")
     private fun applyWindowBackground(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot) {
-        if (bgMountOff704()) { bgBlockedLog704("applyWindowBackground("); return }
+        if (mountOff703()) { dumpCounts703("mount-skip applyWindowBackground("); return }
         // 619：黑线定位探针挂在这条每次 enforce 都会走的路径上（3 秒一次、只读）
         runCatching { locateLines(activity, decor, SystemClock.uptimeMillis()) }
         runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
@@ -2347,29 +2347,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
     private fun dumpCounts703(reason: String) {
         HLog.i("$TAG 模块侧计数(703) $reason 安装=$installCount703 View写入=$writeCount703")
-    }
-
-    private var globalPass704 = 0
-    private var bgBlocked704 = 0
-    /** 704：总开关关 = 真零介入（所有入口都停）。 */
-    private fun masterOff704(): Boolean = runCatching {
-        val s = ThemeSettings.snapshot(context.hostContext())
-        s == null || !s.enabled
-    }.getOrDefault(true)
-    /** 704：四页全关只停「背景图挂载」这一条子链，不再连带隐藏底栏/标题栏/圆角等全局功能。 */
-    private fun fourPagesOff704(): Boolean = runCatching {
-        val s = ThemeSettings.snapshot(context.hostContext())
-        s != null && !s.pageHome && !s.pageContacts && !s.pageDiscover && !s.pageMe
-    }.getOrDefault(false)
-    private fun bgMountOff704(): Boolean = masterOff704() || fourPagesOff704()
-    private fun bgBlockedLog704(entry: String) {
-        bgBlocked704++
-        if (bgBlocked704 <= 8) HLog.i("$TAG 背景图挂载被拦(704): $entry 累计=$bgBlocked704")
-    }
-    private fun globalPassLog704(entry: String) {
-        if (masterOff704()) return
-        globalPass704++
-        if (globalPass704 <= 8) HLog.i("$TAG 全局功能放行(704): $entry 四页全关=${fourPagesOff704()} 累计=$globalPass704")
     }
 
 
@@ -6194,7 +6171,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun installLifecycleBumps(activity: Activity, decor: ViewGroup) {
-        globalPassLog704("installLifecycleBumps"); if (masterOff704()) { dumpCounts703("master-skip installLifecycleBumps("); return }
+        if (mountOff703()) { dumpCounts703("mount-skip applyWindowBackground("); return }
         if (!lifecycleBumped.add(activity)) return
         val bump: (String) -> Unit = { tag ->
             mainHandler.post {
@@ -6447,7 +6424,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun enforce(activity: Activity, decor: ViewGroup, force: Boolean = false) {
-        globalPassLog704("enforce"); if (masterOff704()) { dumpCounts703("master-skip enforce("); return }
+        if (mountOff703()) { dumpCounts703("mount-skip if (snapshot.backgroundEnabled) reassertImmersive"); return }
         if (!decor.isAttachedToWindow) return
         val now = SystemClock.uptimeMillis()
         if (!force && now - lastEnforceAt < ENFORCE_INTERVAL_MS) return
@@ -7750,7 +7727,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
      *  才纠正，中间那段就是用户看到的「页面切换紫色底」。这里在 setter 处直接换掉：任何 view 被设成
      *  #ff7a7396 纯色底，立即改为透明（壁纸在下面），不碰布局、不碰子 View。 */
     private fun installPurpleBackgroundSwap() {
-        globalPassLog704("installPurpleBackgroundSwap(635/636拦截)"); if (masterOff704()) { dumpCounts703("master-skip 标题栏白底已拦(635)"); return }
+        if (mountOff703()) { dumpCounts703("mount-skip 标题栏白底已拦(635)"); return }
         if (purpleSwapInstalled) return
         val purple = 0xff7a7396.toInt()
         val cb = object : XC_MethodHook() {
@@ -7956,7 +7933,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     /** 610：ViewPager 自身也铺一张窗口锚定壁纸，切页过渡期的空洞露壁纸而不是宿主的渐变底。 */
     private fun applyPagerUnderlay(pager: ViewGroup, path: String?, homePath: String?, log: Boolean) {
-        if (bgMountOff704()) { bgBlockedLog704("PagerStripWallpaperDrawable(pager)"); return }
+        if (mountOff703()) { dumpCounts703("mount-skip PagerStripWallpaperDrawable(pager)"); return }
         if (path.isNullOrBlank()) {
             // 667：四页都关掉时把底衬摘掉，避免整页壁纸从 ViewPager 底下透出来
             val current = pagerUnderlays.remove(pager)
