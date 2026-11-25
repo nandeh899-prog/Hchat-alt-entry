@@ -91,6 +91,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedMap(WeakHashMap<View, Float>())
     private val originalVisibilities: MutableMap<View, Int> =
         Collections.synchronizedMap(WeakHashMap<View, Int>())
+    /** 710：633 缝隙清线已处理过的列表实例（每实例只清一次，防止 706 那种反复清同一个列表导致四页乱屏）。 */
+    private val seamClearedLists710: MutableSet<View> = Collections.newSetFromMap(WeakHashMap<View, Boolean>())
+    /** 710：已挂过布局监听的 decor（每个 decor 只挂一个监听）。 */
+    private val seamClearerDecors710: MutableSet<ViewGroup> = Collections.newSetFromMap(WeakHashMap<ViewGroup, Boolean>())
+    /** 710：被 applyEarlyWindowBackground 改写成壁纸的 window 底原值；还原 decor 时必须连这一层一起还原，否则设置页/非主题页会继续透出壁纸。 */
+    private val replacedWindowBackgrounds: MutableMap<Window, Drawable?> =
+        Collections.synchronizedMap(WeakHashMap<Window, Drawable?>())
+    /** 710：633 缝隙清线的走树限频时间戳。 */
+    @Volatile private var lastSeamWalk710 = 0L
     private val homeImageHosts: MutableMap<View, android.graphics.drawable.Drawable?> =
         Collections.synchronizedMap(WeakHashMap<View, android.graphics.drawable.Drawable?>())
     private val homeImageDrawables: MutableMap<View, ScreenAnchoredBitmapDrawable> =
@@ -527,8 +536,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun applyThemeNow(activity: Activity, decor: ViewGroup) {
-        if (mountOff703()) { dumpCounts703("mount-skip applyPageBackgrounds("); return }
+        // 710：底栏开关不再挂在任何门控之后。708 的失效链是「关页态 → 本函数早退 → installEnforcement
+        // 从未执行 → enforce 没有任何调用者」，所以底栏的隐藏/恢复必须先于 mountOff703() 与 enabled 判定跑一次。
         val snapshot = ThemeSettings.snapshot(context.hostContext())
+        runCatching { syncNativeTab710(decor, snapshot) }
+            .onFailure { HLog.e("$TAG 底栏独立同步异常(710): ${it.message}", it) }
+        // 710：633 缝隙清线同理独立挂载（每个列表实例首次布局清一次），不依赖巡检与页面背景开关。
+        runCatching { installSeamClearer710(decor) }
+            .onFailure { HLog.e("$TAG 633 缝隙清线挂载异常(710): ${it.message}", it) }
+        if (mountOff703()) { dumpCounts703("mount-skip applyPageBackgrounds("); return }
         if (!snapshot.enabled) {
             HLog.i("$TAG 主题未启用（读到的 enabled=false），恢复已改视图；配置=${prefsPath()}")
             restoreTouchedViews()
@@ -814,6 +830,51 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
     }
 
+    /**
+     * 710：底栏隐藏/恢复的独立同步入口。
+     *
+     * 与 applyBottomTab 的分工：这里只做「隐藏 / 恢复」一件事，不受 mountOff703()、backgroundEnabled
+     * 与 enforce 巡检频率的任何约束，因此设置页、关页态下底栏开关依然生效（708「隐藏底栏失效」的根因
+     * 就是这条链断在 applyThemeNow 的早退上：installEnforcement 从未执行、enforce 没有调用者）。
+     *
+     * 恢复方向必须自己复位 tabHiddenByUs：restoreTouchedViews() 只还原 hiddenViews 的可见性与高度，
+     * 不清这个标记，漏复位会让下一次「隐藏底栏=开」误判成「已经隐藏过」。
+     */
+    private fun syncNativeTab710(decor: ViewGroup, snapshot: ThemeSnapshot) {
+        if (!snapshot.enabled) {
+            // 主题总开关关掉：restoreTouchedViews() 会把 hiddenViews 全部置回 VISIBLE，这里只对齐标记。
+            tabHiddenByUs = false
+            return
+        }
+        val wantHide = snapshot.tabHideNative
+        var cached = lastTab?.get()
+        if (cached != null && !cached.isAttachedToWindow) cached = null
+        if (cached == null && !wantHide && !tabHiddenByUs) {
+            // 不需要隐藏、也没有隐藏过 → 无事可做，避免每次进页面都扫一遍视图树。
+            return
+        }
+        val tab = cached ?: findBottomTab(decor, logCandidates = wantHide)
+        if (tab == null) {
+            if (wantHide) {
+                HLog.e("$TAG 底栏独立同步(710)：隐藏底栏=开，但没找到底栏容器，本轮未隐藏")
+            }
+            return
+        }
+        lastTab = WeakReference(tab)
+        if (wantHide) {
+            if (tab.visibility != View.GONE) {
+                HLog.i("$TAG 隐藏原生底栏=开，隐藏底栏容器(710): ${tab.javaClass.name}#${idName(tab)}")
+            }
+            hideView(tab)
+            tabHiddenByUs = true
+            return
+        }
+        if (tabHiddenByUs) {
+            runCatching { showView(tab) }
+            tabHiddenByUs = false
+            HLog.i("$TAG 隐藏原生底栏=关，恢复原生底栏显示(710): ${tab.javaClass.name}#${idName(tab)}")
+        }
+    }
     private fun applyBottomTab(decor: ViewGroup, snapshot: ThemeSnapshot) {
         if (!snapshot.tabEnabled && !snapshot.tabHideNative) return
         val tab = findBottomTab(decor, logCandidates = true)
@@ -2121,6 +2182,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (anchorHeight <= 0) anchorHeight = decor.height.takeIf { it > 0 } ?: dm.heightPixels
             val drawable = anchored(decor, image)
             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            // 710：写 window 底之前先登记原值，否则设置页 / 非主题页只还原 decor、window 那层壁纸仍会透出来。
+            if (!replacedWindowBackgrounds.containsKey(window)) {
+                // Window 只有 getBackground()、没有配对的 setBackground，Kotlin 不会合成属性，必须显式调用。
+                @Suppress("DEPRECATION")
+                val prevWindowBackground = runCatching { window.getBackground() }.getOrNull()
+                replacedWindowBackgrounds[window] = prevWindowBackground
+            }
             window.setBackgroundDrawable(drawable)
             window.statusBarColor = Color.TRANSPARENT
             window.navigationBarColor = Color.TRANSPARENT
@@ -2359,6 +2427,16 @@ private class ThemeRuntime(private val context: FeatureContext) {
     /** 703：非主题页不铺壁纸；若此前铺过，用原底精确还原（只还原我们写过的那一层）。 */
     private fun restoreNativeDecorIfOurs703(activity: Activity, decor: ViewGroup) {
         runCatching {
+            // 710：先还原 window 底（冷启动铺底写的就是这一层），再还原 decor，顺序反了会露出中间态。
+            val window = activity.window
+            if (window != null && replacedWindowBackgrounds.containsKey(window)) {
+                val prevWindow = replacedWindowBackgrounds.remove(window)
+                runCatching { window.setBackgroundDrawable(prevWindow) }
+                HLog.i(
+                    "$TAG 非主题页还原窗口底(710): ${activity.javaClass.simpleName}" +
+                        " 原=${prevWindow?.javaClass?.simpleName ?: "null"}"
+                )
+            }
             val prev = replacedBackgrounds.remove(decor)
             if (prev != null && decor.background !== prev) {
                 decor.setBackgroundDrawable(prev)
@@ -4469,6 +4547,76 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return "凹陷=$k$dips 行=$rows"
     }
 
+    /**
+     * 710：633 缝隙清线改为「每个 ConversationListView 实例首次布局后清一次 Paint」。
+     *
+     * 706 把 probeSeam633 挂到 500ms 巡检里反复清同一个列表，四页全乱，707 因此整段回退。
+     * 这里用 WeakHashMap 记住已处理的实例：宿主重建列表（新实例）才再清一次，同一实例永不重复清；
+     * 触发用全局布局监听（列表还没布局时不会空跑），并限频 500ms，避免切页动画期间每帧走树。
+     */
+    private fun installSeamClearer710(decor: ViewGroup) {
+        if (!seamClearerDecors710.add(decor)) return
+        runCatching {
+            decor.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    runCatching { clearSeamOnce710(decor) }
+                        .onFailure { HLog.e("$TAG 633 缝隙清线异常(710): ${it.message}", it) }
+                }
+            })
+            HLog.i("$TAG 633 缝隙清线已挂载(710)：每个列表实例首次布局后清一次 Paint")
+        }.onFailure { HLog.e("$TAG 633 缝隙清线挂载失败(710): ${it.message}", it) }
+    }
+    private fun clearSeamOnce710(root: ViewGroup) {
+        if (root.width <= 0 || root.height <= 0) return
+        val now = SystemClock.uptimeMillis()
+        if (now - lastSeamWalk710 < 500L) return
+        lastSeamWalk710 = now
+        val lists = ArrayList<View>()
+        collectSeamLists710(root, lists, 0)
+        if (lists.isEmpty()) return
+        for (list in lists) {
+            // 关键：每个列表实例只清一次，已处理过就整段跳过（706 的乱屏就是重复清同一个列表）。
+            if (!seamClearedLists710.add(list)) continue
+            val sb = StringBuilder()
+            var count = 0
+            var cls: Class<*>? = list.javaClass
+            var depth = 0
+            while (cls != null && depth < 3) {
+                for (f in KavaReflector.declaredFields(cls)) {
+                    if (!Paint::class.java.isAssignableFrom(f.type)) continue
+                    runCatching {
+                        val paint = f.get(list) as? Paint ?: return@runCatching
+                        val color = paint.color
+                        if (((color ushr 24) and 0xFF) !in 1..80 || (color and 0xFFFFFF) != 0) return@runCatching
+                        sb.append(" ").append(f.name).append("=#").append(Integer.toHexString(color))
+                        paint.color = 0
+                        paint.alpha = 0
+                        count++
+                    }
+                }
+                cls = cls.superclass
+                depth++
+            }
+            runCatching { list.invalidate() }
+            if (count > 0) {
+                HLog.i("$TAG 633 缝隙清线(710): ${list.javaClass.name}#${idName(list)} 清除 $count 个 Paint:$sb")
+            } else {
+                HLog.i("$TAG 633 缝隙清线(710): ${list.javaClass.name}#${idName(list)} 无低 alpha 黑色 Paint，未改动")
+            }
+        }
+    }
+    private fun collectSeamLists710(node: View, out: MutableList<View>, depth: Int) {
+        if (depth > MAX_DEPTH) return
+        val name = node.javaClass.name
+        if (name == SEAM_LIST_CLASS || name.endsWith(".$SEAM_LIST_CLASS") || name.contains(SEAM_LIST_CLASS)) {
+            out.add(node)
+        }
+        if (node is ViewGroup) {
+            for (index in 0 until node.childCount) {
+                node.getChildAt(index)?.let { collectSeamLists710(it, out, depth + 1) }
+            }
+        }
+    }
     /**
      * 633：把「#000000 族、低 alpha」的列表自带 Paint 一次性清成透明，并用 PixelCopy 清前/清后自证。
      * 状态机：0→测清前→(300ms)→清 Paint→(500ms)→测清后→完成。全程最多 3 次清除。
@@ -7169,7 +7317,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { view.visibility = visibility }
         }
         originalVisibilities.clear()
+        // 710：applyEarlyWindowBackground 写的是 window 底，只清 decor 会让设置页 / 关页态继续透出壁纸。
+        replacedWindowBackgrounds.entries.toList().forEach { (window, background) ->
+            runCatching { window.setBackgroundDrawable(background) }
+        }
+        replacedWindowBackgrounds.clear()
         lastTab = null
+        // 710：hiddenViews 已在上面全部还原成 VISIBLE，标记必须同步复位。
+        tabHiddenByUs = false
     }
 
     private fun findActionBar(activity: Activity, root: ViewGroup): View? {
@@ -8341,6 +8496,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val GRADIENT_VIEW_CLASS = "com.tencent.mm.dynamicbackground.view.GradientColorBackgroundView"
         const val PAGER_CLASS = "com.tencent.mm.ui.base.CustomViewPager"
         const val BOTTOM_TAB_CLASS = "com.tencent.mm.ui.LauncherUIBottomTabView"
+        const val SEAM_LIST_CLASS = "ConversationListView"
         val ACTION_BAR_ID_NAMES = listOf("action_bar", "action_bar_container", "title_bar", "title_bar_container")
         val ACTION_BAR_CLASS_NAMES = listOf("ActionBarContainer", "ActionBarLayout", "MMWindowActionBar", "TitleBarView")
         val BOTTOM_TAB_CLASS_NAMES = listOf("LauncherUIBottomTabView", "MMTabView", "BottomTabView", "HomeBottomTab")
