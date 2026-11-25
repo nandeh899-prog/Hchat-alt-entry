@@ -2740,28 +2740,53 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 让设置页那些留白处透出灰底而不是壁纸；离开设置页再整体铺回。
      */
     private val settingsLikeHidden710 = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** 710d：窗口底是否已被我们改成白色（用于「隐藏原生底栏后那条灰」）。 */
+    private var bottomStripWhitened710 = false
+
+    /** 710d：底栏那段是否必然空着——隐藏了原生底栏、同时没开自定义底栏。 */
+    private fun bottomStripEmpty710(snapshot: ThemeSnapshot): Boolean =
+        snapshot.tabHideNative && !snapshot.tabEnabled
     private val settingsTitles710 = arrayOf(
         "设置", "通用", "聊天", "隐私", "账号与安全", "朋友权限", "关于微信", "青少年模式",
         "关怀模式", "个人信息与权限", "新消息通知", "个人信息收集清单", "第三方信息共享清单",
         "订单与卡包", "界面和显示", "存储空间", "辅助功能", "发现页管理"
     )
     private var lastSettingsLikeLogAt = 0L
+    /** 710c：连续判定「不在设置页」的轮数，用于抗抖（见 enforce 里的恢复门）。 */
+    private var settingsMissCycles710 = 0
 
-    /** 710c：decor 顶部 300px 内是否出现「设置类页面」的标题文本。 */
+    /** 710c：只在设置页里出现、且不会出现在「我」页上的文案（次要证据）。 */
+    private val settingsOnlyTitles710 = arrayOf(
+        "账号与安全", "青少年模式", "关怀模式", "朋友权限",
+        "个人信息与权限", "个人信息收集清单", "第三方信息共享清单", "关于微信"
+    )
+
+    /**
+     * 710c：decor 里是否正在显示「设置类页面」。
+     *
+     * 主证据：decor 顶部 300px 内的标题文本命中 [settingsTitles710]（排除列表行里的同名文本）。
+     * 次证据：树里同时出现 ≥2 个 [settingsOnlyTitles710] 里的设置页独有文案。
+     * 次证据是为了抗抖：设置页滚动/切换子页时标题可能被回收或短暂置空，只靠主证据会
+     * 每隔一两秒误判一次「已离开设置页」，壁纸于是反复隐显（真机 1009 日志里实测
+     * 5 次按住 / 4 次放开即由此而来）。
+     */
     private fun settingsLikeVisible710(decor: ViewGroup): Boolean {
         var hit = false
+        var secondary = 0
         val queue = ArrayList<View>()
         queue.add(decor)
         var i = 0
         while (i < queue.size && i < 1200 && !hit) {
             val v = queue[i]; i++
-            if (v is TextView && v.visibility == View.VISIBLE && absTopOfView(v) < 300) {
+            if (v is TextView && v.visibility == View.VISIBLE) {
                 val t = v.text?.toString()?.trim()
-                // 只要标题栏里的文本：列表行里的同名文本（例如「我」页的「设置」行、
-                // 设置主页里的「通用/聊天」行）一律排除，避免把普通列表误判成设置页。
-                if (t != null && t.isNotEmpty() && t.length <= 10 &&
-                    settingsTitles710.contains(t) && !insideScrollable710(v)
-                ) hit = true
+                if (t != null && t.isNotEmpty() && t.length <= 10) {
+                    if (!hit && absTopOfView(v) < 300 && settingsTitles710.contains(t) &&
+                        !insideScrollable710(v)
+                    ) hit = true
+                    if (secondary < 2 && settingsOnlyTitles710.contains(t)) secondary++
+                    if (hit || secondary >= 2) hit = true
+                }
             }
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
         }
@@ -6981,11 +7006,45 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 所以只能靠顶层标题文本识别：命中就按住页面壁纸，离开再铺回。
         runCatching {
             if (settingsLikeVisible710(decor)) {
+                settingsMissCycles710 = 0
                 hidePageWallpaperForSettings710(decor, "巡检")
-            } else {
-                restorePageWallpaperAfterSettings710(decor, "巡检")
+            } else if (settingsLikeHidden710.get()) {
+                // 抗抖：设置页里标题被回收/滚动时会短暂识别不到，连续 6 轮（≈2.4s）都没命中
+                // 才认为真的离开了设置页，否则壁纸会反复隐显。
+                settingsMissCycles710++
+                if (settingsMissCycles710 >= SETTINGS_RESTORE_MISS_CYCLES_710) {
+                    settingsMissCycles710 = 0
+                    restorePageWallpaperAfterSettings710(decor, "巡检")
+                }
             }
         }.onFailure { HLog.e("$TAG 设置页壁纸按住异常(710c): ${it.message}") }
+        // 710d：「隐藏原生底栏」但没开自定义底栏时，底栏那段（真机实测 174px）没有任何视图，
+        // 露出的是窗口底色 #EDEDED → 用户看到「原本底栏位置留一条灰」。页面背景开着时
+        // 壁纸层把这段盖住了，所以只有关掉页面背景才看得见。这里在关背景的情况下把窗口底
+        // 改成白色，与列表同色，灰条即消失。
+        runCatching {
+            val want = !snapshot.backgroundEnabled && bottomStripEmpty710(snapshot)
+            if (want) {
+                val white = 0xffffffff.toInt()
+                val cur = (decor.background as? ColorDrawable)?.color
+                if (cur != white) {
+                    decor.setBackgroundDrawable(ColorDrawable(white))
+                    activity.window?.setBackgroundDrawable(ColorDrawable(white))
+                    if (!bottomStripWhitened710) {
+                        HLog.i(
+                            "$TAG 底部空档底色改白(710d): 隐藏底栏=%s 自定义底栏=%s（巡检）"
+                                .format(snapshot.tabHideNative, snapshot.tabEnabled)
+                        )
+                    }
+                }
+                bottomStripWhitened710 = true
+            } else if (bottomStripWhitened710) {
+                bottomStripWhitened710 = false
+                decor.setBackgroundDrawable(ColorDrawable(NATIVE_GREY))
+                activity.window?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY))
+                HLog.i("$TAG 底部空档底色还原原生灰(710d)（巡检）")
+            }
+        }.onFailure { HLog.e("$TAG 底部空档底色切换异常(710d): ${it.message}") }
         // 710：叠加页兜底巡检——钩子（Instrumentation/Activity#onResume）万一在某些 ROM 上不生效，
         // 这里每轮也看一眼「当前有没有非 Launcher 的可见 Activity」，有就撤壁纸，回来就补铺。
         runCatching {
@@ -9076,6 +9135,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val LIFECYCLE_BUMP_DELAY_MS = 80L
         const val PERIODIC_TICK_MS = 500L
         const val ENFORCE_INTERVAL_MS = 400L
+        /** 710c：设置页识别连续失手多少轮才恢复页面壁纸（≈2.4s），用于抗抖。 */
+        const val SETTINGS_RESTORE_MISS_CYCLES_710 = 6
         const val SCRIM_INTERVAL_MS = 1200L
         const val FRAME_PUMP_MS = 2400L
         const val ROW_GAP_DP = 6f
