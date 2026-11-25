@@ -100,6 +100,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedMap(WeakHashMap<Window, Drawable?>())
     /** 710：633 缝隙清线的走树限频时间戳。 */
     @Volatile private var lastSeamWalk710 = 0L
+    /** 710：已打过「视图树里没有列表」日志的 decor（每个 decor 只打一次，避免刷屏）。 */
+    private val seamEmptyLogged710: MutableSet<ViewGroup> = Collections.newSetFromMap(WeakHashMap<ViewGroup, Boolean>())
     private val homeImageHosts: MutableMap<View, android.graphics.drawable.Drawable?> =
         Collections.synchronizedMap(WeakHashMap<View, android.graphics.drawable.Drawable?>())
     private val homeImageDrawables: MutableMap<View, ScreenAnchoredBitmapDrawable> =
@@ -4566,17 +4568,31 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             })
             HLog.i("$TAG 633 缝隙清线已挂载(710)：每个列表实例首次布局后清一次 Paint")
+            // 710 实测：布局监听在部分会话里只对第一个列表实例回调（17:00 清过、17:06/17:07/17:08 三次都没清），
+            // 所以挂载后自己也主动试几轮，覆盖「列表晚于首次布局才挂上」的情况；每实例仍只清一次。
+            runCatching { clearSeamOnce710(decor) }
+            decor.post { runCatching { clearSeamOnce710(decor) } }
+            decor.postDelayed({ runCatching { clearSeamOnce710(decor) } }, 400L)
+            decor.postDelayed({ runCatching { clearSeamOnce710(decor) } }, 1500L)
         }.onFailure { HLog.e("$TAG 633 缝隙清线挂载失败(710): ${it.message}", it) }
     }
     private fun clearSeamOnce710(root: ViewGroup) {
         if (root.width <= 0 || root.height <= 0) return
         val now = SystemClock.uptimeMillis()
-        if (now - lastSeamWalk710 < 500L) return
+        if (now - lastSeamWalk710 < 1500L) return
         lastSeamWalk710 = now
         val lists = ArrayList<View>()
         collectSeamLists710(root, lists, 0)
-        if (lists.isEmpty()) return
-        for (list in lists) {
+        if (lists.isEmpty()) {
+            if (seamEmptyLogged710.add(root)) {
+                HLog.i("$TAG 633 缝隙清线(710): 当前视图树里还没有 $SEAM_LIST_CLASS，等下一次布局重试")
+            }
+            return
+        }
+        val fresh = lists.filter { !seamClearedLists710.contains(it) }
+        if (fresh.isEmpty()) return
+        HLog.i("$TAG 633 缝隙清线(710): 待处理列表 ${fresh.size}/${lists.size} 个")
+        for (list in fresh) {
             // 关键：每个列表实例只清一次，已处理过就整段跳过（706 的乱屏就是重复清同一个列表）。
             if (!seamClearedLists710.add(list)) continue
             val sb = StringBuilder()
@@ -6278,6 +6294,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     .onFailure { HLog.e("$TAG 常驻补刷异常: ${it.message}", it) }
                 runCatching { refreshVisiblePageScrim() }
                     .onFailure { HLog.e("$TAG 可见页分层补跑异常(678): ${it.message}", it) }
+                // 710：列表实例重建后（切页/回首页）再补一次清线；同一实例由 seamClearedLists710 挡住，不会重复清。
+                runCatching { clearSeamOnce710(decor) }
+                    .onFailure { HLog.e("$TAG 633 缝隙清线异常(710): ${it.message}", it) }
                 mainHandler.postDelayed(this, PERIODIC_TICK_MS)
             }
         }

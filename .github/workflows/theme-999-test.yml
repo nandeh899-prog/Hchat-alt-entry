@@ -55,10 +55,18 @@ jobs:
           mkdir -p app/keystore
           echo "$HCAT_KEYSTORE_BASE64" | base64 -d > "app/keystore/。。.jks"
 
+      - name: 计算版本号
+        # github.run_number 是本工作流自己的运行计数，从 1 开始，直接当 versionCode 会小于 999 里已装的 709，
+        # 只能靠 pm install -d 降级安装。这里统一加 1000 作为基线，保证每次都是正常升级。
+        run: |
+          set -e
+          code=$((1000 + GITHUB_RUN_NUMBER))
+          echo "HCAT_VERSION_CODE=$code" >> "$GITHUB_ENV"
+          echo "HCAT_VERSION_NAME=5.5.103.$code-theme" >> "$GITHUB_ENV"
+          echo "versionCode=$code versionName=5.5.103.$code-theme"
+
       - name: 编译 release（关 R8，999 测试通道）
         env:
-          HCAT_VERSION_CODE: ${{ github.run_number }}
-          HCAT_VERSION_NAME: '5.5.103.${{ github.run_number }}-theme'
           HCAT_APP_ID_SUFFIX: '.coexist'
           HCAT_MINIFY: 'false'
           HCAT_APK_NAME: 'Toolbox-coexist-test-signed.apk'
