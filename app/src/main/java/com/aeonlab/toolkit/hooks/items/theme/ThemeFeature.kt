@@ -2656,17 +2656,109 @@ private class ThemeRuntime(private val context: FeatureContext) {
             HLog.i("$TAG 叠加页钩子已就位(710)：Instrumentation#callActivityOnResume + Activity#onResume")
         }.onFailure { HLog.e("$TAG 设置页钩子异常(684): ${it.message}") }
     }
+    /**
+     * 710b：设置页这类「半透明窗口 + 内容层留白」的叠加页，只撤 decor 壁纸还不够。
+     * 真机截图（1000143806 / 1000143807）显示设置页顶部是直接透出「我的」页的头像与
+     * 「海绵宝宝」卡片 —— 说明看到的并不是设置页自己画的壁纸，而是底下 LauncherUI 的壁纸层。
+     * 半透明窗口里 `window.setBackgroundDrawable()` 是无效的（系统会把 decor 底置空），
+     * 所以在叠加页 decor 的最底层插一块整窗原生灰底板，退出时整块摘掉。
+     */
+    private val overlaySettingsActivities710: MutableSet<Activity> = java.util.Collections.synchronizedSet(
+        java.util.Collections.newSetFromMap(java.util.WeakHashMap<Activity, Boolean>())
+    )
+    private var lastOverlayBackdropLogAt = 0L
+    private var overlayBackdropCount710 = 0
+
+    /** 710b：微信「设置」家族 Activity（设置主页 / 通用 / 青少年模式 / 关怀模式 …）。 */
+    private fun isSettingsFamily710(a: Activity): Boolean {
+        val n = a.javaClass.name
+        return !n.startsWith("com.aeonlab") && !n.contains(LAUNCHER_UI_CLASS) &&
+            (n.startsWith("com.tencent.mm.plugin.setting") || n.contains("etting") || n.contains("Setting"))
+    }
+
+    private fun fullWindowLayoutParams(): ViewGroup.LayoutParams =
+        android.widget.FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+
+    /**
+     * 710b：保证叠加页 decor 最底层有一块整窗原生灰底板。
+     * 宿主/系统可能把它挪位或改回透明，所以每轮 enforce 都会再校一次（幂等，代价是一次 childCount 遍历）。
+     */
+    private fun ensureOverlayBackdrop710(a: Activity, reason: String) {
+        val decor = runCatching { a.window?.decorView as? ViewGroup }.getOrNull() ?: return
+        if (!decor.isAttachedToWindow) return
+        if (decor !is android.widget.FrameLayout) return
+        val existing = decor.findViewWithTag<View>(OVERLAY_BACKDROP_TAG)
+        if (existing != null) {
+            if ((existing.background as? ColorDrawable)?.color != NATIVE_GREY) {
+                runCatching { existing.setBackgroundColor(NATIVE_GREY) }
+            }
+            if (existing.visibility != View.VISIBLE) runCatching { existing.visibility = View.VISIBLE }
+            if (decor.indexOfChild(existing) != 0) {
+                runCatching {
+                    decor.removeView(existing)
+                    decor.addView(existing, 0, fullWindowLayoutParams())
+                }
+            }
+            return
+        }
+        runCatching {
+            val backdrop = View(a)
+            backdrop.tag = OVERLAY_BACKDROP_TAG
+            backdrop.setBackgroundColor(NATIVE_GREY)
+            backdrop.isClickable = false
+            backdrop.isFocusable = false
+            backdrop.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            decor.addView(backdrop, 0, fullWindowLayoutParams())
+            overlayBackdropCount710++
+            val now = SystemClock.uptimeMillis()
+            if (now - lastOverlayBackdropLogAt >= 2000L) {
+                lastOverlayBackdropLogAt = now
+                HLog.i(
+                    "$TAG 叠加页灰底板已插入(710b): ${a.javaClass.simpleName} decor=${decor.javaClass.simpleName}" +
+                        " ${decor.width}x${decor.height} 累计=$overlayBackdropCount710（$reason）"
+                )
+            }
+        }.onFailure { HLog.e("$TAG 叠加页灰底板插入失败(710b): ${it.message}") }
+    }
+
+    /** 710b：退出叠加页时把灰底板整块摘掉，绝不留给宿主。 */
+    private fun clearOverlayBackdrops710(reason: String) {
+        if (overlaySettingsActivities710.isEmpty()) return
+        val list = overlaySettingsActivities710.toList()
+        overlaySettingsActivities710.clear()
+        var removed = 0
+        list.forEach { a ->
+            runCatching {
+                val decor = a.window?.decorView as? ViewGroup ?: return@runCatching
+                val bd = decor.findViewWithTag<View>(OVERLAY_BACKDROP_TAG) ?: return@runCatching
+                decor.removeView(bd)
+                removed++
+            }
+        }
+        if (removed > 0) HLog.i("$TAG 叠加页灰底板已摘除(710b): $removed 处（$reason）")
+    }
+
     /** 710：某个 Activity 恢复到前台时的统一处理（叠加页撤壁纸 / 宿主回来补铺 / 设置页灰底）。 */
     private fun onOverlayActivityResumed710(a: Activity) {
         val n = a.javaClass.name
         if (n.startsWith("com.aeonlab")) return
         if (n.contains(LAUNCHER_UI_CLASS)) {
             revealDecorWallpaper710("宿主 resumed710")
+            clearOverlayBackdrops710("宿主 resumed710")
             return
         }
-        HLog.i("$TAG 叠加页探测(710): 类=$n → 撤下 decor/窗口壁纸")
+        val settingsFamily = isSettingsFamily710(a)
+        if (settingsFamily) {
+            HLog.i("$TAG 叠加页探测(710): 类=$n → 撤下 decor/窗口壁纸")
+            overlaySettingsActivities710.add(a)
+        }
         hideDecorWallpaper710("叠加页 ${a.javaClass.simpleName}")
-        if (n.contains("etting") || n.contains("Setting")) {
+        if (settingsFamily) {
+            // 710b：先插整窗灰底板（半透明窗口的关键），再走原来的窗口/页面灰底。
+            ensureOverlayBackdrop710(a, "resumed710")
             applyNativeGreyToSettingsPage(a, "resumed710")
         }
     }
@@ -6800,6 +6892,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 hideDecorWallpaper710("巡检 ${overlay.javaClass.simpleName}")
             } else if (overlay == null && wallpaperHidden) {
                 revealDecorWallpaper710("巡检：回到宿主")
+                clearOverlayBackdrops710("巡检：回到宿主")
+            }
+            // 710b：叠加页一直开着时，每轮都把灰底板校一遍（宿主会把它挪位/改回透明）。
+            if (overlaySettingsActivities710.isNotEmpty()) {
+                overlaySettingsActivities710.toList().forEach { a ->
+                    runCatching { ensureOverlayBackdrop710(a, "巡检") }
+                }
             }
         }.onFailure { HLog.e("$TAG 叠加页巡检异常(710): ${it.message}") }
         if (snapshot.backgroundEnabled) reassertImmersive(activity, decor, force)
@@ -6824,6 +6923,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 tabHiddenByUs = false
                 HLog.i("$TAG 隐藏原生底栏=关，恢复原生底栏显示: ${tab.javaClass.name}#${idName(tab)}")
             }
+        }
+        // 710b：底栏隐藏后原位置那条灰。与壁纸开关无关（用户实测开/关都一样），
+        // 只在「底栏确实被我们隐藏了」时才清，否则会破坏微信自己画的底栏。
+        if (snapshot.tabHideNative || tabHiddenByUs) {
+            runCatching { clearBottomBarStrip710(decor, true) }
+                .onFailure { HLog.e("$TAG 底部残条清理异常(710b): ${it.message}") }
         }
         if (snapshot.backgroundEnabled) {
             pageDrawables.entries.toList().forEach { (page, drawable) ->
@@ -7020,6 +7125,81 @@ private class ThemeRuntime(private val context: FeatureContext) {
             )
         }
         return true
+    }
+
+    /** 710b：底部残条日志节流 + 探针节流。 */
+    private var lastBottomStripLogAt = 0L
+
+    private fun isNeutralGrey710(c: Int): Boolean {
+        if (Color.alpha(c) != 0xFF) return false
+        val r = c shr 16 and 0xFF
+        val g = c shr 8 and 0xFF
+        val b = c and 0xFF
+        return r == g && g == b && r in 0x30..0xF8
+    }
+
+    /**
+     * 710b：底栏隐藏后，原底栏位置还留着一条原生灰（用户真机截图：通讯录最底部一整条灰）。
+     *
+     * 判据收紧成「整宽 + 完全贴在屏幕最底 + 高度不超过 1.6 个底栏高 + 中性灰」，
+     * 只清这种条状视图：纯白列表行（r≠0xED 那种）、图标、自家壁纸层一律不碰。
+     * 没命中时打一条探针，把最底部那几层的类名/尺寸/底色点出来 —— 万一绘制者不是独立视图，
+     * 下一份日志就能直接看出是谁在托底。
+     */
+    private fun clearBottomBarStrip710(decor: ViewGroup, dumpCandidates: Boolean) {
+        val decorW = decor.width.coerceAtLeast(decor.measuredWidth)
+        val decorH = decor.height.coerceAtLeast(decor.measuredHeight)
+        if (decorW <= 0 || decorH <= 0) return
+        val density = decor.resources.displayMetrics.density
+        val barH = (density * 48f).toInt().coerceAtLeast(120)
+        var cleared = 0
+        val hits = ArrayList<String>()
+        val candidates = ArrayList<String>()
+        fun walk(v: View, d: Int) {
+            if (d > 18) return
+            val w = v.width.coerceAtLeast(v.measuredWidth)
+            val h = v.height.coerceAtLeast(v.measuredHeight)
+            if (v !== decor && w > 0 && h > 0) {
+                val top = absTopOfView(v)
+                val bottom = top + h
+                val bg = v.background
+                val inBand = bottom >= decorH - 6 && top >= decorH - barH * 2 &&
+                    h <= barH * 16 / 10 && w >= decorW * 9 / 10
+                if (inBand && v !is ImageView && bg != null &&
+                    !(bg is ColorDrawable && Color.alpha(bg.color) == 0) &&
+                    !isOurWallpaperDrawable(bg) && bg !is ScreenAnchoredBitmapDrawable &&
+                    bg !is PagerStripWallpaperDrawable && !homeImageHosts.containsKey(v)
+                ) {
+                    val desc = descDrawable(bg)
+                    if (candidates.size < 10) {
+                        candidates.add("${v.javaClass.simpleName}#${idName(v)} ${w}x$h top=$top bg=$desc")
+                    }
+                    if (bg is ColorDrawable && isNeutralGrey710(bg.color)) {
+                        if (!replacedBackgrounds.containsKey(v)) replacedBackgrounds[v] = bg
+                        runCatching { v.setBackgroundColor(Color.TRANSPARENT) }
+                        clearedViews.add(v)
+                        rowScrimDrawables.remove(v)
+                        cleared++
+                        if (hits.size < 8) {
+                            hits.add("${v.javaClass.simpleName}#${idName(v)} ${w}x$h top=$top bg=$desc")
+                        }
+                    }
+                }
+            }
+            if (v is ViewGroup) for (i in 0 until v.childCount) v.getChildAt(i)?.let { walk(it, d + 1) }
+        }
+        walk(decor, 0)
+        val now = SystemClock.uptimeMillis()
+        if (cleared > 0 && now - lastBottomStripLogAt >= 3000L) {
+            lastBottomStripLogAt = now
+            HLog.i("$TAG 底部底栏残条已清透明(710b): $cleared 处 [${hits.joinToString(" / ")}]")
+        } else if (cleared == 0 && dumpCandidates && now - lastBottomStripLogAt >= 30000L) {
+            lastBottomStripLogAt = now
+            HLog.i(
+                "$TAG 底部残条探针(710b): 底栏高≈$barH 屏高=$decorH 未命中，候选=" +
+                    (if (candidates.isEmpty()) "无" else candidates.joinToString(" / "))
+            )
+        }
     }
 
     private fun absTopOfView(v: View): Int {
@@ -8752,6 +8932,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val FRAME_PUMP_MS = 2400L
         const val ROW_GAP_DP = 6f
         const val HOME_IMAGE_TAG = "hchat_home_image_layer"
+        /** 710b：叠加页（微信设置页等半透明窗口）整窗灰底板的 tag。 */
+        const val OVERLAY_BACKDROP_TAG = "aeonlab_overlay_backdrop_710"
         const val HOME_ROW_ALPHA = 31
         const val CONTENT_ROW_ALPHA = 13
     }

@@ -2173,3 +2173,25 @@ DexClub 横向核验如下，表内混淆名称仅作 APK 证据，运行时代�
 `applyImmersiveStatusBar()` 新增一趟：贴着屏幕最顶端（`top <= statusH/2`）、整宽（≥90%）、
 高度 ≈ 状态栏（≤2×statusH）、底色不是自家壁纸层的视图一律清成透明，并打印类名与底色
 （`状态栏条底色已清(710)`），便于下一轮确认那条渐变到底挂在谁身上。
+
+### 5. 710b 真机复验后的收口
+
+真机反馈（1006）：黑底、图标错位、首页状态栏全部达标；两项未过。
+
+**(a) 设置页仍透壁纸** —— 成因不是「设置页自己画了壁纸」，而是**设置页窗口本身是半透明的**：
+截图里设置页顶部透出的其实是底下 `LauncherUI` 的页面壁纸层（能看到「我的」页的头像与昵称卡片）。
+半透明窗口里 `Window.setBackgroundDrawable()` 是无效的（系统把 decor 底置空），所以 710 只撤
+decor/窗口底的做法在这条链路上必然失效。改为在设置家族 Activity 的 `decor` **最底层插一块整窗
+原生灰底板**（tag `aeonlab_overlay_backdrop_710`，`FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)`）：
+
+- `isSettingsFamily710()` 只认 `com.tencent.mm.plugin.setting*` / 含 `etting`/`Setting` 且非
+  `LauncherUI`、非本 App 的 Activity（聊天页也是独立 Activity，绝不能插，否则会把聊天背景刷灰）；
+- `ensureOverlayBackdrop710()` 幂等：已存在就校色、校可见性、校 z 序（`indexOfChild != 0` 时挪回 index 0）；
+- `enforce()` 里对 `overlaySettingsActivities710` 每轮再校一次（宿主会把它挪位/改回透明）；
+- 退出叠加页（回到 `LauncherUI`）→ `clearOverlayBackdrops710()` 整块摘掉，绝不留给宿主。
+
+**(b) 底栏隐藏后原位置留一条灰** —— `clearBottomBarStrip710()` 新增一趟底部扫描：
+`宽≥90%屏宽 + 底边贴屏幕最底(±6px) + 高≤1.6×底栏高 + 中性灰(r==g==b, 0x30..0xF8)`
+的条状视图清成透明并登记 `clearedViews`（宿主再写回来会被 `desiredBackgroundFor` 拦回）。
+只在 `snapshot.tabHideNative || tabHiddenByUs` 时执行，与壁纸总开关无关（用户实测开/关现象一致）。
+未命中时每 30s 打一条 `底部残条探针(710b)`，把最底部候选层的类名/尺寸/底色点出来。
