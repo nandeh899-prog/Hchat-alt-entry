@@ -1028,6 +1028,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         path: String,
         isHome: Boolean
     ) {
+        // 710c：设置页可见期间，任何重铺都直接放弃（否则 layout 回调会把刚按下去的壁纸又铺回来）。
+        if (settingsLikeHidden710.get()) return
         // 主题包里的 c 字段是背景上的叠色（#AARRGGBB），叠上去才和原主题观感一致
         // 5.5.104：页面层也换全屏锚定 Drawable，与 decor/容器层像素对齐，接缝才会消失。
         val image: Drawable = anchored(page, bitmap)
@@ -2320,6 +2322,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (gateWrite702()) return null
         // 676：叠加页在前台时壁纸层已撤下，这段时间放行宿主自己写背景，别把壁纸又拉回来。
         if (wallpaperHidden) return null
+        // 710c：设置页可见期间同样放行，避免把刚按下去、换成的原生灰又刷回壁纸。
+        if (settingsLikeHidden710.get()) return null
         // 状态栏那条 139px 由 612 的 window.statusBarColor 通道管，绝不能被这里的「清透明」碰到。
         if (view.id == android.R.id.statusBarBackground) return null
         try {
@@ -2350,6 +2354,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private fun fastAssertBackgroundsBeforeDraw() {
         if (gateWrite702()) return
         if (wallpaperHidden) return
+        // 710c：设置页可见期间不要逐帧把壁纸断言回来。
+        if (settingsLikeHidden710.get()) return
         if (!fastAssertLogged) {
             fastAssertLogged = true
             HLog.i("$TAG 逐帧背景断言已生效(613): 每帧绘制前把被宿主改写的页面/容器/行底色拉回")
@@ -2724,6 +2730,92 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }.onFailure { HLog.e("$TAG 叠加页灰底板插入失败(710b): ${it.message}") }
     }
 
+    /**
+     * 710c：微信「设置」不是独立 Activity —— 真机 dumpsys 里 user999 的任务栈只有 LauncherUI、
+     * 日志全程只有一个 (com.tencent.mm) 进程，说明设置页是**在 LauncherUI 窗口内渲染的页面**。
+     * 所以之前「给设置 Activity 插灰底板」打错了靶：那片壁纸其实是底下页面自己的壁纸层
+     * （用户描述「背景图应该是我的页面的那张」完全对上）。
+     *
+     * 做法：扫顶层 300px 有没有设置类页面的标题文本，命中就把页面壁纸层撤掉、页面容器转原生灰，
+     * 让设置页那些留白处透出灰底而不是壁纸；离开设置页再整体铺回。
+     */
+    private val settingsLikeHidden710 = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val settingsTitles710 = arrayOf(
+        "设置", "通用", "聊天", "隐私", "账号与安全", "朋友权限", "关于微信", "青少年模式",
+        "关怀模式", "个人信息与权限", "新消息通知", "个人信息收集清单", "第三方信息共享清单",
+        "订单与卡包", "界面和显示", "存储空间", "辅助功能", "发现页管理"
+    )
+    private var lastSettingsLikeLogAt = 0L
+
+    /** 710c：decor 顶部 300px 内是否出现「设置类页面」的标题文本。 */
+    private fun settingsLikeVisible710(decor: ViewGroup): Boolean {
+        var hit = false
+        val queue = ArrayList<View>()
+        queue.add(decor)
+        var i = 0
+        while (i < queue.size && i < 1200 && !hit) {
+            val v = queue[i]; i++
+            if (v is TextView && v.visibility == View.VISIBLE && absTopOfView(v) < 300) {
+                val t = v.text?.toString()?.trim()
+                // 只要标题栏里的文本：列表行里的同名文本（例如「我」页的「设置」行、
+                // 设置主页里的「通用/聊天」行）一律排除，避免把普通列表误判成设置页。
+                if (t != null && t.isNotEmpty() && t.length <= 10 &&
+                    settingsTitles710.contains(t) && !insideScrollable710(v)
+                ) hit = true
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        return hit
+    }
+
+    /** 710c：撤掉页面壁纸层（页面底图 ImageView + 页面背景），让设置页留白处透出原生灰。 */
+    private fun hidePageWallpaperForSettings710(decor: ViewGroup, reason: String) {
+        if (!settingsLikeHidden710.compareAndSet(false, true)) return
+        var imgs = 0
+        var pages = 0
+        val queue = ArrayList<View>()
+        queue.add(decor)
+        var i = 0
+        while (i < queue.size && i < 1500) {
+            val v = queue[i]; i++
+            if (v.tag == HOME_IMAGE_TAG) {
+                runCatching { v.visibility = View.GONE }
+                imgs++
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        pageDrawables.keys.toList().forEach { page ->
+            runCatching { page.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+            pages++
+        }
+        val now = SystemClock.uptimeMillis()
+        if (now - lastSettingsLikeLogAt >= 2000L) {
+            lastSettingsLikeLogAt = now
+            HLog.i("$TAG 设置页已按住页面壁纸(710c): 壁纸层=$imgs 页底=$pages（$reason）")
+        }
+    }
+
+    /** 710c：离开设置页，把壁纸整体铺回来。 */
+    private fun restorePageWallpaperAfterSettings710(decor: ViewGroup?, reason: String) {
+        if (!settingsLikeHidden710.compareAndSet(true, false)) return
+        var shown = 0
+        if (decor != null) {
+            val queue = ArrayList<View>()
+            queue.add(decor)
+            var i = 0
+            while (i < queue.size && i < 1500) {
+                val v = queue[i]; i++
+                if (v.tag == HOME_IMAGE_TAG && v.visibility != View.VISIBLE) {
+                    runCatching { v.visibility = View.VISIBLE }
+                    shown++
+                }
+                if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+            }
+        }
+        HLog.i("$TAG 设置页已退出，重铺页面壁纸(710c): 壁纸层恢复=$shown（$reason）")
+        scheduleReapply("设置页退出710c")
+    }
+
     /** 710b：退出叠加页时把灰底板整块摘掉，绝不留给宿主。 */
     private fun clearOverlayBackdrops710(reason: String) {
         if (overlaySettingsActivities710.isEmpty()) return
@@ -3090,6 +3182,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     /** 613：把某一页的背景与内容分层在它被看见之前做到位（切页回调 / 页面 layout 回调共用）。 */
     private fun prepPageNow(activity: Activity, page: View, index: Int, reason: String) {
+        // 710c：设置页可见期间不铺图（否则切页回调 = 把壁纸又铺回灰底上）。
+        if (settingsLikeHidden710.get()) return
         val now = SystemClock.uptimeMillis()
         if (now - (pagePrepAt[page] ?: 0L) < 150L) return
         // 结构没变、页面背景也还是我们的那张 → 什么都不用做。
@@ -6883,6 +6977,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
         lastEnforceAt = now
         val snapshot = ThemeSettings.snapshot(context.hostContext())
         if (!snapshot.enabled) return
+        // 710c：微信「设置」是 LauncherUI 窗口内的页面（不是独立 Activity，dumpsys 任务栈与日志进程都印证了），
+        // 所以只能靠顶层标题文本识别：命中就按住页面壁纸，离开再铺回。
+        runCatching {
+            if (settingsLikeVisible710(decor)) {
+                hidePageWallpaperForSettings710(decor, "巡检")
+            } else {
+                restorePageWallpaperAfterSettings710(decor, "巡检")
+            }
+        }.onFailure { HLog.e("$TAG 设置页壁纸按住异常(710c): ${it.message}") }
         // 710：叠加页兜底巡检——钩子（Instrumentation/Activity#onResume）万一在某些 ROM 上不生效，
         // 这里每轮也看一眼「当前有没有非 Launcher 的可见 Activity」，有就撤壁纸，回来就补铺。
         runCatching {
@@ -6901,8 +7004,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             }
         }.onFailure { HLog.e("$TAG 叠加页巡检异常(710): ${it.message}") }
-        if (snapshot.backgroundEnabled) reassertImmersive(activity, decor, force)
-        if (snapshot.backgroundEnabled) {
+        if (snapshot.backgroundEnabled && !settingsLikeHidden710.get()) reassertImmersive(activity, decor, force)
+        if (snapshot.backgroundEnabled && !settingsLikeHidden710.get()) {
             reassertClearedBackgrounds()
             reassertRowScrims()
             retryUnscrimmedPages()
@@ -6930,7 +7033,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
             runCatching { clearBottomBarStrip710(decor, true) }
                 .onFailure { HLog.e("$TAG 底部残条清理异常(710b): ${it.message}") }
         }
-        if (snapshot.backgroundEnabled) {
+        if (snapshot.backgroundEnabled && !settingsLikeHidden710.get()) {
             pageDrawables.entries.toList().forEach { (page, drawable) ->
                 if (page.background !== drawable) {
                     runCatching { page.setBackgroundDrawable(drawable) }
@@ -7177,6 +7280,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         var cleared = 0
         val hits = ArrayList<String>()
         val candidates = ArrayList<String>()
+        // 710c：无条件记录底部所有层（含列表内部、含 bg=null），灰条找不到绘制者时靠它点名。
+        val all = ArrayList<String>()
         fun walk(v: View, d: Int) {
             if (d > 18) return
             val w = v.width.coerceAtLeast(v.measuredWidth)
@@ -7185,6 +7290,13 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val top = absTopOfView(v)
                 val bottom = top + h
                 val bg = v.background
+                if (all.size < 12 && top >= decorH - barH * 2 && h <= barH * 2) {
+                    val parent = (v.parent as? View)?.javaClass?.simpleName ?: "-"
+                    all.add(
+                        "${v.javaClass.simpleName}#${idName(v)} ${w}x$h top=$top bg=${descDrawable(bg)}" +
+                            " shown=${v.isShown} inList=${insideScrollable710(v)} parent=$parent"
+                    )
+                }
                 val inBand = bottom >= decorH - 6 && top >= decorH - barH * 2 &&
                     h <= barH * 16 / 10 && w >= decorW * 9 / 10
                 if (inBand && v.isShown && v !is ImageView && bg != null &&
@@ -7231,6 +7343,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
             HLog.i(
                 "$TAG 底部残条探针(710b): 底栏高≈$barH 屏高=$decorH 未命中，候选=" +
                     (if (candidates.isEmpty()) "无" else candidates.joinToString(" / "))
+            )
+            HLog.i(
+                "$TAG 底部全层转储(710c): " + (if (all.isEmpty()) "空" else all.joinToString(" / "))
             )
         }
     }

@@ -2195,3 +2195,24 @@ decor/窗口底的做法在这条链路上必然失效。改为在设置家族 A
 的条状视图清成透明并登记 `clearedViews`（宿主再写回来会被 `desiredBackgroundFor` 拦回）。
 只在 `snapshot.tabHideNative || tabHiddenByUs` 时执行，与壁纸总开关无关（用户实测开/关现象一致）。
 未命中时每 30s 打一条 `底部残条探针(710b)`，把最底部候选层的类名/尺寸/底色点出来。
+
+### 6. 710c：设置页其实不是独立 Activity
+
+真机复验（1008）后推翻 710b 的前提：`dumpsys activity activities --user 999` 的任务栈里只有
+`LauncherUI`，模块日志全程只有 `(com.tencent.mm)` 一个进程 —— 微信「设置」是**渲染在
+LauncherUI 窗口内的页面**，不是独立 Activity。所以「给设置 Activity 插整窗灰底板」打错了靶：
+设置页那些留白处透出的，正是底下页面自己的壁纸层（用户描述「背景图应该是我的页面的那张」吻合）。
+
+改为按页面识别 + 按住壁纸：
+
+- `settingsLikeVisible710()`：扫 decor 顶部 300px，找标题栏里文本属于设置类标题
+  （设置/通用/聊天/隐私/账号与安全/朋友权限/关于微信…）的 TextView；`！insideScrollable710()`
+  保证只认标题栏、不认列表行里的同名文本；
+- 命中 → `hidePageWallpaperForSettings710()`：把页面底图 ImageView（tag `hchat_home_image_layer`）
+  置 GONE、把 `pageDrawables` 各页底换成原生灰；
+- 期间 `guardedBackgroundFor()` / `fastAssertBackgroundsBeforeDraw()` / `applyPageBitmap()` /
+  `prepPageNow()` / enforce 里的 reassert 与重铺分支全部短路，避免下一帧把壁纸铺回来；
+- 离开设置页 → `restorePageWallpaperAfterSettings710()`：把壁纸层恢复可见并 `scheduleReapply()`。
+
+底部残条另加一条 `底部全层转储(710c)`：无条件列出底部两层内的所有视图（含列表内部、含 bg=null、
+带 isShown/inList/parent），用于在「页面背景关」时定位那条灰到底由谁托底。
