@@ -6423,34 +6423,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         }
     }
 
-    /** 709：把底栏可见性单独抽出来，只吃「美化主题总开关」。
-     *  放开范围严格限于底栏 View 的 show/hide；636/681/682 重铺、生命周期补刷、reassert 系与 runStep 一律不受影响。 */
-    private fun applyBottomBarHiding(decor: ViewGroup, snapshot: ThemeSnapshot) {
-        var tab = lastTab?.get()
-        if (tab != null && !tab.isAttachedToWindow) tab = null
-        if (tab == null) tab = findBottomTab(decor, logCandidates = false)
-        if (tab != null) {
-            lastTab = WeakReference(tab)
-            if (snapshot.tabHideNative) {
-                if (tab.visibility != View.GONE) {
-                    HLog.i("$TAG 隐藏原生底栏=开，隐藏底栏容器: ${tab.javaClass.name}#${idName(tab)}")
-                    hideView(tab)
-                    tabHiddenByUs = true
-                }
-            } else if (tabHiddenByUs) {
-                runCatching { showView(tab) }
-                tabHiddenByUs = false
-                HLog.i("$TAG 隐藏原生底栏=关，恢复原生底栏显示: ${tab.javaClass.name}#${idName(tab)}")
-            }
-        }
-    }
-
     private fun enforce(activity: Activity, decor: ViewGroup, force: Boolean = false) {
-        // 709：底栏隐藏独立于页面背景门控，只看美化主题总开关；enforce 主体与其余写入仍走 703 的 mountOff703()。
-        runCatching {
-            val s709 = ThemeSettings.snapshot(context.hostContext())
-            if (s709 != null && s709.enabled) applyBottomBarHiding(decor, s709)
-        }
         if (mountOff703()) { dumpCounts703("mount-skip if (snapshot.backgroundEnabled) reassertImmersive"); return }
         if (!decor.isAttachedToWindow) return
         val now = SystemClock.uptimeMillis()
