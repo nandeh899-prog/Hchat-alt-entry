@@ -7138,6 +7138,28 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return r == g && g == b && r in 0x30..0xF8
     }
 
+    /** 710b：浅色底（灰/白都算）——底栏残条既可能是 #EDEDED 也可能是 #F7F7F7。 */
+    private fun isLightFill710(c: Int): Boolean {
+        if (Color.alpha(c) != 0xFF) return false
+        val r = c shr 16 and 0xFF
+        val g = c shr 8 and 0xFF
+        val b = c and 0xFF
+        return (r + g + b) / 3 >= 0x60
+    }
+
+    /** 710b：是否位于滚动容器内部（列表行一律受这条保护，绝不清）。 */
+    private fun insideScrollable710(v: View): Boolean {
+        var cur: View? = v.parent as? View
+        var guard = 0
+        while (cur != null && guard++ < 16) {
+            if (cur is android.widget.AbsListView) return true
+            val n = cur.javaClass.name
+            if (n.contains("RecyclerView") || n.contains("ScrollView") || n.contains("PullDownListView")) return true
+            cur = cur.parent as? View
+        }
+        return false
+    }
+
     /**
      * 710b：底栏隐藏后，原底栏位置还留着一条原生灰（用户真机截图：通讯录最底部一整条灰）。
      *
@@ -7165,16 +7187,27 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val bg = v.background
                 val inBand = bottom >= decorH - 6 && top >= decorH - barH * 2 &&
                     h <= barH * 16 / 10 && w >= decorW * 9 / 10
-                if (inBand && v !is ImageView && bg != null &&
+                if (inBand && v.isShown && v !is ImageView && bg != null &&
                     !(bg is ColorDrawable && Color.alpha(bg.color) == 0) &&
                     !isOurWallpaperDrawable(bg) && bg !is ScreenAnchoredBitmapDrawable &&
-                    bg !is PagerStripWallpaperDrawable && !homeImageHosts.containsKey(v)
+                    bg !is PagerStripWallpaperDrawable && !homeImageHosts.containsKey(v) &&
+                    !insideScrollable710(v)
                 ) {
                     val desc = descDrawable(bg)
                     if (candidates.size < 10) {
                         candidates.add("${v.javaClass.simpleName}#${idName(v)} ${w}x$h top=$top bg=$desc")
                     }
-                    if (bg is ColorDrawable && isNeutralGrey710(bg.color)) {
+                    // 710b 二轮：残条不一定是纯灰 ColorDrawable（微信底栏容器普遍是
+                    // StateListDrawable/InsetDrawable 的 selector）。几何判据已经很紧（整宽 +
+                    // 完全贴底 + 高度≈一个底栏 + 不在任何滚动容器里），这里放宽到「浅色纯色 /
+                    // 选择器 / 内边距底」，其余（图标、文字行、自家壁纸层）全部排除在外。
+                    val clearable = when {
+                        bg is ColorDrawable -> isLightFill710(bg.color)
+                        else -> bg.javaClass.simpleName.let {
+                            it.contains("StateList") || it.contains("Inset") || it.contains("Layer")
+                        }
+                    }
+                    if (clearable) {
                         if (!replacedBackgrounds.containsKey(v)) replacedBackgrounds[v] = bg
                         runCatching { v.setBackgroundColor(Color.TRANSPARENT) }
                         clearedViews.add(v)
