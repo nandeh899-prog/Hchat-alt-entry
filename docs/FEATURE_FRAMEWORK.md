@@ -2245,3 +2245,23 @@ y=2592..2772 整宽纯 `#EDEDED`。这条带本来就是原生底栏占的位置
 （它的列表本来就是灰底，刷白会出现横向接缝），其余页刷白（列表本来是白底）。
 pager 引用缓存在 `stripPager710`（只认宽高都 ≥90% 屏的 ViewPager），底色记在 `bottomStripColor710`，
 每轮校验，宿主改回灰会被重新刷回。日志：`底部空档底色已铺(710d)` / `还原原生灰(710d)`。
+
+### 8. 710f：用户否掉了「涂色」，改成让列表自己铺满
+
+1011 真机反馈：底栏那一段「涂白」和「涂灰」都不对 —— 用户要的是**透明**，即根本不该多出一条东西。
+于是不再着色，改成把页面容器的 `paddingBottom` 归零：
+
+`dumpsys activity top` 里 `LayoutListenerView{padding}` 是全屏的（`0,0-1240,2772`），其唯一子视图
+`MMWeUIBounceView` 只到 `2598`，差值 174 正好等于底栏高度 —— 说明那 174px 是页面容器用
+paddingBottom 让给底栏的。把 paddingBottom 归零后，列表（首页/通讯录白底、发现页灰底）自己铺到
+屏幕底，视觉上就是「没有那条东西」，也不再依赖涂什么颜色。
+
+- 只改 padding、不碰 LayoutParams，原值记在 `stripPaddings710`，底栏恢复/开启自定义底栏时写回；
+- 条件与原 710d 一致：`tabHideNative && !tabEnabled`；
+- 找不到带 paddingBottom 的容器时打 `底栏空档铺满(710f): 没找到…`，便于下一轮取证。
+
+同一版还修了设置页右上角残留的那块壁纸：`hidePageWallpaperForSettings710()` 原来只认
+`HOME_IMAGE_TAG`，而状态栏那条壁纸（612 通道）与 pager 底衬都挂在视图自身的 background 上，
+所以漏掉了。现在凡是 background 属于自家壁纸类（`isOurWallpaperDrawable`：锚定层 / PagerStrip /
+含 Wallpaper 的类名）的视图一并换成原生灰，原 Drawable 记在 `settingsSavedBgs710`，离开设置页时
+原样写回后再 `scheduleReapply()`。

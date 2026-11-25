@@ -2740,14 +2740,49 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 让设置页那些留白处透出灰底而不是壁纸；离开设置页再整体铺回。
      */
     private val settingsLikeHidden710 = java.util.concurrent.atomic.AtomicBoolean(false)
-    /** 710d：底部空档当前铺的底色（0=未铺），避免每轮重复写背景。 */
-    private var bottomStripColor710 = 0
-    /** 710d：缓存首页 ViewPager 引用，省掉每轮的整树搜索。 */
-    private var stripPager710: ViewGroup? = null
+    /** 710f：被我们临时摘掉的自家壁纸 Drawable（设置页按住期间），键=视图，值=原背景。 */
+    private val settingsSavedBgs710 = ArrayList<Pair<View, Drawable?>>()
+    /** 710f：页面容器原始 paddingBottom（用于底栏空档铺满）。 */
+    private val stripPaddings710 = ArrayList<Pair<View, Int>>()
+    private var stripPaddingApplied710 = false
 
     /** 710d：底栏那段是否必然空着——隐藏了原生底栏、同时没开自定义底栏。 */
     private fun bottomStripEmpty710(snapshot: ThemeSnapshot): Boolean =
         snapshot.tabHideNative && !snapshot.tabEnabled
+
+    /**
+     * 710f：底栏空档铺满。
+     *
+     * 真机取证：底栏区（y=2598..2772，174px）就是被置 GONE 的 `LauncherUIBottomTabView` 自己的位置，
+     * 而各页内容容器 `MMWeUIBounceView` 只画到 2598 —— 那段高度是页面容器（`LayoutListenerView`）
+     * 留出来的 paddingBottom。所以不涂色，直接把 paddingBottom 归零，让列表铺到屏幕底。
+     * 只改 padding，不碰 LayoutParams，恢复也简单（记原值即可）。
+     */
+    private fun zeroStripPadding710(decor: ViewGroup): Int {
+        var n = 0
+        val queue = ArrayList<View>()
+        queue.add(decor)
+        var i = 0
+        while (i < queue.size && i < 1800) {
+            val v = queue[i]; i++
+            val cn = v.javaClass.name
+            if (cn.endsWith("LayoutListenerView") && v.paddingBottom > 0) {
+                if (stripPaddings710.none { it.first === v }) {
+                    stripPaddings710.add(v to v.paddingBottom)
+                    runCatching {
+                        v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, 0)
+                        v.requestLayout()
+                        n++
+                    }
+                }
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        if (n == 0) {
+            HLog.i("$TAG 底栏空档铺满(710f): 没找到带 paddingBottom 的页面容器，本轮不处理")
+        }
+        return n
+    }
     private val settingsTitles710 = arrayOf(
         "设置", "通用", "聊天", "隐私", "账号与安全", "朋友权限", "关于微信", "青少年模式",
         "关怀模式", "个人信息与权限", "新消息通知", "个人信息收集清单", "第三方信息共享清单",
@@ -2798,8 +2833,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
     /** 710c：撤掉页面壁纸层（页面底图 ImageView + 页面背景），让设置页留白处透出原生灰。 */
     private fun hidePageWallpaperForSettings710(decor: ViewGroup, reason: String) {
         if (!settingsLikeHidden710.compareAndSet(false, true)) return
+        settingsSavedBgs710.clear()
         var imgs = 0
         var pages = 0
+        var bgs = 0
         val queue = ArrayList<View>()
         queue.add(decor)
         var i = 0
@@ -2808,6 +2845,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
             if (v.tag == HOME_IMAGE_TAG) {
                 runCatching { v.visibility = View.GONE }
                 imgs++
+            } else if (isOurWallpaperDrawable(v.background)) {
+                // 710f：状态栏那条壁纸（612 通道）与 pager 底衬不在 HOME_IMAGE_TAG 上，
+                // 只认 tag 会漏掉它们 —— 真机 1011 上设置页右上角残留的那块黄就是状态栏图。
+                val old = v.background
+                if (settingsSavedBgs710.none { it.first === v }) {
+                    settingsSavedBgs710.add(v to old)
+                    runCatching { v.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
+                    bgs++
+                }
             }
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
         }
@@ -2818,7 +2864,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val now = SystemClock.uptimeMillis()
         if (now - lastSettingsLikeLogAt >= 2000L) {
             lastSettingsLikeLogAt = now
-            HLog.i("$TAG 设置页已按住页面壁纸(710c): 壁纸层=$imgs 页底=$pages（$reason）")
+            HLog.i("$TAG 设置页已按住页面壁纸(710c): 壁纸层=$imgs 页底=$pages 壁纸Drawable=$bgs（$reason）")
         }
     }
 
@@ -2839,7 +2885,17 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
             }
         }
-        HLog.i("$TAG 设置页已退出，重铺页面壁纸(710c): 壁纸层恢复=$shown（$reason）")
+        var restored = 0
+        settingsSavedBgs710.forEach { pair ->
+            runCatching {
+                val v = pair.first
+                val d = pair.second
+                if (d == null) v.background = null else v.setBackgroundDrawable(d)
+                restored++
+            }
+        }
+        settingsSavedBgs710.clear()
+        HLog.i("$TAG 设置页已退出，重铺页面壁纸(710c): 壁纸层恢复=$shown 壁纸Drawable恢复=$restored（$reason）")
         scheduleReapply("设置页退出710c")
     }
 
@@ -7020,43 +7076,36 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             }
         }.onFailure { HLog.e("$TAG 设置页壁纸按住异常(710c): ${it.message}") }
-        // 710d：「隐藏原生底栏」但没开自定义底栏时，底栏那段（真机实测 174px）没有任何视图，
-        // 露出的是窗口底色 #EDEDED → 用户看到「原本底栏位置留一条灰」。页面背景开着时
-        // 壁纸层把这段盖住了，所以只有关掉页面背景才看得见。这里在关背景的情况下把窗口底
-        // 改成白色，与列表同色，灰条即消失。
+        // 710f：「隐藏原生底栏」但没开自定义底栏时，底栏那段（真机实测 174px）没有任何视图托底，
+        // 露出的是窗口/上层 pager 的底色 → 用户看到「原本底栏位置留一条灰」。涂白或涂灰都会被
+        // 用户判为「多出一条色块」，所以正确做法是让页面内容自己铺满：把页面容器的 paddingBottom
+        // 归零（详情见 zeroStripPadding710 的注释）。
         runCatching {
-            val want = !snapshot.backgroundEnabled && bottomStripEmpty710(snapshot)
-            if (want) {
-                // 谁在托底：那 174px 就是被置 GONE 的 LauncherUIBottomTabView 自己的位置，
-                // 露出来的是它上层 CustomViewPager(#kod) 的底色。所以把 pager 底色按当前页涂：
-                // 首页/通讯录（白底列表）→ 白；发现页（原生灰底）→ 原生灰，避免出现横向接缝。
-                val pager = stripPager710?.takeIf { it.isAttachedToWindow && it.isShown }
-                    ?: findHomePager(decor, false)?.takeIf { p ->
-                        val dm = activity.resources.displayMetrics
-                        p.width >= dm.widthPixels * 0.9 && p.height >= dm.heightPixels * 0.9
-                    }?.also { stripPager710 = it }
-                val idx = if (pager != null && pager.width > 0) {
-                    (pager.scrollX + pager.width / 2) / pager.width
-                } else -1
-                val target = if (idx == 2) NATIVE_GREY else 0xffffffff.toInt()
-                val cur = (pager?.background as? ColorDrawable)?.color
-                if (target != bottomStripColor710 || cur != target) {
-                    bottomStripColor710 = target
-                    runCatching { decor.setBackgroundDrawable(ColorDrawable(target)) }
-                    runCatching { activity.window?.setBackgroundDrawable(ColorDrawable(target)) }
-                    runCatching { pager?.setBackgroundDrawable(ColorDrawable(target)) }
-                    HLog.i(
-                        "$TAG 底部空档底色已铺(710d): color=#%08X 页序=$idx 隐藏底栏=%s 自定义底栏=%s（巡检）"
-                            .format(target, idx, snapshot.tabHideNative, snapshot.tabEnabled)
-                    )
+            // 710f：底栏空档不涂色（用户明确「白色/灰色都不对，应该是透明」），
+            // 而是把页面容器的 paddingBottom 归零，让列表自身铺到屏幕底 ——
+            // 视觉上就是「没有那条东西」，列表最后一行自然延续。
+            val want = bottomStripEmpty710(snapshot)
+            if (want && !stripPaddingApplied710) {
+                val n = zeroStripPadding710(decor)
+                if (n > 0) {
+                    stripPaddingApplied710 = true
+                    HLog.i("$TAG 底栏空档铺满(710f): 页面容器=$n 个 paddingBottom 已归零")
                 }
-            } else if (bottomStripColor710 != 0) {
-                bottomStripColor710 = 0
-                runCatching { decor.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
-                runCatching { activity.window?.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
-                HLog.i("$TAG 底部空档底色还原原生灰(710d)（巡检）")
+            } else if (!want && stripPaddingApplied710) {
+                var back = 0
+                stripPaddings710.forEach { pair ->
+                    runCatching {
+                        val v = pair.first
+                        v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, pair.second)
+                        v.requestLayout()
+                        back++
+                    }
+                }
+                stripPaddings710.clear()
+                stripPaddingApplied710 = false
+                HLog.i("$TAG 底栏空档铺满已还原(710f): 还原=$back 个")
             }
-        }.onFailure { HLog.e("$TAG 底部空档底色切换异常(710d): ${it.message}") }
+        }.onFailure { HLog.e("$TAG 底栏空档处理异常(710f): ${it.message}") }
         // 710：叠加页兜底巡检——钩子（Instrumentation/Activity#onResume）万一在某些 ROM 上不生效，
         // 这里每轮也看一眼「当前有没有非 Launcher 的可见 Activity」，有就撤壁纸，回来就补铺。
         runCatching {
