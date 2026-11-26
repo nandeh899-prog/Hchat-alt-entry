@@ -8497,7 +8497,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         rows.sortBy { it.top }
         val sb = StringBuilder()
         sb.append("$TAG 行缩进取证(711) 页=${page.javaClass.simpleName} 行=${rows.size}")
-        for (v in rows.take(14)) {
+        for (v in rows.take(10)) {
             val lp = v.layoutParams
             val pad = intArrayOf(v.paddingLeft, v.paddingTop, v.paddingRight, v.paddingBottom)
             val bg = v.background
@@ -8514,12 +8514,49 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 "\n$TAG   行 ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} top=${v.top}" +
                     " pad=${pad.toList()} bg=${bg?.javaClass?.simpleName} bgPad=${bgPad.toList()}" +
                     " 子数=${(v as? ViewGroup)?.childCount ?: -1} 子0=${c0?.javaClass?.simpleName}@left=$cL 宽=${c0?.width ?: -1}" +
-                    " lp=${lp?.javaClass?.simpleName}:${lp?.width}x${lp?.height}"
+                    " lp=${lp?.javaClass?.simpleName}:${lp?.width}x${lp?.height}" +
+                    " 我们换底=${rowScrimDrawables.containsKey(v)}"
             )
             val key = intArrayOf(pad[0], pad[2], cL, v.width)
             val old = rowProbeSeen711.put(v, key)
             if (old != null && !old.contentEquals(key)) {
                 sb.append(" [缩进被改 前=${old.toList()}]")
+            }
+            // 712：链式取证——顺着「第一个有孩子的 ViewGroup」往下走 4 层，
+            // 把每层的 left/尺寸/padding/背景/背景 padding 一起打出来。
+            // 目的：50px 左内缩究竟落在 (a) 行 padding、(b) cgi 的 padding、
+            // (c) 内容层 View 的 left，还是 (d) 被我们清掉的 .9 背景。只读。
+            var cur: View? = v
+            var lvl = 0
+            while (cur != null && lvl < 4) {
+                val g = cur as? ViewGroup
+                if (g == null) break
+                var next: View? = null
+                for (i in 0 until g.childCount) {
+                    val c = g.getChildAt(i)
+                    if (c is ViewGroup && c.childCount > 0 && c.width > 0) {
+                        next = c
+                        break
+                    }
+                }
+                if (next == null) break
+                val cp = intArrayOf(next.paddingLeft, next.paddingTop, next.paddingRight, next.paddingBottom)
+                val cbg = next.background
+                val cbp = IntArray(4)
+                if (cbg != null) {
+                    val r2 = android.graphics.Rect()
+                    if (runCatching { cbg.getPadding(r2) }.getOrDefault(false)) {
+                        cbp[0] = r2.left; cbp[1] = r2.top; cbp[2] = r2.right; cbp[3] = r2.bottom
+                    }
+                }
+                sb.append(
+                    "\n$TAG     链${lvl + 1} ${next.javaClass.simpleName}#${idName(next)}" +
+                        " left=${next.left} ${next.width}x${next.height} pad=${cp.toList()}" +
+                        " bg=${cbg?.javaClass?.simpleName} bgPad=${cbp.toList()}" +
+                        " 子数=${(next as? ViewGroup)?.childCount ?: -1}"
+                )
+                cur = next
+                lvl++
             }
         }
         HLog.i(sb.toString())
