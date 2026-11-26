@@ -1116,6 +1116,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val detail = log && dumpedPages.add(page)
         dumpTopRegion(page, detail)
         scrimTree(page, page, pageWidth, pageHeight, scrim, gapPx, false, counters, sample, detail, isHome)
+        val skipped710q = skippedRowRewrite710q
+        skippedRowRewrite710q = 0
         runCatching { headerHousekeeping(page, pageWidth, pageHeight, detail) }
             .onFailure { HLog.e("$TAG 头部清理异常: ${it.message}", it) }
         val scrimmedTotal = counters[0] + counters[1] + counters[2] + counters[3]
@@ -1123,7 +1125,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (log) {
             HLog.i(
                 "$TAG 页面 ${page.javaClass.simpleName} 内容分层：容器置透明 ${counters[0]} 个，" +
-                    "通栏行压半透明 ${counters[1]} 个，索引条去底 ${counters[2]} 个，" +
+                    "通栏行压半透明 ${counters[1]} 个，幂等跳过=$skipped710q 个，索引条去底 ${counters[2]} 个，" +
                     "整页图片层透明 ${counters[3]} 个，" +
                     "行缝=${ROW_GAP_DP}dp 遮罩=#${Integer.toHexString(scrim)}" +
                     " 背景平均色=#${String.format(java.util.Locale.US, "%02X%02X%02X", (stats[0] * 255).toInt(), (stats[1] * 255).toInt(), (stats[2] * 255).toInt())}" +
@@ -1634,17 +1636,33 @@ private class ThemeRuntime(private val context: FeatureContext) {
                             // 通栏行：纯色（无圆角）＋ 行底留缝，让背景从行间透出来
                             // 608：换底前记下行的有效缩进（视图 padding 与 .9 背景 padding 取大值），换底后钉回；
                             // 否则 .9 图自带的左/上内缩随背景一起消失，发现页/通讯录图标就贴左错位。
+                            //
+                            // 710q：真机日志证明这里以前**每轮都重建一个新 InsetDrawable 再赋值**，
+                            // 而 `setBackgroundDrawable` 必定 requestLayout()+invalidate()，
+                            // 710 的「吞掉等价写入」按引用比较 → 新实例永远不等于旧实例 → 等于被绕过。
+                            // 证据：12:18:06.143~.156 同一个 ConversationFolderItemView#cj1 在 13ms 内被
+                            // 写成「通栏行6.0dp缝」十几次，行内布局反复重排 → 标题文本脱离原生约束、偶发靠左错位。
+                            // 这里只加幂等跳过：已经是我们那条缝、且引用没被宿主换掉，就不重建、不重写；
+                            // 判据与作用对象完全不变（壁纸换了会清表，引用不再相同，照旧重建）。
                             val keptPadding = rowPaddingOf(view)
-                            val insetRow = InsetDrawable(ColorDrawable(scrim), 0, 0, 0, gapPx)
-                            view.background = insetRow
-                            rowScrimDrawables[view] = insetRow
-                            clearedViews.remove(view)
-                            rowPaddingKept[view] = keptPadding
-                            applyKeptPadding(view, keptPadding)
-                            counters[1]++
-                            scrimmed = true
-                            if (log && sample.size < 120) {
-                                sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→通栏行${ROW_GAP_DP}dp缝")
+                            val prev = rowScrimDrawables[view]
+                            if (prev != null && view.background === prev) {
+                                rowPaddingKept[view]?.let { applyKeptPadding(view, it) }
+                                counters[1]++
+                                scrimmed = true
+                                skippedRowRewrite710q++
+                            } else {
+                                val insetRow = InsetDrawable(ColorDrawable(scrim), 0, 0, 0, gapPx)
+                                view.background = insetRow
+                                rowScrimDrawables[view] = insetRow
+                                clearedViews.remove(view)
+                                rowPaddingKept[view] = keptPadding
+                                applyKeptPadding(view, keptPadding)
+                                counters[1]++
+                                scrimmed = true
+                                if (log && sample.size < 120) {
+                                    sample.add("${view.javaClass.simpleName}#${idName(view)} ${width}x${height} bg=${background.javaClass.simpleName}→通栏行${ROW_GAP_DP}dp缝 (钉缩进=${keptPadding.toList()})")
+                                }
                             }
                         }
                     }
@@ -8449,6 +8467,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     // ===== 608 新增状态（原版基线上重做，改动只服务三处已知问题）=====
     private val rowPaddingKept: MutableMap<View, IntArray> =
         Collections.synchronizedMap(WeakHashMap<View, IntArray>())
+    /** 710q：本轮被幂等跳过的通栏行重写次数（只用于日志，不参与任何判定）。 */
+    @Volatile private var skippedRowRewrite710q = 0
     private val panelBarAnchored: MutableSet<View> =
         Collections.newSetFromMap(WeakHashMap<View, Boolean>())
     @Volatile private var lastPanelBarLogAt = 0L
