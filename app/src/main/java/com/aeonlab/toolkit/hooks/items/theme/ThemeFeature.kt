@@ -2742,8 +2742,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private val settingsLikeHidden710 = java.util.concurrent.atomic.AtomicBoolean(false)
     /** 710f：被我们临时摘掉的自家壁纸 Drawable（设置页按住期间），键=视图，值=原背景。 */
     private val settingsSavedBgs710 = ArrayList<Pair<View, Drawable?>>()
-    /** 710f：页面容器原始 paddingBottom（用于底栏空档铺满）。 */
-    private val stripPaddings710 = ArrayList<Pair<View, Int>>()
+    /** 710f：页面内容容器原始高度（底栏空档铺满用），键=视图，值=原 layoutParams.height。 */
+    private val stripHeights710 = ArrayList<Pair<View, Int>>()
     private var stripPaddingApplied710 = false
 
     /** 710d：底栏那段是否必然空着——隐藏了原生底栏、同时没开自定义底栏。 */
@@ -2754,9 +2754,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 710f：底栏空档铺满。
      *
      * 真机取证：底栏区（y=2598..2772，174px）就是被置 GONE 的 `LauncherUIBottomTabView` 自己的位置，
-     * 而各页内容容器 `MMWeUIBounceView` 只画到 2598 —— 那段高度是页面容器（`LayoutListenerView`）
-     * 留出来的 paddingBottom。所以不涂色，直接把 paddingBottom 归零，让列表铺到屏幕底。
-     * 只改 padding，不碰 LayoutParams，恢复也简单（记原值即可）。
+     * 而各页内容容器 `MMWeUIBounceView` 只画到 2598 —— 那 174px 是宿主给底栏让出来的高度。
+     * 第一版想靠「容器 paddingBottom 归零」解决，真机 1012 日志显示 `LayoutListenerView` 根本没有
+     * paddingBottom，所以改成直接动内容容器的 LayoutParams：把固定像素高度改成 MATCH_PARENT，
+     * 让列表铺到屏幕底。原高度记在 `stripHeights710`，可原样还原。
      */
     private fun zeroStripPadding710(decor: ViewGroup): Int {
         var n = 0
@@ -2766,20 +2767,37 @@ private class ThemeRuntime(private val context: FeatureContext) {
         while (i < queue.size && i < 1800) {
             val v = queue[i]; i++
             val cn = v.javaClass.name
-            if (cn.endsWith("LayoutListenerView") && v.paddingBottom > 0) {
-                if (stripPaddings710.none { it.first === v }) {
-                    stripPaddings710.add(v to v.paddingBottom)
-                    runCatching {
-                        v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, 0)
-                        v.requestLayout()
-                        n++
+            if (cn.endsWith("LayoutListenerView")) {
+                if (v is ViewGroup) {
+                    for (k in 0 until v.childCount) {
+                        val c = v.getChildAt(k) ?: continue
+                        val lp = c.layoutParams ?: continue
+                        if (lp.height > 0 && stripHeights710.none { it.first === c }) {
+                            if (stripHeights710.isEmpty()) {
+                                HLog.i(
+                                    "$TAG 底栏空档结构(710f): 容器=${cn.substringAfterLast('.')} 尺寸=${v.width}x${v.height}" +
+                                        " pad=${v.paddingLeft},${v.paddingTop},${v.paddingRight},${v.paddingBottom}" +
+                                        " | 子=${c.javaClass.simpleName} 高=${lp.height} 边距=" +
+                                        (lp as? android.view.ViewGroup.MarginLayoutParams)?.let {
+                                            "${it.topMargin}/${it.bottomMargin}"
+                                        }
+                                )
+                            }
+                            runCatching {
+                                stripHeights710.add(c to lp.height)
+                                lp.height = ViewGroup.LayoutParams.MATCH_PARENT
+                                c.layoutParams = lp
+                                c.requestLayout()
+                                n++
+                            }
+                        }
                     }
                 }
             }
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
         }
         if (n == 0) {
-            HLog.i("$TAG 底栏空档铺满(710f): 没找到带 paddingBottom 的页面容器，本轮不处理")
+            HLog.i("$TAG 底栏空档铺满(710f): 没找到可拉伸的页面内容容器，本轮不处理")
         }
         return n
     }
@@ -7093,15 +7111,19 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             } else if (!want && stripPaddingApplied710) {
                 var back = 0
-                stripPaddings710.forEach { pair ->
+                stripHeights710.forEach { pair ->
                     runCatching {
                         val v = pair.first
-                        v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, pair.second)
-                        v.requestLayout()
-                        back++
+                        val lp = v.layoutParams
+                        if (lp != null) {
+                            lp.height = pair.second
+                            v.layoutParams = lp
+                            v.requestLayout()
+                            back++
+                        }
                     }
                 }
-                stripPaddings710.clear()
+                stripHeights710.clear()
                 stripPaddingApplied710 = false
                 HLog.i("$TAG 底栏空档铺满已还原(710f): 还原=$back 个")
             }

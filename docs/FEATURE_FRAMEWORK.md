@@ -2251,14 +2251,18 @@ pager 引用缓存在 `stripPager710`（只认宽高都 ≥90% 屏的 ViewPager�
 1011 真机反馈：底栏那一段「涂白」和「涂灰」都不对 —— 用户要的是**透明**，即根本不该多出一条东西。
 于是不再着色，改成把页面容器的 `paddingBottom` 归零：
 
-`dumpsys activity top` 里 `LayoutListenerView{padding}` 是全屏的（`0,0-1240,2772`），其唯一子视图
-`MMWeUIBounceView` 只到 `2598`，差值 174 正好等于底栏高度 —— 说明那 174px 是页面容器用
-paddingBottom 让给底栏的。把 paddingBottom 归零后，列表（首页/通讯录白底、发现页灰底）自己铺到
-屏幕底，视觉上就是「没有那条东西」，也不再依赖涂什么颜色。
+`dumpsys activity top` 里 `LayoutListenerView` 是全屏的（`0,0-1240,2772`），其唯一子视图
+`MMWeUIBounceView` 只到 `2598`，差值 174 正好等于底栏高度 —— 那 174px 是宿主给底栏让出来的。
 
-- 只改 padding、不碰 LayoutParams，原值记在 `stripPaddings710`，底栏恢复/开启自定义底栏时写回；
+第一版想靠「把容器 paddingBottom 归零」解决，1012 真机日志直接否掉：
+`底栏空档铺满(710f): 没找到带 paddingBottom 的页面容器` —— `LayoutListenerView` 的 padding 全是 0，
+说明让位不是靠 padding。第二版改成动内容容器的 LayoutParams：把 `MMWeUIBounceView` 这种
+固定像素高度改成 `MATCH_PARENT`（原高度记在 `stripHeights710`，恢复时写回），并打一条
+`底栏空档结构(710f)` 把容器的尺寸/padding 与子视图的原始高度/边距点出来，便于下一轮判断。
+
+- 只动内容容器的 LayoutParams.height（原文记在 `stripHeights710`），底栏恢复或开启自定义底栏时写回；
 - 条件与原 710d 一致：`tabHideNative && !tabEnabled`；
-- 找不到带 paddingBottom 的容器时打 `底栏空档铺满(710f): 没找到…`，便于下一轮取证。
+- 无可拉伸容器时打 `底栏空档铺满(710f): 没找到可拉伸的页面内容容器`，便于下一轮取证。
 
 同一版还修了设置页右上角残留的那块壁纸：`hidePageWallpaperForSettings710()` 原来只认
 `HOME_IMAGE_TAG`，而状态栏那条壁纸（612 通道）与 pager 底衬都挂在视图自身的 background 上，
