@@ -2269,3 +2269,24 @@ pager 引用缓存在 `stripPager710`（只认宽高都 ≥90% 屏的 ViewPager�
 所以漏掉了。现在凡是 background 属于自家壁纸类（`isOurWallpaperDrawable`：锚定层 / PagerStrip /
 含 Wallpaper 的类名）的视图一并换成原生灰，原 Drawable 记在 `settingsSavedBgs710`，离开设置页时
 原样写回后再 `scheduleReapply()`。
+
+### 9. 710h：设置页右上角残留壁纸 —— 堵住重铺路径 + 每轮幂等复清
+
+710f 之后用户在 1012 上仍能看到设置页右上角一小块壁纸，而代理自己截的那一帧里没有（
+`setcur.png` 逐行扫黄色全为空），说明它**不是稳态，而是被间歇性重铺回来的**。根因有两条：
+
+1. `installLifecycleBumps()` 注册的 `decor.viewTreeObserver.addOnGlobalLayoutListener` 每次布局
+   变更都会调 `applyWindowBackground(activity, decor, snap)`，而它当时只挡了 `wallpaperHidden`
+   （独立叠加页 Activity 那条链），没挡「设置页按住」状态。设置页里滚动/焦点变化不停触发布局，
+   于是 710c 刚撤掉的整屏壁纸又被铺回 `decor` —— 设置页没盖住的右上角就透出来。
+2. `hidePageWallpaperForSettings710()` 用 `compareAndSet(false, true)` 把关，只在进入设置页那一帧
+   跑一次；此后任何路径再写一层壁纸都清不掉。
+
+修法：
+
+- `applyWindowBackground()` 在 `wallpaperHidden` 之后增加 `settingsLikeHidden710.get()` 早退，
+  并累加 `blockedDecorWrites710`，首次与每 50 次打一条
+  `设置页按住中，跳过铺 decor 壁纸(710h): 累计=N`；
+- `hidePageWallpaperForSettings710()` 改成**每轮巡检幂等复清**：记录表只在首次进入时清空，
+  `HOME_IMAGE_TAG` 的视图每轮都确保 `GONE`，凡 background 又是自家壁纸的视图每轮重新压成
+  `ColorDrawable(NATIVE_GREY)`（原值只在第一次记），已是灰的不重复写，避免每 400ms 触发重绘。

@@ -1824,6 +1824,18 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 710：叠加页（微信设置页 / 小程序）在前台时壁纸层已撤下，enforce 每 400ms 跑一次会把壁纸
         // 重新铺回 decor+窗口底，结果叠加页又一帧一帧透出壁纸。这里直接不铺。
         if (wallpaperHidden) return
+        // 710h：设置页（LauncherUI 内的叠加页）在前台时一律不铺 decor 壁纸。
+        // 这条路径不只在 enforce 里走：installLifecycleBumps 注册的 addOnGlobalLayoutListener
+        // 每次布局变更都会调一次 applyWindowBackground，而设置页里滚动/焦点变化会不断触发它，
+        // 于是 710c 刚按住的那层整屏壁纸又被铺回 decor —— 真机 1012 表现为「设置页右上角
+        // 一直留一块壁纸，而代理自截帧里又看不到」（重铺发生在截图之间的空档）。
+        if (settingsLikeHidden710.get()) {
+            blockedDecorWrites710++
+            if (blockedDecorWrites710 == 1 || blockedDecorWrites710 % 50 == 0) {
+                HLog.i("$TAG 设置页按住中，跳过铺 decor 壁纸(710h): 累计=${blockedDecorWrites710}")
+            }
+            return
+        }
         // 619：黑线定位探针挂在这条每次 enforce 都会走的路径上（3 秒一次、只读）
         runCatching { locateLines(activity, decor, SystemClock.uptimeMillis()) }
         runCatching { sampleDarkRows(decor, SystemClock.uptimeMillis()) }
@@ -2809,6 +2821,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var lastSettingsLikeLogAt = 0L
     /** 710c：连续判定「不在设置页」的轮数，用于抗抖（见 enforce 里的恢复门）。 */
     private var settingsMissCycles710 = 0
+    private var blockedDecorWrites710 = 0
 
     /** 710c：只在设置页里出现、且不会出现在「我」页上的文案（次要证据）。 */
     private val settingsOnlyTitles710 = arrayOf(
@@ -2850,8 +2863,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
 
     /** 710c：撤掉页面壁纸层（页面底图 ImageView + 页面背景），让设置页留白处透出原生灰。 */
     private fun hidePageWallpaperForSettings710(decor: ViewGroup, reason: String) {
-        if (!settingsLikeHidden710.compareAndSet(false, true)) return
-        settingsSavedBgs710.clear()
+        // 710h：改成每轮巡检幂等复清。原先用 compareAndSet 只在进入设置页的那一帧跑一次，
+        // 之后只要任何路径再写回一层壁纸（布局监听里的 applyWindowBackground、宿主自己重铺、
+        // syncAnchoredHosts 的漂移重录）就再也不会被清 —— 真机 1012 就是「右上角那块一直在」。
+        // 记录表只在首次进入时清空，否则会把宿主原本的底丢掉。
+        if (settingsLikeHidden710.compareAndSet(false, true)) settingsSavedBgs710.clear()
         var imgs = 0
         var pages = 0
         var bgs = 0
@@ -2866,9 +2882,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
             } else if (isOurWallpaperDrawable(v.background)) {
                 // 710f：状态栏那条壁纸（612 通道）与 pager 底衬不在 HOME_IMAGE_TAG 上，
                 // 只认 tag 会漏掉它们 —— 真机 1011 上设置页右上角残留的那块黄就是状态栏图。
-                val old = v.background
-                if (settingsSavedBgs710.none { it.first === v }) {
-                    settingsSavedBgs710.add(v to old)
+                // 710h：原值只在第一次记（那才是宿主自己的底），之后每轮只要又看到自家壁纸
+                // 就重新压灰，避免「清一次 → 被重铺 → 永远露着」。
+                if (settingsSavedBgs710.none { it.first === v }) settingsSavedBgs710.add(v to v.background)
+                if ((v.background as? ColorDrawable)?.color != NATIVE_GREY) {
                     runCatching { v.setBackgroundDrawable(ColorDrawable(NATIVE_GREY)) }
                     bgs++
                 }
