@@ -1121,6 +1121,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 711 取证：只读打印行缩进链路，不写任何布局。
         runCatching { probeRowInsets711(page, pageWidth) }
             .onFailure { HLog.e("$TAG 行缩进取证调用异常(711): ${it.message}") }
+        // 712：行内缩回钉——只把「这一行自己曾经亲眼出现过的正内缩」钉回去，
+        // 绝不凭空给值，因此不会把正常的行改坏。详见函数注释。
+        runCatching { pinRowInsets712(page, pageWidth) }
+            .onFailure { HLog.e("$TAG 行内缩回钉异常(712): ${it.message}") }
         runCatching { headerHousekeeping(page, pageWidth, pageHeight, detail) }
             .onFailure { HLog.e("$TAG 头部清理异常: ${it.message}", it) }
         val scrimmedTotal = counters[0] + counters[1] + counters[2] + counters[3]
@@ -8476,6 +8480,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
     @Volatile private var rowProbeAt711 = 0L
     private val rowProbeSeen711: MutableMap<View, IntArray> =
         Collections.synchronizedMap(WeakHashMap<View, IntArray>())
+    /** 712：每行 `cgi` 曾经亲眼出现过的正内缩值（只来自该行自己的历史观测）。 */
+    private val rowInsetSeen712: MutableMap<View, Int> =
+        Collections.synchronizedMap(WeakHashMap<View, Int>())
+    @Volatile private var lastInsetPinLog712 = 0L
 
     /**
      * 711 取证：把当前页里每个「行」的缩进链路打出来。
@@ -8560,6 +8568,70 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
         }
         HLog.i(sb.toString())
+    }
+
+    /**
+     * 712：行内缩回钉（只回钉「这一行自己曾经出现过」的正内缩）。
+     *
+     * 真机事实（1025 的 dumpsys 视图树）：
+     *  - 发现页 6 行里 4 行 `cgi`(7f091250) 的首子 `LinearLayout` 宽 1128 / left=0，
+     *    另 2 行同层宽 1078 / left=50 —— 即健康态是「cgi 左内缩 50，子宽 = cgi 宽 - 50」；
+     *  - 用户反馈 1026 上两页又不出现错位（偶发）。
+     *
+     * 所以这是一个排版竞态：内缩有时在、有时被抹成 0。本函数不做任何推理，
+     * 只做两件事：
+     *  ① 每次巡检时，若某行的 `cgi` 有正内缩、且子节点确实按这个内缩摆放 → 记下来；
+     *  ② 若之后同一行变成「内缩 0 且子节点贴左 0」→ 用记下来的那个值 setPadding 回去并 requestLayout。
+     *
+     * 关键约束：值只来自该行自己的历史观测，绝不硬编码 16dp、也不取同页多数，
+     * 所以不存在「把本来正确的行改歪」的可能；从未健康过的行也不会被我们编造缩进。
+     */
+    private fun pinRowInsets712(page: View, pageWidth: Int) {
+        val rows = ArrayList<View>()
+        runCatching { collectRows711(page, pageWidth, rows, 0) }
+        if (rows.isEmpty()) return
+        var fixed = 0
+        for (row in rows) {
+            val cgi = findDescendantById712(row, "cgi", 0, 6) ?: continue
+            val g = cgi as? ViewGroup ?: continue
+            if (g.childCount < 1) continue
+            val child = g.getChildAt(0) ?: continue
+            if (child.width <= 0) continue
+            val padL = cgi.paddingLeft
+            val seen = rowInsetSeen712[cgi] ?: 0
+            if (padL > 0 && child.left >= padL - 2) {
+                // 健康态：子节点确实被内缩推开，记住这个值
+                rowInsetSeen712[cgi] = padL
+                continue
+            }
+            if (padL == 0 && seen > 0 && child.left <= 2 && child.width >= cgi.width - 2) {
+                // 异常态：内缩被抹成 0（子节点铺满整个 cgi）→ 用这一行自己的历史值钉回去
+                val ok = runCatching {
+                    cgi.setPadding(seen, cgi.paddingTop, cgi.paddingRight, cgi.paddingBottom)
+                    cgi.requestLayout()
+                }.isSuccess
+                if (ok) fixed++
+            }
+        }
+        if (fixed > 0) {
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastInsetPinLog712 >= 2000L) {
+                lastInsetPinLog712 = now
+                HLog.i("$TAG 行内缩回钉(712)：$fixed 行，页=${page.javaClass.simpleName}")
+            }
+        }
+    }
+
+    private fun findDescendantById712(v: View, name: String, depth: Int, maxDepth: Int): View? {
+        if (depth > maxDepth) return null
+        val g = v as? ViewGroup ?: return null
+        val n = minOf(g.childCount, 40)
+        for (i in 0 until n) {
+            val c = g.getChildAt(i) ?: continue
+            if (idName(c) == name) return c
+            findDescendantById712(c, name, depth + 1, maxDepth)?.let { return it }
+        }
+        return null
     }
 
     private fun collectRows711(v: View, pageWidth: Int, out: MutableList<View>, depth: Int) {
