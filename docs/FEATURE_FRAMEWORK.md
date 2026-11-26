@@ -2322,3 +2322,39 @@ pager 引用缓存在 `stripPager710`（只认宽高都 ≥90% 屏的 ViewPager�
 - 命中后对 `homeImageDrawables` 全部宿主 `forceReRecord()`，日志
   `布局落定后强制重录(710j): 宿主=N 个 累计=… 尝试=…`（3 秒节流）；
 - 叠加页撤壁纸期间（`wallpaperHidden`）与设置页按住期间直接跳过。
+
+### 12. 710k / 710l：底栏空档的真因是「内容链没铺到底」
+
+1015 的真机视图树把问题定死了（user999、通讯录页）：
+
+```
+LayoutListenerView#jlt   0..2772
+ └ MMWeUIBounceView      288..2598
+    └ NestedScrollView   288..2598
+       └ FrameLayout     288..2598
+          └ WxRecyclerView 288..2598
+```
+
+「隐藏原生底栏」只把底栏容器置 GONE，宿主给内容的布局高度仍然只到 2598；
+2598..2772 这 174px 里没有任何视图，露出来的是 ViewPager 底衬
+（`PagerStripWallpaperDrawable`）画的壁纸。所以用户看到的
+「底栏位置盖了一层背景图、本该透出好友列表」不是色块问题，是内容链短了 174px：
+710d/710e/710f 的涂色与 710g 的整窗拉伸都打错了目标。
+
+正确做法（710k）：只把内容链放到底。
+
+- 只从 `javaClass.name.endsWith("LayoutListenerView")` 的直接子视图往下走；
+- 只沿「高度 >= 屏高 55%」的容器递归（174px 的列表行不会被命中）；
+- `lp.height > 0` 改 `MATCH_PARENT`、`bottomMargin` 归零、`paddingBottom` 归零；
+- **`topMargin` 一律不动** —— 710g 把内容顶到标题栏下面就是动了顶部让位；
+- 原值记进 `stripFixes710`，`tabHideNative` 关掉时写回；
+- 日志 `底栏空档放开(710k): 命中=N 处`（每次状态变化一条）。
+
+710l：710k 的判定条件写错了一处 —— 原本写 `tabHideNative && !tabEnabled`，
+但 `tabEnabled` 默认就是 true（与隐藏原生底栏不互斥，`applyBottomTab()` 里也是
+`tabHideNative` 优先直接 return），于是条件恒假、710k 一次都没执行（1027 真机日志：
+`底栏开关=false 隐藏底栏=true`，`底栏空档放开` 计数 0）。现在只看 `snapshot.tabHideNative`。
+
+附带一条部署踩坑：`super_admin:shell` 没有 root，`cp 到 /data/local/tmp` 会静默失败，
+`pm install` 装到的是上一次留在那里的旧包（本次因此白装了一次 1015）。
+可靠写法是流式安装：`cat /sdcard/Download/x.apk | pm install -r -d -S <字节数>`。

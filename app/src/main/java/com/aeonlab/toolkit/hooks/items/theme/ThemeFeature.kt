@@ -7234,11 +7234,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 所以只在「隐藏原生底栏 && 未开自定义底栏」时，把这半条链放到底（保留顶部让位与标题栏），
         // 恢复底栏时原值写回。
         runCatching {
-            val want = snapshot.tabHideNative && !snapshot.tabEnabled
+            // 710l：判定条件只看「隐藏原生底栏」。710k 写成 `tabHideNative && !tabEnabled`，
+            // 但 tabEnabled 默认就是 true（与「自定义底栏」互不冲突，applyBottomTab 里也是
+            // tabHideNative 优先直接 return），条件恒假 → 710k 一次都没执行（1027 真机日志：
+            // 底栏开关=false 隐藏底栏=true，`底栏空档放开` 计数 0）。
+            val want = snapshot.tabHideNative
             if (want && !stripStretchApplied710) {
                 val n = stretchPageContent710(decor)
                 if (n > 0) stripStretchApplied710 = true
-                HLog.i("$TAG 底栏空档放开(710k): 命中=$n 处")
+                HLog.i("$TAG 底栏空档放开(710k): 命中=$n 处 want=$want")
             } else if (!want && stripStretchApplied710) {
                 val back = restoreStripStretch710()
                 stripStretchApplied710 = false
