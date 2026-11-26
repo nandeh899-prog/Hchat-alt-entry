@@ -1124,7 +1124,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 712：行内缩回钉——只把「这一行自己曾经亲眼出现过的正内缩」钉回去，
         // 绝不凭空给值，因此不会把正常的行改坏。详见函数注释。
         runCatching { pinRowInsets712(page, pageWidth) }
-            .onFailure { HLog.e("$TAG 行内缩回钉异常(712): ${it.message}") }
+            .onFailure { HLog.e("$TAG 行内缩回钉异常(712): ${it.message}", it) }
+        // 712c：记住这次处理过的页面，供 OnPreDraw 里「画之前回钉」用。
+        lastScrimPage712 = java.lang.ref.WeakReference(page)
         runCatching { headerHousekeeping(page, pageWidth, pageHeight, detail) }
             .onFailure { HLog.e("$TAG 头部清理异常: ${it.message}", it) }
         val scrimmedTotal = counters[0] + counters[1] + counters[2] + counters[3]
@@ -6930,6 +6932,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 // 613：先做逐帧断言（纯引用比对，不受 400ms 节流限制），再跑常规 enforce。
                 runCatching { fastAssertBackgroundsBeforeDraw() }
                     .onFailure { HLog.e("$TAG 逐帧断言异常(613): ${it.message}", it) }
+                // 712c：把「行内缩回钉」也提到画之前，让错位在画出来之前就被钉回，
+                // 而不是等 1.2 秒的巡检（用户 1027 实测：错位约 1~2 秒后被压回去）。
+                runCatching { pinRowInsetsBeforeDraw712() }
+                    .onFailure { HLog.e("$TAG 绘制前回钉异常(712): ${it.message}", it) }
                 runCatching { assertWindowColors(activity) }
                     .onFailure { HLog.e("$TAG 状态栏底色重设异常(677): ${it.message}", it) }
                 runCatching { enforce(activity, decor) }
@@ -8484,6 +8490,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private val rowInsetSeen712: MutableMap<View, Int> =
         Collections.synchronizedMap(WeakHashMap<View, Int>())
     @Volatile private var lastInsetPinLog712 = 0L
+    /** 712c：绘制前回钉用的「最后处理过的页面」与节流时间（只用于把回钉提前到画之前）。 */
+    private var lastScrimPage712: java.lang.ref.WeakReference<View>? = null
+    @Volatile private var pinBeforeDrawAt712 = 0L
+    /** 712c：每行累计回钉次数（防死循环：超 20 次就放弃，避免和宿主抢绘制）。 */
+    private val rowInsetPinTries712: MutableMap<View, Int> =
+        Collections.synchronizedMap(WeakHashMap<View, Int>())
 
     /**
      * 711 取证：把当前页里每个「行」的缩进链路打出来。
@@ -8571,6 +8583,24 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     /**
+     * 712c：把 [pinRowInsets712] 放到 OnPreDraw 里跑，让「回钉」发生在这一帧画出来之前。
+     *
+     * 用户 1027 实测：错位出现后约 1~2 秒才被压回对齐（那是 1.2 秒巡检的延迟）。
+     * 这里用 100ms 节流在绘制前补一枪——只为把延迟从「秒级」压到「肉眼看不见」，
+     * 判定逻辑完全复用 pinRowInsets712，不新增任何判定条件。
+     */
+    private fun pinRowInsetsBeforeDraw712() {
+        val now = SystemClock.uptimeMillis()
+        if (now - pinBeforeDrawAt712 < 100L) return
+        pinBeforeDrawAt712 = now
+        val pg = lastScrimPage712?.get() ?: return
+        if (!pg.isAttachedToWindow) return
+        val w = pg.width
+        if (w <= 0) return
+        pinRowInsets712(pg, w)
+    }
+
+    /**
      * 712：行内缩回钉（只回钉「这一行自己曾经出现过」的正内缩）。
      *
      * 真机事实（1025 的 dumpsys 视图树）：
@@ -8606,6 +8636,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
             if (padL == 0 && seen > 0 && child.left <= 2 && child.width >= cgi.width - 2) {
                 // 异常态：内缩被抹成 0（子节点铺满整个 cgi）→ 用这一行自己的历史值钉回去
+                // 防死循环：同一行累计回钉超过 20 次说明宿主每帧都在把它抹回去，
+                // 这时再钉就是和宿主抢绘制，直接放弃（避免掉帧），只在日志里留痕。
+                val tries = (rowInsetPinTries712[cgi] ?: 0) + 1
+                rowInsetPinTries712[cgi] = tries
+                if (tries > 20) {
+                    if (tries == 21) HLog.i("$TAG 行内缩回钉(712)：同一行回钉已超 20 次，放弃以免抢绘制")
+                    continue
+                }
                 val ok = runCatching {
                     cgi.setPadding(seen, cgi.paddingTop, cgi.paddingRight, cgi.paddingBottom)
                     cgi.requestLayout()
