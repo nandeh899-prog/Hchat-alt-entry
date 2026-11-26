@@ -2989,33 +2989,17 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 避免 710g 那样把内容顶到标题栏下面。原值全部记进 `stripFixes710`，恢复底栏时写回。
      */
     private fun applyBottomGapStretch710(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot? = null) {
-        val s = snapshot ?: runCatching { ThemeSettings.snapshot(context.hostContext()) }.getOrNull() ?: return
+        // 1033：真机 16:00 复测证伪「拉伸内容链」这条路——710g 当天就被同一现象否过
+        // （「通讯录底栏位置没有透明，而是盖了一层背景图」），710k 又把拉伸加了回来，
+        // 于是底栏那 174px 一直被内容链/壁纸填满：背景开时是一条壁纸色带，背景关时是一片 #EDEDED。
+        // 用户确认过的状态是 710f/710j 的「不动任何 LayoutParams、不涂色，底栏空档交还宿主绘制」。
+        // 所以这里把拉伸彻底停用：只负责把历史改过的原值写回去，不再做任何拉伸。
         runCatching {
-            // 710l：判定条件只看「隐藏原生底栏」。710k 写成 `tabHideNative && !tabEnabled`，
-            // 但 tabEnabled 默认就是 true（与「自定义底栏」互不冲突，applyBottomTab 里也是
-            // tabHideNative 优先直接 return），条件恒假 → 710k 一次都没执行（1027 真机日志：
-            // 底栏开关=false 隐藏底栏=true，`底栏空档放开` 计数 0）。
-            //
-            // 710m：不再用「已放开」状态位——ViewPager 的页面是懒 inflate 的，启动时只有首页
-            // 那一条链在，切到通讯录/发现/我的之后新容器才出现（1027 真机只命中 2 处）。
-            // 改成按 1.5s 节流幂等扫描：已处理过的视图在 stripFixes710 里直接跳过。
-            val want = s.tabHideNative &&
-                activity.javaClass.name.contains(LAUNCHER_UI_CLASS)
-            if (want) {
-                val nowMs = SystemClock.uptimeMillis()
-                if (nowMs - stripScanAt710 >= STRIP_SCAN_INTERVAL_710) {
-                    stripScanAt710 = nowMs
-                    val before = stripFixes710.size
-                    val n = stretchPageContent710(decor)
-                    if (n > 0) {
-                        HLog.i("$TAG 底栏空档放开(710k): 新增=$n 处 累计=${stripFixes710.size} 处（前=$before）")
-                    }
-                }
-            } else if (stripFixes710.isNotEmpty()) {
+            if (stripFixes710.isNotEmpty()) {
                 val back = restoreStripStretch710()
-                HLog.i("$TAG 底栏空档放开已还原(710k): 还原=$back 处")
+                HLog.i("$TAG 底栏空档拉伸已停用(1033): 原值写回=$back 处")
             }
-        }.onFailure { HLog.e("$TAG 底栏空档放开异常(710k): ${it.message}") }
+        }.onFailure { HLog.e("$TAG 底栏空档拉伸停用异常(1033): ${it.message}") }
     }
 
     /**
