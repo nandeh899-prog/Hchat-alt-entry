@@ -57,7 +57,17 @@
   - 「设置里找不到群管理」→ 我们构建的 alt-entry/1038 本来就没有 groupadmin（历史从未有过）；
   - 「分组修复回归到未修复前状态」→ 587 是主题分支，里面 `ConversationGroupRuntime` 缺那 700 行修复。
 
-- **下一步（需用户选择）**：
-  1. 只验基线：重装 `Toolbox-720.apk`（1038，代码 = baseline-1028），分组修复即回来，但群管理仍然没有；
-  2. 要群管理：把 `hooks/items/groupadmin/`（21 文件）从 `theme-work` 移植到 `baseline-1028` 之上，只新增文件 + `FeatureRegistry` 注册，不动冻结项；
-  3. 要两者都在：以 `baseline-1028` 为基线做「移植 + 保留分组修复」，之后主题实验只在单独分支跑。
+- **已执行（2026-11-26 18:35，用户选 B）**：
+  - 以 `baseline-1028` 为基线，新增 `hooks/items/groupadmin/`（21 文件）、
+    `hooks/items/groupleave/GroupMemberMediaOrder.kt`、`ui/miuix/GroupMemberMediaOrderDialog.kt`，
+    `FeatureRegistry` 注册 `GroupAdminFeature()`，`MiuixSettingsPage` 补 import / PREFS_NAME / 群组分节 /
+    搜索关键词 / 页面路由；
+  - 期间踩到并记录三个编译问题：`ContactListCard`/`ContactOption`/`PickerSectionHeader` 原为 `private`
+    （改 `internal`）、漏写 `@Composable`、`MiuixSettingsPageKt` 门面类超 64KB 触发
+    `ClassTooLargeException`（把 `featureSubSearchTerms` 176 行整段拆到 `ui/miuix/FeatureSubSearchTerms.kt` 腾余量）；
+  - 构建 run 42（`45800944040`，head `4bbbf3c`）success，产物 21,330,479 字节，
+    已装 999 分身：`versionCode=1042`，装机包内 `GroupAdmin` 字符串 1313 处；
+  - **尚未真机验证功能行为**：待用户开「设置 → 实用 → 群组 → 群管理」确认页面可进入、开关可保存、规则能生效。
+
+- **回退方式**：`git reset --hard baseline-1028` 即回到 1028；只想摘掉群管理则 revert
+  `dd0b01a`、`de0b69c`、`980a301`、`4bbbf3c` 四个提交。
