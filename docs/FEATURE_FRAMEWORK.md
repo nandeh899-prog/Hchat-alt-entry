@@ -2358,3 +2358,30 @@ LayoutListenerView#jlt   0..2772
 附带一条部署踩坑：`super_admin:shell` 没有 root，`cp 到 /data/local/tmp` 会静默失败，
 `pm install` 装到的是上一次留在那里的旧包（本次因此白装了一次 1015）。
 可靠写法是流式安装：`cat /sdcard/Download/x.apk | pm install -r -d -S <字节数>`。
+
+
+### 13. 710m / 710n：内容链铺到底之后的最后一道 —— 列表自己的底内边距
+
+710m：710k 用「已放开」状态位，只在进程起来那一刻扫一次。ViewPager 的页面是懒 inflate 的，
+切到通讯录/发现/我的之后新容器才建出来，所以只命中 2 处。改成 1.5s 节流的幂等扫描
+（`stripFixes710` 去重），并且限定只对 `LauncherUI` 生效，避免聊天页/其它 Activity 被误改。
+
+1019 真机验证（user999、通讯录页）：
+
+```
+LayoutListenerView   1240..2480,0-2772   (第 2 页)
+ └ MMWeUIBounceView   0,288-1240,2772
+    └ NestedScrollView 0,0-1240,2484     (绝对底 = 288+2484 = 2772)
+       └ ... WxRecyclerView 0,0-1240,2484
+```
+
+容器确实铺到屏底了，但像素上最后一行白底停在 y≈2540，下面 232px 仍是壁纸
+（`#FEB42F → #FFF939`）。232 ≈ 底栏 174 + 导航栏 58 —— 是**列表自己在 paddingBottom 里
+留的底栏占位**，而且是在 layout/onMeasure 之后才写回去的。
+
+710n：对已登记过的视图每轮再压一次 `paddingBottom` / `bottomMargin`（原值仍用首次记录的那份），
+日志 `列表底内边距再压(710n)` 60 秒节流。
+
+部署捷径（本轮实测有用）：让 user999 的微信回到屏上要带 `--activity-reorder-to-front`，
+否则 `am start --user999` 只把它放进任务栈、界面不显示；`am switch-user 999` 对 MultiApp
+用户无效。底栏被隐藏后 tab 不可见，但点击底部空档坐标（y≈2630，x≈465/775）仍然能切页。

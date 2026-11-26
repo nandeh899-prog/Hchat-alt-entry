@@ -2938,6 +2938,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private val stripFixes710 = ArrayList<StripStretch710>()
     /** 710m：上次放开扫描的时间 —— 只做节流，不再用「已放开」状态位（切页后新 inflate 的页面容器也要补扫）。 */
     private var stripScanAt710 = 0L
+    /** 710n：「列表底内边距再压」的日志节流（宿主可能每帧重写，避免刷屏）。 */
+    private var stripRepressLogAt710 = 0L
 
     /**
      * 710k：把各页的内容链放到底栏空档里去。
@@ -2958,8 +2960,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (screenH <= 0) return 0
         val minH = screenH * 55 / 100
         var n = 0
-        // 710m：改成幂等补扫后，每次只打印「本次新增」的详情（累计超过 6 处就不再刷日志）。
-        var firstLog = stripFixes710.size < 6
+        // 710m：改成幂等补扫后，每次只打印「本次新增/本次再压」的详情（1.5s 节流，量很小）。
+        var firstLog = true
         val queue = ArrayList<View>()
         queue.add(decor)
         var i = 0
@@ -2981,13 +2983,14 @@ private class ThemeRuntime(private val context: FeatureContext) {
         val h = if (v.height > 0) v.height else v.measuredHeight
         if (h <= 0 || h < minH) return 0
         var n = 0
-        if (stripFixes710.none { it.v === v }) {
-            val lp = v.layoutParams
-            if (lp != null) {
+        val lp = v.layoutParams
+        if (lp != null) {
+            val mlp = lp as? ViewGroup.MarginLayoutParams
+            val bm = mlp?.bottomMargin ?: 0
+            val pb = v.paddingBottom
+            val known = stripFixes710.firstOrNull { it.v === v }
+            if (known == null) {
                 val origH = lp.height
-                val mlp = lp as? ViewGroup.MarginLayoutParams
-                val bm = mlp?.bottomMargin ?: 0
-                val pb = v.paddingBottom
                 val needH = origH > 0
                 val needBm = bm > 0
                 val needPb = pb > 0
@@ -3005,6 +3008,26 @@ private class ThemeRuntime(private val context: FeatureContext) {
                                 " 高=$h 原高=$origH 原底边距=$bm 原底内边距=$pb 屏高=$screenH"
                         )
                     }
+                }
+            } else {
+                // 710n：宿主会在 layout/onMeasure 之后把「底栏占位」重新写回 paddingBottom
+                // （真机 1019：RecyclerView 高度已到 2772，但最后一行停在 y≈2540，差 232px ≈ 底栏 174 + 导航栏 58）。
+                // 所以对已登记过的视图也要每轮再压一次，原值仍用首次记录的那份。
+                if (pb > 0) {
+                    v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, 0)
+                    runCatching { v.requestLayout() }
+                    n++
+                    val nowRepress = SystemClock.uptimeMillis()
+                    if (log && nowRepress - stripRepressLogAt710 >= 60000L) {
+                        stripRepressLogAt710 = nowRepress
+                        HLog.i("$TAG 列表底内边距再压(710n): ${v.javaClass.simpleName}#${idName(v)} 原底内边距=${known.pb} 当前=$pb")
+                    }
+                }
+                if (bm > 0) {
+                    mlp?.bottomMargin = 0
+                    runCatching { v.layoutParams = lp }
+                    runCatching { v.requestLayout() }
+                    n++
                 }
             }
         }
