@@ -37,9 +37,21 @@ class PagerStripWallpaperDrawable(private val host: ViewGroup) : Drawable() {
     @Volatile
     private var offFillColor = OFF_FILL_GREY
 
-    fun setOffFillColor(color: Int) {
-        if (offFillColor == color) return
-        offFillColor = color
+    /**
+     * 1035：是否跳过「空页格填充」。
+     *
+     * 真机取证（16:41 日志 `灰条绘制者取证`）点名了底部那条灰的两个绘制者：
+     * `WxViewPager.draw → View.drawBackground → Paint.setColor(#ffededed)` 与
+     * `AbsListView.draw → ColorDrawable.draw(#ffededed)`。也就是说那 174px 是**不透明纯色**，
+     * 不是没铺满。冻结清单的禁止事项写明「不许用涂色解决底部空档」，所以这里不换色，
+     * 而是在「隐藏原生底栏」时**什么都不画**：空页格保持透明，让内容链自己铺到底（拖底-710k）。
+     */
+    @Volatile
+    private var skipOffFill = false
+
+    fun setSkipOffFill(skip: Boolean) {
+        if (skipOffFill == skip) return
+        skipOffFill = skip
         invalidateSelf()
     }
 
@@ -75,9 +87,10 @@ class PagerStripWallpaperDrawable(private val host: ViewGroup) : Drawable() {
             if (cellLeft + w <= 0f || cellLeft >= w.toFloat()) continue
             val bmp = slots[i]
             if (bmp == null || bmp.width <= 0 || bmp.height <= 0) {
-                // 676：这一页没设图（该页开关关闭）→ 画不透明原生底。
-                // 之前空槽不画，页面上没被内容盖住的地方就透出窗口那层壁纸（用户 11-23 08:34 截图：
-                // 只开主页时通讯录/发现底部仍见壁纸）。这里只动我们自己的绘制层，不写宿主属性。
+                // 676：这一页没设图（该页开关关闭）→ 画不透明原生底，挡住窗口壁纸透出。
+                // 1035：但「隐藏原生底栏」时这条填充就是用户看到的底部灰带（取证见 skipOffFill），
+                // 此时什么都不画，把这一格交还给内容链（拖底-710k 已经把列表铺到屏幕底）。
+                if (skipOffFill) continue
                 paint.alpha = 255
                 paint.color = offFillColor
                 canvas.drawRect(cellLeft, 0f, cellLeft + w, h.toFloat(), paint)

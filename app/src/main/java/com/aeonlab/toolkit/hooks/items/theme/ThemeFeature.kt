@@ -3076,6 +3076,76 @@ private class ThemeRuntime(private val context: FeatureContext) {
     /** 1029b：关背景恢复原生的节流时间（该逻辑挂在 OnPreDraw 上，不能每帧扫）。 */
     @Volatile private var lastBgOffRestore1029 = 0L
 
+    /** 1035：被我们清掉的不透明灰底（视图 → 原 drawable），用于「隐藏底栏」关掉时原样写回。 */
+    private val greyBands1035: MutableMap<View, Drawable?> =
+        java.util.Collections.synchronizedMap(WeakHashMap<View, Drawable?>())
+    @Volatile private var lastBand1035 = 0L
+    @Volatile private var lastBandLog1035 = 0L
+
+    /**
+     * 1035：底部那 174px「色带」的减法处理（不涂任何颜色）。
+     *
+     * 16:41 日志 `灰条绘制者取证` 点名了两个绘制者：
+     *   `WxViewPager.draw → View.drawBackground → ColorDrawable(#ffededed)`
+     *   `AbsListView.draw → ColorDrawable.draw(#ffededed)`
+     * 即：那一段是**不透明纯色底**（宿主给页面/列表留的原生底），内容链铺到底后仍然盖在上面。
+     *
+     * 冻结清单禁止「用涂色解决底部空档」（710d/710e/710f 均被否决），所以这里只做减法：
+     * ① 我们自己的切页底衬在「隐藏原生底栏」时不再给空页格画灰（PagerStripWallpaperDrawable.setSkipOffFill）；
+     * ② 把「页面/列表大小 + 背景恰好是 #ffededed 的 ColorDrawable」清成透明，让下面的内容透出来；
+     *    原 drawable 记在 greyBands1035，关掉「隐藏底栏」时原样写回。
+     * 判定条件只读不改：尺寸 ≥ 宽 70% / 高 55% 屏、颜色严格等于 #ffededed、仅 LauncherUI。
+     */
+    private fun syncBottomBand1035(activity: Activity, decor: ViewGroup, s: ThemeSnapshot) {
+        for ((_, d) in pagerUnderlays.entries.toList()) {
+            (d as? PagerStripWallpaperDrawable)?.setSkipOffFill(s.tabHideNative)
+        }
+        val now = SystemClock.uptimeMillis()
+        if (now - lastBand1035 < 1000L) return
+        lastBand1035 = now
+        if (!s.tabHideNative) {
+            var back = 0
+            for ((v, bg) in greyBands1035.entries.toList()) {
+                runCatching {
+                    if (v.background == null) v.setBackgroundDrawable(bg)
+                    greyBands1035.remove(v)
+                    back++
+                }
+            }
+            if (back > 0) HLog.i("$TAG 底部灰底已写回(1035): $back 处（隐藏底栏已关闭）")
+            return
+        }
+        if (!activity.javaClass.name.contains(LAUNCHER_UI_CLASS)) return
+        val dm = activity.resources.displayMetrics
+        val minH = dm.heightPixels * 55 / 100
+        val minW = dm.widthPixels * 7 / 10
+        val grey = 0xffededed.toInt()
+        var n = 0
+        val queue = ArrayList<View>()
+        queue.add(decor)
+        var i = 0
+        while (i < queue.size && i < 1600) {
+            val v = queue[i]; i++
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+            val h = v.height.coerceAtLeast(v.measuredHeight)
+            val w = v.width.coerceAtLeast(v.measuredWidth)
+            if (h < minH || w < minW) continue
+            if (!greyBands1035.containsKey(v)) {
+                val bg = v.background
+                if (bg is ColorDrawable && bg.color == grey) {
+                    greyBands1035[v] = bg
+                    runCatching { v.setBackgroundDrawable(null) }
+                    n++
+                    if (now - lastBandLog1035 >= 2000L) {
+                        lastBandLog1035 = now
+                        HLog.i("$TAG 底部灰底已清透明(1035): ${v.javaClass.simpleName}#${idName(v)} ${w}x$h 原=#ffededed")
+                    }
+                }
+            }
+        }
+        if (n > 0) HLog.i("$TAG 底部灰底清透明本轮(1035): 新增=$n 处 累计=${greyBands1035.size} 处")
+    }
+
     /** 1029：mount-off 分支的工作节流（该分支在 OnPreDraw 上，不能每帧读配置/扫树）。 */
     @Volatile private var lastMountOffWork1029 = 0L
     private fun stretchPageContent710(decor: ViewGroup): Int {
@@ -7375,6 +7445,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 if (s1029.enabled) {
                     applyBottomGapStretch710(activity, decor, s1029)
                     restoreAllNativeWhenBgOff1029(activity, decor, s1029)
+                    runCatching { syncBottomBand1035(activity, decor, s1029) }
+                        .onFailure { HLog.e("$TAG 底部灰底清理异常(1035): ${it.message}") }
                 }
             }
             dumpCounts703("mount-skip if (snapshot.backgroundEnabled) reassertImmersive")
@@ -7424,6 +7496,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 主开关开着时它立即返回，不产生任何副作用。
         runCatching { restoreAllNativeWhenBgOff1029(activity, decor, snapshot) }
             .onFailure { HLog.e("$TAG 关背景恢复原生异常(1029b): ${it.message}") }
+        // 1035：底栏那 174px 的「不透明灰底」只做减法——我们自己的空页格填充停笔 + 清掉
+        // #ffededed 纯色底（记原值，隐藏底栏关掉时写回）。不涂任何颜色。
+        runCatching { syncBottomBand1035(activity, decor, snapshot) }
+            .onFailure { HLog.e("$TAG 底部灰底清理异常(1035): ${it.message}") }
         // 710：叠加页兜底巡检——钩子（Instrumentation/Activity#onResume）万一在某些 ROM 上不生效，
         // 这里每轮也看一眼「当前有没有非 Launcher 的可见 Activity」，有就撤壁纸，回来就补铺。
         runCatching {
