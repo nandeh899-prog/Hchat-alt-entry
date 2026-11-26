@@ -733,10 +733,15 @@ object ConversationGroupRuntime {
                         .firstOrNull { virtualTalker(it.id) == talker }
                     if (child != null) {
                         showGroup(activity, child.id)
-                    } else if (!openNativeGroupConversation(fragment, talker) &&
-                        WeChatApis.conversations()?.openChat(talker) != true
-                    ) {
-                        HLog.e("$TAG 打开分组内会话失败: talker=$talker")
+                    } else {
+                        // 打开子会话前先把页面打开时被隐藏的聊天层恢复出来，否则微信把聊天页
+                        // 渲染进同一层 ChattingUILayout 也是不可见的（“点不进去”）。
+                        showChattingLayer(activity)
+                        if (!openNativeGroupConversation(fragment, talker) &&
+                            WeChatApis.conversations()?.openChat(talker) != true
+                        ) {
+                            HLog.e("$TAG 打开分组内会话失败: talker=$talker")
+                        }
                     }
                 }
             }
@@ -1185,10 +1190,14 @@ object ConversationGroupRuntime {
                             syncAsync(context.hostContext())
                             updateNativeGroupUnread(param.thisObject)
                             updateNativeGroupTitle(param.thisObject, context.hostContext())
-                            hideChattingLayer(
-                                (KavaReflector.invokeMethod(param.thisObject, "getActivity")
-                                    ?: KavaReflector.invokeMethod(param.thisObject, "thisActivity")) as? Activity
-                            )
+                            // 只有列表还在前台时才隐藏预建聊天层：用户点开分组内会话之后，同一层
+                            // ChattingUILayout 就是真实聊天页，此时再 GONE 会把聊天页一起藏掉。
+                            if (nativeGroupListShown(param.thisObject)) {
+                                hideChattingLayer(
+                                    (KavaReflector.invokeMethod(param.thisObject, "getActivity")
+                                        ?: KavaReflector.invokeMethod(param.thisObject, "thisActivity")) as? Activity
+                                )
+                            }
                         }
                     } finally {
                         nativeGroupPageParent.remove()
@@ -1243,6 +1252,33 @@ object ConversationGroupRuntime {
             HLog.e("$TAG 已隐藏分组页内预建的空白聊天层: ${target.javaClass.simpleName}")
             true
         }.getOrDefault(false)
+    }
+
+    /**
+     * 把 [hideChattingLayer] 隐藏掉的聊天层恢复可见。
+     *
+     * 分组页（ConvBoxServiceConversationUI）用**同一层** [ChattingUILayout] 渲染“用户点开的会话”。
+     * 页面打开时我们把这一层 GONE 掉防空白页闪烁，于是之后点任何群聊，微信把聊天页画进这一层也
+     * 是不可见的——表现就是“分组内的群聊点击进不去聊天界面”（真机 2026-11-27 日志：进入分组页
+     * 后固定出现两条 “已隐藏分组页内预建的空白聊天层: ConvBoxServiceConversationUI”）。
+     * 所以在真正要打开子会话之前，先把它恢复回来。
+     */
+    private fun showChattingLayer(activity: Activity?): Boolean {
+        val decor = activity?.window?.decorView ?: return false
+        val layer = findViewBySimpleClass(decor, "ChattingUILayout") ?: return false
+        if (layer.visibility == View.VISIBLE) return true
+        return runCatching {
+            layer.visibility = View.VISIBLE
+            HLog.i("$TAG 点开分组内会话，恢复聊天层可见性: ${activity.javaClass.simpleName}")
+            true
+        }.getOrDefault(false)
+    }
+
+    /** 分组页的会话列表是否还显示在前台（用来区分“还在列表”与“用户已经点开某个会话”）。 */
+    private fun nativeGroupListShown(fragment: Any?): Boolean {
+        val target = fragment ?: return false
+        val list = KavaReflector.readField(target, "appbrandMessageLV") as? View ?: return false
+        return list.isShown
     }
 
     private fun findChattingEditText(view: View?): android.widget.EditText? {
@@ -2339,13 +2375,25 @@ object ConversationGroupRuntime {
             ConversationGroupHomeProjection.refresh()
             val state = loadConversationParents(database, emptySet())
             val official = state.officialIds(originals)
+            // 关闭总开关时，所有还挂在模块父级下的会话都必须回到原始父级——目标父级只能是
+            // “不属于任何分组”（空表）。这里曾把「当前父级」当成目标父级传进去（自己映射自己），
+            // ConversationGroupParentPolicy 于是判定“无需变更”，一个会话都还原不出来。
+            // 真机 2026-11-27：25 个会话卡在 wxid_hchat_group_* 下，首页看不到、分组页也点不进。
             val plan = ConversationGroupParentPolicy.plan(
-                assigned = state.parents.filterKeys { it !in official },
+                assigned = emptyMap(),
                 current = state.parents,
                 protected = official,
                 originals = originals
             )
-            applyParentPlan(database, prefs, account, plan)
+            val restored = applyParentPlan(database, prefs, account, plan)
+            HLog.i(
+                "$TAG 已关闭聊天分组：待还原 ${plan.restoring.size} 个会话，" +
+                    "实际写入 ${restored.size} 个，缺少原始父级 ${plan.unresolved.size} 个"
+            )
+            // 会话还没还原完时不能删虚拟父行，否则那些会话会彻底失去归属。
+            if (plan.unresolved.isEmpty() && restored.containsAll(plan.updates.keys)) {
+                cleanupVirtualRows(database, emptySet())
+            }
             return
         }
         val automaticResolution = if (enabled) {
