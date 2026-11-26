@@ -2933,6 +2933,110 @@ private class ThemeRuntime(private val context: FeatureContext) {
         scheduleReapply("设置页退出710c")
     }
 
+    /** 710k：被「底栏空档放开」改过的内容容器 —— 视图 + 原高度 / 原底边距 / 原底部内边距。 */
+    private data class StripStretch710(val v: View, val h: Int, val bm: Int, val pb: Int)
+    private val stripFixes710 = ArrayList<StripStretch710>()
+    /** 710k：本轮是否已放开内容链 —— 避免每轮 enforce 都重走一遍遍历。 */
+    private var stripStretchApplied710 = false
+
+    /**
+     * 710k：把各页的内容链放到底栏空档里去。
+     *
+     * 1015 真机视图树（user999，通讯录页）：
+     *   `LayoutListenerView 0..2772` → `MMWeUIBounceView 288..2598`
+     *   → `NestedScrollView 288..2598` → `FrameLayout 288..2598` → `WxRecyclerView 288..2598`
+     * 也就是说「隐藏原生底栏」之后，宿主仍然只给了 2598 的高度，2598..2772 这 174px 没有任何内容，
+     * 露出来的是 ViewPager 底衬（`PagerStripWallpaperDrawable`）画的壁纸 —— 用户看到的
+     * 「底栏位置盖了一层背景图、本该透出好友列表」就是这一块。
+     *
+     * 做法：只沿「高度 ≥ 屏高 55%」的容器（即内容链本身，不会碰到 174px 的列表行）逐层放开：
+     * 写死的高度改 `MATCH_PARENT`、底边距与底部内边距归零；顶部让位（topMargin）一律不动，
+     * 避免 710g 那样把内容顶到标题栏下面。原值全部记进 `stripFixes710`，恢复底栏时写回。
+     */
+    private fun stretchPageContent710(decor: ViewGroup): Int {
+        val screenH = decor.height.coerceAtLeast(decor.measuredHeight)
+        if (screenH <= 0) return 0
+        val minH = screenH * 55 / 100
+        var n = 0
+        var firstLog = stripFixes710.isEmpty()
+        val queue = ArrayList<View>()
+        queue.add(decor)
+        var i = 0
+        while (i < queue.size && i < 1800) {
+            val v = queue[i]; i++
+            if (v is ViewGroup && v.javaClass.name.endsWith("LayoutListenerView")) {
+                for (k in 0 until v.childCount) {
+                    val c = v.getChildAt(k) ?: continue
+                    if (c.visibility != View.VISIBLE) continue
+                    n += stretchChain710(c, minH, screenH, firstLog)
+                    if (n > 0) firstLog = false
+                }
+            }
+            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
+        }
+        return n
+    }
+
+    private fun stretchChain710(v: View, minH: Int, screenH: Int, log: Boolean): Int {
+        val h = if (v.height > 0) v.height else v.measuredHeight
+        if (h <= 0 || h < minH) return 0
+        var n = 0
+        if (stripFixes710.none { it.v === v }) {
+            val lp = v.layoutParams
+            if (lp != null) {
+                val origH = lp.height
+                val mlp = lp as? ViewGroup.MarginLayoutParams
+                val bm = mlp?.bottomMargin ?: 0
+                val pb = v.paddingBottom
+                val needH = origH > 0
+                val needBm = bm > 0
+                val needPb = pb > 0
+                if (needH || needBm || needPb) {
+                    stripFixes710.add(StripStretch710(v, origH, bm, pb))
+                    if (needH) lp.height = ViewGroup.LayoutParams.MATCH_PARENT
+                    if (needBm) mlp?.bottomMargin = 0
+                    if (needPb) v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, 0)
+                    runCatching { v.layoutParams = lp }
+                    runCatching { v.requestLayout() }
+                    n++
+                    if (log) {
+                        HLog.i(
+                            "$TAG 内容链放开(710k): ${v.javaClass.simpleName}#${idName(v)}" +
+                                " 高=$h 原高=$origH 原底边距=$bm 原底内边距=$pb 屏高=$screenH"
+                        )
+                    }
+                }
+            }
+        }
+        if (v is ViewGroup) {
+            for (k in 0 until v.childCount) {
+                val c = v.getChildAt(k) ?: continue
+                n += stretchChain710(c, minH, screenH, log)
+            }
+        }
+        return n
+    }
+
+    private fun restoreStripStretch710(): Int {
+        var back = 0
+        stripFixes710.forEach { fix ->
+            runCatching {
+                val v = fix.v
+                val lp = v.layoutParams
+                if (lp != null) {
+                    lp.height = fix.h
+                    (lp as? ViewGroup.MarginLayoutParams)?.bottomMargin = fix.bm
+                    runCatching { v.layoutParams = lp }
+                }
+                if (fix.pb > 0) v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, fix.pb)
+                runCatching { v.requestLayout() }
+                back++
+            }
+        }
+        stripFixes710.clear()
+        return back
+    }
+
     /** 710b：退出叠加页时把灰底板整块摘掉，绝不留给宿主。 */
     private fun clearOverlayBackdrops710(reason: String) {
         if (overlaySettingsActivities710.isEmpty()) return
@@ -7121,6 +7225,26 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 1012（710f，实际不生效的 padding 版本）反而是用户两次确认过的状态，因此整段回退：
         // 不再动任何 LayoutParams，也不涂色，底栏空档交还给宿主原本的绘制。
         // 详见 docs/FEATURE_FRAMEWORK.md §10。
+        //
+        // 710k：1014/1015 真机视图树确认「底栏空档露壁纸」的真正成因 —— 内容链止于 y=2598：
+        //   LayoutListenerView 0..2772 / MMWeUIBounceView 288..2598 / NestedScrollView 288..2598
+        //   / FrameLayout 288..2598 / WxRecyclerView 288..2598。
+        // 2598 以下没有任何内容，露出的就是 pager 底衬（PagerStripWallpaperDrawable）画的壁纸，
+        // 用户看到的就是「一条被壁纸盖住、本该透出好友列表的区域」。
+        // 所以只在「隐藏原生底栏 && 未开自定义底栏」时，把这半条链放到底（保留顶部让位与标题栏），
+        // 恢复底栏时原值写回。
+        runCatching {
+            val want = snapshot.tabHideNative && !snapshot.tabEnabled
+            if (want && !stripStretchApplied710) {
+                val n = stretchPageContent710(decor)
+                if (n > 0) stripStretchApplied710 = true
+                HLog.i("$TAG 底栏空档放开(710k): 命中=$n 处")
+            } else if (!want && stripStretchApplied710) {
+                val back = restoreStripStretch710()
+                stripStretchApplied710 = false
+                HLog.i("$TAG 底栏空档放开已还原(710k): 还原=$back 处")
+            }
+        }.onFailure { HLog.e("$TAG 底栏空档放开异常(710k): ${it.message}") }
         // 710：叠加页兜底巡检——钩子（Instrumentation/Activity#onResume）万一在某些 ROM 上不生效，
         // 这里每轮也看一眼「当前有没有非 Launcher 的可见 Activity」，有就撤壁纸，回来就补铺。
         runCatching {
