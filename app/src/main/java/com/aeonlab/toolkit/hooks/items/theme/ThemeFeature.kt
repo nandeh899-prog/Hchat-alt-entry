@@ -2936,8 +2936,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     /** 710k：被「底栏空档放开」改过的内容容器 —— 视图 + 原高度 / 原底边距 / 原底部内边距。 */
     private data class StripStretch710(val v: View, val h: Int, val bm: Int, val pb: Int)
     private val stripFixes710 = ArrayList<StripStretch710>()
-    /** 710k：本轮是否已放开内容链 —— 避免每轮 enforce 都重走一遍遍历。 */
-    private var stripStretchApplied710 = false
+    /** 710m：上次放开扫描的时间 —— 只做节流，不再用「已放开」状态位（切页后新 inflate 的页面容器也要补扫）。 */
+    private var stripScanAt710 = 0L
 
     /**
      * 710k：把各页的内容链放到底栏空档里去。
@@ -2958,7 +2958,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         if (screenH <= 0) return 0
         val minH = screenH * 55 / 100
         var n = 0
-        var firstLog = stripFixes710.isEmpty()
+        // 710m：改成幂等补扫后，每次只打印「本次新增」的详情（累计超过 6 处就不再刷日志）。
+        var firstLog = stripFixes710.size < 6
         val queue = ArrayList<View>()
         queue.add(decor)
         var i = 0
@@ -2969,7 +2970,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     val c = v.getChildAt(k) ?: continue
                     if (c.visibility != View.VISIBLE) continue
                     n += stretchChain710(c, minH, screenH, firstLog)
-                    if (n > 0) firstLog = false
                 }
             }
             if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
@@ -7238,14 +7238,24 @@ private class ThemeRuntime(private val context: FeatureContext) {
             // 但 tabEnabled 默认就是 true（与「自定义底栏」互不冲突，applyBottomTab 里也是
             // tabHideNative 优先直接 return），条件恒假 → 710k 一次都没执行（1027 真机日志：
             // 底栏开关=false 隐藏底栏=true，`底栏空档放开` 计数 0）。
-            val want = snapshot.tabHideNative
-            if (want && !stripStretchApplied710) {
-                val n = stretchPageContent710(decor)
-                if (n > 0) stripStretchApplied710 = true
-                HLog.i("$TAG 底栏空档放开(710k): 命中=$n 处 want=$want")
-            } else if (!want && stripStretchApplied710) {
+            //
+            // 710m：不再用「已放开」状态位——ViewPager 的页面是懒 inflate 的，启动时只有首页
+            // 那一条链在，切到通讯录/发现/我的之后新容器才出现（1027 真机只命中 2 处）。
+            // 改成按 1.5s 节流幂等扫描：已处理过的视图在 stripFixes710 里直接跳过。
+            val want = snapshot.tabHideNative &&
+                activity.javaClass.name.contains(LAUNCHER_UI_CLASS)
+            if (want) {
+                val nowMs = SystemClock.uptimeMillis()
+                if (nowMs - stripScanAt710 >= STRIP_SCAN_INTERVAL_710) {
+                    stripScanAt710 = nowMs
+                    val before = stripFixes710.size
+                    val n = stretchPageContent710(decor)
+                    if (n > 0) {
+                        HLog.i("$TAG 底栏空档放开(710k): 新增=$n 处 累计=${stripFixes710.size} 处（前=$before）")
+                    }
+                }
+            } else if (stripFixes710.isNotEmpty()) {
                 val back = restoreStripStretch710()
-                stripStretchApplied710 = false
                 HLog.i("$TAG 底栏空档放开已还原(710k): 还原=$back 处")
             }
         }.onFailure { HLog.e("$TAG 底栏空档放开异常(710k): ${it.message}") }
@@ -9341,6 +9351,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val ENFORCE_INTERVAL_MS = 400L
         /** 710c：设置页识别连续失手多少轮才恢复页面壁纸（≈2.4s），用于抗抖。 */
         const val SETTINGS_RESTORE_MISS_CYCLES_710 = 6
+        /** 710m：内容链「底栏空档放开」的幂等扫描节流间隔（切页后新容器靠它补扫）。 */
+        const val STRIP_SCAN_INTERVAL_710 = 1500L
         /** 710j：布局落定后强制重录锚定宿主的延迟 / 漂移重试间隔 / 最大重试次数。 */
         const val SETTLE_RERECORD_DELAY_MS = 700L
         const val SETTLE_RERECORD_RETRY_MS = 200L
