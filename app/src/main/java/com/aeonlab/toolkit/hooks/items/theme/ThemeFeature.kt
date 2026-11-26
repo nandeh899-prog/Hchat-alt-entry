@@ -3019,20 +3019,62 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     /**
-     * 1029：让「空页格填充色」跟随主背景开关。
+     * 1029b：主背景开关关闭 =「不铺图，恢复微信原生状态」（用户 11-26 原话）。
      *
-     * - 主背景开关关（`!backgroundEnabled`）→ 白色（回到 710d「关背景时窗口底改白」的原意）；
-     * - 主开关开、只是某几页关 → 保持 #EDEDED 原生灰（676 起验证过的观感，不动）。
+     * 只**撤掉我们自己的层**，不涂任何颜色：
+     * ① ViewPager 的切页底衬（PagerStripWallpaperDrawable）—— 空页格那层 #EDEDED 灰就是它画的；
+     * ② 我们铺在页面上的位图背景；
+     * ③ decor / 窗口底那层壁纸（回写替换前的原值，不写死任何颜色）。
      *
-     * 只改我们自己那一层 Drawable 的填充色，不写宿主任何属性。
+     * 为什么必须连①②一起撤：底衬画灰的用途是「挡住窗口壁纸透出」（676），
+     * 只要我们还铺着图，空页格就必须涂点什么；反之不铺图就什么都不该画，让宿主自己画。
+     * 只关单页（主开关仍开）时**不走这里**，那条路径的既有观感保持不变。
      */
-    private fun syncPagerOffFill1029(s: ThemeSnapshot) {
-        if (pagerUnderlays.isEmpty()) return
-        val want = if (s.backgroundEnabled) 0xffededed.toInt() else 0xffffffff.toInt()
-        for ((_, d) in pagerUnderlays.entries.toList()) {
-            (d as? PagerStripWallpaperDrawable)?.setOffFillColor(want)
+    private fun restoreAllNativeWhenBgOff1029(activity: Activity, decor: ViewGroup, s: ThemeSnapshot) {
+        if (s.backgroundEnabled) return
+        val now = SystemClock.uptimeMillis()
+        if (now - lastBgOffRestore1029 < 1000L) return
+        lastBgOffRestore1029 = now
+        var n = 0
+        // ① 切页底衬：直接摘掉，恢复成宿主原本的（null 即透出宿主自己的绘制）
+        for ((pager, d) in pagerUnderlays.entries.toList()) {
+            runCatching {
+                if (pager.background === d) pager.setBackgroundDrawable(null)
+                pagerUnderlays.remove(pager)
+                n++
+            }.onFailure { HLog.e("$TAG 关背景摘底衬异常(1029b): ${it.message}") }
         }
+        // ② 页面上我们铺的位图背景 + 相关登记表，一并交还给宿主
+        for ((page, d) in pageDrawables.entries.toList()) {
+            runCatching {
+                if (page.background === d) page.setBackgroundDrawable(null)
+                pageDrawables.remove(page)
+                pageScrim.remove(page)
+                rowScrimDrawables.remove(page)
+                clearedViews.remove(page)
+                n++
+            }.onFailure { HLog.e("$TAG 关背景摘页面图异常(1029b): ${it.message}") }
+        }
+        // ③ decor / 窗口底壁纸：回写替换前的原值（没有记录就不动，绝不写死颜色）
+        runCatching {
+            val prev = replacedBackgrounds.remove(decor)
+            if (prev != null) {
+                decor.setBackgroundDrawable(prev)
+                n++
+            }
+            activity.window?.let { w ->
+                if (replacedWindowBackgrounds.containsKey(w)) {
+                    val p = replacedWindowBackgrounds.remove(w)
+                    runCatching { w.setBackgroundDrawable(p) }
+                    n++
+                }
+            }
+        }.onFailure { HLog.e("$TAG 关背景撤窗口壁纸异常(1029b): ${it.message}") }
+        if (n > 0) HLog.i("$TAG 关背景已恢复原生(1029b): 摘除=$n 处（底衬/页面图/窗口壁纸）")
     }
+
+    /** 1029b：关背景恢复原生的节流时间（该逻辑挂在 OnPreDraw 上，不能每帧扫）。 */
+    @Volatile private var lastBgOffRestore1029 = 0L
 
     /** 1029：mount-off 分支的工作节流（该分支在 OnPreDraw 上，不能每帧读配置/扫树）。 */
     @Volatile private var lastMountOffWork1029 = 0L
@@ -7332,7 +7374,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 val s1029 = ThemeSettings.snapshot(context.hostContext())
                 if (s1029.enabled) {
                     applyBottomGapStretch710(activity, decor, s1029)
-                    syncPagerOffFill1029(s1029)
+                    restoreAllNativeWhenBgOff1029(activity, decor, s1029)
                 }
             }
             dumpCounts703("mount-skip if (snapshot.backgroundEnabled) reassertImmersive")
@@ -7378,9 +7420,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 1029：整段原样抽成 applyBottomGapStretch710()，唯一目的是让 mount-off703 早退分支也能跑到它
         // （关背景后底部 174px 灰回归，见 enforce 开头的注释）。判定与写回逻辑一个字节都没改。
         applyBottomGapStretch710(activity, decor, snapshot)
-        // 1029：主开关开着时把空页格填充色拉回原生灰（关闭时是白），两个方向都由这一处收敛。
-        runCatching { syncPagerOffFill1029(snapshot) }
-            .onFailure { HLog.e("$TAG 空页格填充色同步异常(1029): ${it.message}") }
+        // 1029b：主背景开关关 = 不铺图恢复原生（摘底衬/页面图/窗口壁纸），两个方向都在这一处收敛。
+        // 主开关开着时它立即返回，不产生任何副作用。
+        runCatching { restoreAllNativeWhenBgOff1029(activity, decor, snapshot) }
+            .onFailure { HLog.e("$TAG 关背景恢复原生异常(1029b): ${it.message}") }
         // 710：叠加页兜底巡检——钩子（Instrumentation/Activity#onResume）万一在某些 ROM 上不生效，
         // 这里每轮也看一眼「当前有没有非 Launcher 的可见 Activity」，有就撤壁纸，回来就补铺。
         runCatching {
