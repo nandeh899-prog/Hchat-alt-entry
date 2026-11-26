@@ -2290,3 +2290,35 @@ pager 引用缓存在 `stripPager710`（只认宽高都 ≥90% 屏的 ViewPager�
 - `hidePageWallpaperForSettings710()` 改成**每轮巡检幂等复清**：记录表只在首次进入时清空，
   `HOME_IMAGE_TAG` 的视图每轮都确保 `GONE`，凡 background 又是自家壁纸的视图每轮重新压成
   `ColorDrawable(NATIVE_GREY)`（原值只在第一次记），已是灰的不重复写，避免每 400ms 触发重绘。
+
+### 10. 710i：710g 的内容容器拉伸被真机否掉，整段回退
+
+1014 真机反馈：「通讯录底栏位置没有透明，而是盖了一层背景图」。原因是 710g 把
+`LayoutListenerView` 的唯一子视图（`MMWeUIBounceView`）的 `LayoutParams.height` 拉成
+`MATCH_PARENT`（真机确认从 `0,288-1240,2598` 变成 `0,0-1240,2772`），容器被拉满后，
+原本被页面白色底衬压住的整张壁纸在底栏那一带原样露了出来，和上面的列表形成一条明显色带。
+
+而 1012（710f，padding 版本实际一次都没命中、等于没有动作）恰恰是用户两次确认过的状态，
+所以 710i 把 710f/710g 这一整段**全部删除**：`bottomStripEmpty710()`、`zeroStripPadding710()`、
+`stripHeights710`、`stripPaddingApplied710` 一并移除，不再动任何 `LayoutParams`，也不涂色。
+后续若再要处理底栏空档，必须先拿到用户认可的对照截图，不能再靠「看起来更像透明」。
+
+### 11. 710j：布局落定后强制重录锚定宿主（面板半透明层 / 图标偶发错位）
+
+1014 另两条反馈：①从主页下拉进入「最近」小程序面板时，中间压着一层半透明图，点一下屏幕才
+变透明；②发现页 / 我的页图标偶发错位。两者与 `ScreenAnchoredBitmapDrawable` 注释里
+599/600 记录的是同一类问题：面板/翻页的 property 动画期间录进 display list 的帧会滞留，
+直到宿主下一次重录（触摸恰好触发）才被纠正，所以表现为「点一下就正常了」。
+
+`requestSyncIfDrifted()` 只在漂移 >2px 时才排定重录，对「已经录错但位置没漂」的滞留帧无效。
+710j 增加一条互补链路：
+
+- `decor.viewTreeObserver.addOnGlobalLayoutListener` 里在 `applyWindowBackground()` 之后调
+  `scheduleSettleReRecord710()`（布局变更才排定，静止时不打扰；连续布局会取消上一次排期）；
+- 延迟 `SETTLE_RERECORD_DELAY_MS = 700ms` 后执行，给入场动画留时间；
+- 执行前用新增的 `ScreenAnchoredBitmapDrawable.driftNow()` 看漂移量，>2 就
+  `SETTLE_RERECORD_RETRY_MS = 200ms` 后再试，最多 `SETTLE_RERECORD_MAX_RETRY = 5` 次，
+  避免把动画中途的位移烙进 display list（648 踩过的坑）；
+- 命中后对 `homeImageDrawables` 全部宿主 `forceReRecord()`，日志
+  `布局落定后强制重录(710j): 宿主=N 个 累计=… 尝试=…`（3 秒节流）；
+- 叠加页撤壁纸期间（`wallpaperHidden`）与设置页按住期间直接跳过。

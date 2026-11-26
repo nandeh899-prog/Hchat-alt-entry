@@ -109,6 +109,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
     /** 5.5.104：全屏锚定基准尺寸（decorView 宽高）。所有背景层共用同一组缩放值，接缝才会消失。 */
     @Volatile private var anchorWidth = 0
     @Volatile private var anchorHeight = 0
+    /** 710j：布局落定后强制重录锚定宿主的排期句柄与统计。 */
+    private var settleReRecordRunnable: Runnable? = null
+    private var settleReRecordCount710 = 0
+    private var settleReRecordLogAt710 = 0L
     private var lastHomeRepaintLogAt = 0L
     private val originalCacheColorHints: MutableMap<android.widget.AbsListView, Int> =
         Collections.synchronizedMap(WeakHashMap<android.widget.AbsListView, Int>())
@@ -1746,6 +1750,59 @@ private class ThemeRuntime(private val context: FeatureContext) {
         for (d in homeImageDrawables.values.toList()) runCatching<Unit> { d.requestSyncIfDrifted() }
     }
 
+    /**
+     * 710j：布局落定后对锚定壁纸宿主做一次**强制重录**。
+     *
+     * 真机 1014 反馈两条：①从主页下拉进「最近」小程序面板时，中间压着一层半透明图，点一下屏幕
+     * 才变透明；②发现页/我的页图标偶发错位。两者都是 599 记录过的同一类问题：面板/翻页的
+     * property 动画期间录进 display list 的帧会滞留，直到下一次宿主重录（触摸恰好触发）才纠正。
+     *
+     * 做法与 `requestSyncIfDrifted()` 互补而不是替代：
+     * - 只有「布局变更」才排定（翻页、面板弹出/收起、页面 inflate 都会触发，静止时不打扰）；
+     * - 延迟 700ms 再动手，给入场动画留出时间；
+     * - 动手前先看漂移量（`driftNow()`），动画还没停就 200ms 后再试，最多 5 次 ——
+     *   避免把动画中途的平移量烙进 display list（648 踩过的坑）；
+     * - 设置页按住期间、壁纸撤销期间直接跳过。
+     */
+    private fun scheduleSettleReRecord710() {
+        settleReRecordRunnable?.let { mainHandler.removeCallbacks(it) }
+        val r = Runnable { settleReRecordNow710(0) }
+        settleReRecordRunnable = r
+        mainHandler.postDelayed(r, SETTLE_RERECORD_DELAY_MS)
+    }
+
+    private fun settleReRecordNow710(attempt: Int) {
+        if (homeImageDrawables.isEmpty()) {
+            settleReRecordRunnable = null
+            return
+        }
+        if (wallpaperHidden || settingsLikeHidden710.get()) {
+            settleReRecordRunnable = null
+            return
+        }
+        val list = homeImageDrawables.values.toList()
+        val busy = list.any { runCatching { it.driftNow() }.getOrDefault(-1) > 2 }
+        if (busy) {
+            if (attempt >= SETTLE_RERECORD_MAX_RETRY) {
+                settleReRecordRunnable = null
+                return
+            }
+            val r = Runnable { settleReRecordNow710(attempt + 1) }
+            settleReRecordRunnable = r
+            mainHandler.postDelayed(r, SETTLE_RERECORD_RETRY_MS)
+            return
+        }
+        var n = 0
+        list.forEach { if (runCatching { it.forceReRecord() }.getOrDefault(false)) n++ }
+        settleReRecordCount710++
+        val now = SystemClock.uptimeMillis()
+        if (now - settleReRecordLogAt710 >= 3000L) {
+            settleReRecordLogAt710 = now
+            HLog.i("$TAG 布局落定后强制重录(710j): 宿主=$n 个 累计=$settleReRecordCount710 尝试=$attempt")
+        }
+        settleReRecordRunnable = null
+    }
+
     private fun ensurePageImageHosts(page: View, bitmap: Bitmap, log: Boolean) {
         if (page !is ViewGroup) return
         val hosts = ArrayList<View>()
@@ -2754,65 +2811,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private val settingsLikeHidden710 = java.util.concurrent.atomic.AtomicBoolean(false)
     /** 710f：被我们临时摘掉的自家壁纸 Drawable（设置页按住期间），键=视图，值=原背景。 */
     private val settingsSavedBgs710 = ArrayList<Pair<View, Drawable?>>()
-    /** 710f：页面内容容器原始高度（底栏空档铺满用），键=视图，值=原 layoutParams.height。 */
-    private val stripHeights710 = ArrayList<Pair<View, Int>>()
-    private var stripPaddingApplied710 = false
 
-    /** 710d：底栏那段是否必然空着——隐藏了原生底栏、同时没开自定义底栏。 */
-    private fun bottomStripEmpty710(snapshot: ThemeSnapshot): Boolean =
-        snapshot.tabHideNative && !snapshot.tabEnabled
-
-    /**
-     * 710f：底栏空档铺满。
-     *
-     * 真机取证：底栏区（y=2598..2772，174px）就是被置 GONE 的 `LauncherUIBottomTabView` 自己的位置，
-     * 而各页内容容器 `MMWeUIBounceView` 只画到 2598 —— 那 174px 是宿主给底栏让出来的高度。
-     * 第一版想靠「容器 paddingBottom 归零」解决，真机 1012 日志显示 `LayoutListenerView` 根本没有
-     * paddingBottom，所以改成直接动内容容器的 LayoutParams：把固定像素高度改成 MATCH_PARENT，
-     * 让列表铺到屏幕底。原高度记在 `stripHeights710`，可原样还原。
-     */
-    private fun zeroStripPadding710(decor: ViewGroup): Int {
-        var n = 0
-        val queue = ArrayList<View>()
-        queue.add(decor)
-        var i = 0
-        while (i < queue.size && i < 1800) {
-            val v = queue[i]; i++
-            val cn = v.javaClass.name
-            if (cn.endsWith("LayoutListenerView")) {
-                if (v is ViewGroup) {
-                    for (k in 0 until v.childCount) {
-                        val c = v.getChildAt(k) ?: continue
-                        val lp = c.layoutParams ?: continue
-                        if (lp.height > 0 && stripHeights710.none { it.first === c }) {
-                            if (stripHeights710.isEmpty()) {
-                                HLog.i(
-                                    "$TAG 底栏空档结构(710f): 容器=${cn.substringAfterLast('.')} 尺寸=${v.width}x${v.height}" +
-                                        " pad=${v.paddingLeft},${v.paddingTop},${v.paddingRight},${v.paddingBottom}" +
-                                        " | 子=${c.javaClass.simpleName} 高=${lp.height} 边距=" +
-                                        (lp as? android.view.ViewGroup.MarginLayoutParams)?.let {
-                                            "${it.topMargin}/${it.bottomMargin}"
-                                        }
-                                )
-                            }
-                            runCatching {
-                                stripHeights710.add(c to lp.height)
-                                lp.height = ViewGroup.LayoutParams.MATCH_PARENT
-                                c.layoutParams = lp
-                                c.requestLayout()
-                                n++
-                            }
-                        }
-                    }
-                }
-            }
-            if (v is ViewGroup) for (k in 0 until v.childCount) v.getChildAt(k)?.let { queue.add(it) }
-        }
-        if (n == 0) {
-            HLog.i("$TAG 底栏空档铺满(710f): 没找到可拉伸的页面内容容器，本轮不处理")
-        }
-        return n
-    }
     private val settingsTitles710 = arrayOf(
         "设置", "通用", "聊天", "隐私", "账号与安全", "朋友权限", "关于微信", "青少年模式",
         "关怀模式", "个人信息与权限", "新消息通知", "个人信息收集清单", "第三方信息共享清单",
@@ -6883,6 +6882,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     val snap = ThemeSettings.snapshot(context.hostContext())
                     if (snap.enabled) applyWindowBackground(activity, decor, snap)
                 }.onFailure { HLog.e("$TAG 布局变更重扫异常: ${it.message}", it) }
+                // 710j：页面切换 / 小程序面板弹出这类「整体布局变化」落定后再重录一次锚定宿主。
+                // 成因见 ScreenAnchoredBitmapDrawable 的 599/600 注释：动画期间录进 display list 的帧
+                // 会滞留（面板弹出后壁纸整体下沉、发现/我的页白色底衬错位），而触摸屏幕带来的重录
+                // 恰好把它修好 —— 用户这次报的「点一下又透明了」「图标偶发错位」就是这个滞留帧。
+                scheduleSettleReRecord710()
             }
         }.onFailure { HLog.e("$TAG 布局变更监听注册失败: ${it.message}", it) }
         runCatching {
@@ -7111,40 +7115,12 @@ private class ThemeRuntime(private val context: FeatureContext) {
                 }
             }
         }.onFailure { HLog.e("$TAG 设置页壁纸按住异常(710c): ${it.message}") }
-        // 710f：「隐藏原生底栏」但没开自定义底栏时，底栏那段（真机实测 174px）没有任何视图托底，
-        // 露出的是窗口/上层 pager 的底色 → 用户看到「原本底栏位置留一条灰」。涂白或涂灰都会被
-        // 用户判为「多出一条色块」，所以正确做法是让页面内容自己铺满：把页面容器的 paddingBottom
-        // 归零（详情见 zeroStripPadding710 的注释）。
-        runCatching {
-            // 710f：底栏空档不涂色（用户明确「白色/灰色都不对，应该是透明」），
-            // 而是把页面容器的 paddingBottom 归零，让列表自身铺到屏幕底 ——
-            // 视觉上就是「没有那条东西」，列表最后一行自然延续。
-            val want = bottomStripEmpty710(snapshot)
-            if (want && !stripPaddingApplied710) {
-                val n = zeroStripPadding710(decor)
-                if (n > 0) {
-                    stripPaddingApplied710 = true
-                    HLog.i("$TAG 底栏空档铺满(710f): 页面容器=$n 个 paddingBottom 已归零")
-                }
-            } else if (!want && stripPaddingApplied710) {
-                var back = 0
-                stripHeights710.forEach { pair ->
-                    runCatching {
-                        val v = pair.first
-                        val lp = v.layoutParams
-                        if (lp != null) {
-                            lp.height = pair.second
-                            v.layoutParams = lp
-                            v.requestLayout()
-                            back++
-                        }
-                    }
-                }
-                stripHeights710.clear()
-                stripPaddingApplied710 = false
-                HLog.i("$TAG 底栏空档铺满已还原(710f): 还原=$back 个")
-            }
-        }.onFailure { HLog.e("$TAG 底栏空档处理异常(710f): ${it.message}") }
+        // 710i：710g 的「把内容容器 LayoutParams 拉成 MATCH_PARENT」已被真机 1014 否掉 ——
+        // 用户反馈「通讯录底栏位置没有透明，而是盖了一层背景图」：容器被拉满后，原本被页面白色
+        // 底衬压住的整张壁纸在底栏那一带原样露了出来，和上面的列表形成一条明显色带。
+        // 1012（710f，实际不生效的 padding 版本）反而是用户两次确认过的状态，因此整段回退：
+        // 不再动任何 LayoutParams，也不涂色，底栏空档交还给宿主原本的绘制。
+        // 详见 docs/FEATURE_FRAMEWORK.md §10。
         // 710：叠加页兜底巡检——钩子（Instrumentation/Activity#onResume）万一在某些 ROM 上不生效，
         // 这里每轮也看一眼「当前有没有非 Launcher 的可见 Activity」，有就撤壁纸，回来就补铺。
         runCatching {
@@ -9237,6 +9213,10 @@ private class ThemeRuntime(private val context: FeatureContext) {
         const val ENFORCE_INTERVAL_MS = 400L
         /** 710c：设置页识别连续失手多少轮才恢复页面壁纸（≈2.4s），用于抗抖。 */
         const val SETTINGS_RESTORE_MISS_CYCLES_710 = 6
+        /** 710j：布局落定后强制重录锚定宿主的延迟 / 漂移重试间隔 / 最大重试次数。 */
+        const val SETTLE_RERECORD_DELAY_MS = 700L
+        const val SETTLE_RERECORD_RETRY_MS = 200L
+        const val SETTLE_RERECORD_MAX_RETRY = 5
         const val SCRIM_INTERVAL_MS = 1200L
         const val FRAME_PUMP_MS = 2400L
         const val ROW_GAP_DP = 6f

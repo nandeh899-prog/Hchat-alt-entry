@@ -97,6 +97,19 @@ class ScreenAnchoredBitmapDrawable(
             " drift=${location[0] - staticLocation[0]},${location[1] - staticLocation[1]})"
     }
 
+    /** 710j：当前「实际位置 vs 静置位置」的漂移量，供「布局落定后重录」判断动画是否停下。
+     *  返回 -1 表示宿主已不在窗口（不要重录）。 */
+    fun driftNow(): Int {
+        val host = hostRef.get() ?: return -1
+        if (!host.isAttachedToWindow) return -1
+        runCatching { staticLocInWindow(host, staticLocation) }
+        runCatching { host.getLocationInWindow(location) }
+        return maxOf(
+            Math.abs(location[0] - staticLocation[0]),
+            Math.abs(location[1] - staticLocation[1])
+        )
+    }
+
     /** 639：一次性强制重录宿主 display list（切后台重开之所以能修好，走的正是这条路）。 */
     fun forceReRecord(): Boolean {
         val host = hostRef.get() ?: return false
