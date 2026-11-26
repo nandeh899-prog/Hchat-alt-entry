@@ -1744,10 +1744,26 @@ private class ThemeRuntime(private val context: FeatureContext) {
         return drawable
     }
 
-    /** 5.5.104：对全部已登记锚定壁纸宿主做一次漂移探测并排定重录。 */
+    /** 5.5.104：对全部已登记锚定壁纸宿主做一次漂移探测并排定重录。
+     *  710o：真机反馈「小程序面板又出现半透明层、点一下屏幕才透明」——面板开合是 translationY
+     *  属性动画，**不触发布局**，所以 710j 的 addOnGlobalLayoutListener 那条链根本不会排定；
+     *  这里在巡检里盯着漂移：一旦发现动画在跑，就在动画结束后补一次强制重录（710j 的延迟链路）。 */
     private fun syncAnchoredHosts() {
         if (homeImageDrawables.isEmpty()) return
-        for (d in homeImageDrawables.values.toList()) runCatching<Unit> { d.requestSyncIfDrifted() }
+        var maxDrift = 0
+        for (d in homeImageDrawables.values.toList()) {
+            runCatching<Unit> { d.requestSyncIfDrifted() }
+            val drift = runCatching { d.driftNow() }.getOrDefault(-1)
+            if (drift > maxDrift) maxDrift = drift
+        }
+        if (maxDrift > 2) {
+            scheduleSettleReRecord710()
+            val now = SystemClock.uptimeMillis()
+            if (now - animDriftLogAt710 >= 3000L) {
+                animDriftLogAt710 = now
+                HLog.i("$TAG 面板/翻页动画中，动画结束补录(710o): 最大漂移=$maxDrift 宿主=${homeImageDrawables.size}")
+            }
+        }
     }
 
     /**
@@ -2940,6 +2956,8 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var stripScanAt710 = 0L
     /** 710n：「列表底内边距再压」的日志节流（宿主可能每帧重写，避免刷屏）。 */
     private var stripRepressLogAt710 = 0L
+    /** 710o：面板/翻页动画（漂移>2）日志节流。 */
+    private var animDriftLogAt710 = 0L
 
     /**
      * 710k：把各页的内容链放到底栏空档里去。
@@ -3010,9 +3028,21 @@ private class ThemeRuntime(private val context: FeatureContext) {
                     }
                 }
             } else {
-                // 710n：宿主会在 layout/onMeasure 之后把「底栏占位」重新写回 paddingBottom
-                // （真机 1019：RecyclerView 高度已到 2772，但最后一行停在 y≈2540，差 232px ≈ 底栏 174 + 导航栏 58）。
-                // 所以对已登记过的视图也要每轮再压一次，原值仍用首次记录的那份。
+                // 710o：宿主会在 onMeasure/onLayout 之后把「底栏占位」重新写回来 ——
+                // 真机反馈「透明能看到两次，重启后又不行」，就是这个回写把 710k 的放开抵消了。
+                // 所以对已登记过的视图每轮再压一次（原值仍用首次记录的那份），只读 lp.height 判断，代价极小。
+                if (lp.height > 0) {
+                    val oldH = lp.height
+                    lp.height = ViewGroup.LayoutParams.MATCH_PARENT
+                    runCatching { v.layoutParams = lp }
+                    runCatching { v.requestLayout() }
+                    n++
+                    val nowRepress = SystemClock.uptimeMillis()
+                    if (log && nowRepress - stripRepressLogAt710 >= 60000L) {
+                        stripRepressLogAt710 = nowRepress
+                        HLog.i("$TAG 内容链高度再压(710o): ${v.javaClass.simpleName}#${idName(v)} 被写回固定高=$oldH → MATCH_PARENT")
+                    }
+                }
                 if (pb > 0) {
                     v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, 0)
                     runCatching { v.requestLayout() }
