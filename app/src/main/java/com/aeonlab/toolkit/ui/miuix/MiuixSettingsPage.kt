@@ -43754,7 +43754,7 @@ private fun ContactFilterChip(
 }
 
 @Composable
-private fun PickerSectionHeader(
+internal fun PickerSectionHeader(
     text: String
 ) {
     Row(
@@ -43902,7 +43902,7 @@ private fun MessageBlockContactRow(
 }
 
 @Composable
-private fun ContactListCard(
+internal fun ContactListCard(
     option: ContactOption,
     selected: Boolean,
     multiSelect: Boolean,
@@ -44748,6 +44748,7 @@ private fun EmptyText(text: String) {
     )
 }
 
+@Composable
 internal fun GroupMemberMediaOrderDialog(
     current: String,
     onValueChange: (String) -> Unit,
@@ -45129,7 +45130,7 @@ private fun queryDisplayName(context: Context, uri: Uri?): String? {
         ?.takeIf { it.isNotBlank() }
 }
 
-private data class ContactOption(
+internal data class ContactOption(
     val id: String,
     val label: String,
     val group: Boolean,
