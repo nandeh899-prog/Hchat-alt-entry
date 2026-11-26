@@ -38,8 +38,26 @@
     `3bfda5d` 分组页自有 extra、`df4c362` 关闭分组页返回拦截 等）；
   - `FeatureRegistry` 中已注册 `ConversationGroupFeature()`、`GroupChatLabelFeature()`、
     `QuickGroupChatLabelFeature()`，`AeonLabExtraFeature` 内注册 `GroupMemberHistorySettingsProvider()`。
-- **待用户确认**：所指的「群管理」是下面哪一个，以免我查错对象：
-  - (a) 模块内的群聊功能（群成员昵称、退群监控、群公告通知、群聊标签…）；
-  - (b) 会话分组（首页分组/分组页）的修复；
-  - (c) 脚本插件里的「群管理助手 / 群娱乐机器人 / 批量退群 / 新人进群验证」
-    （插件位于 `/data/media/<用户>/Android/media/com.tencent.mm/Hchat/脚本插件/`，不在本仓库）。
+- **结论（2026-11-26 17:40 查实）：不是基线丢代码，是「两条分支各缺一半」**
+
+  | | `alt-entry`（我们构建的基线分支） | `fix/5.5.103-587-theme`（主题实验分支，本地 worktree `/root/work/theme`） |
+  |---|---|---|
+  | 群管理 `hooks/items/groupadmin/`（21 个文件） | **从来没有**（全历史无此目录） | **有** |
+  | 会话分组修复（`ConversationGroupRuntime.kt` 700 行级修复：`df4c362`/`3bfda5d`/`860fcf6`/`84e7301`/`b69c6df` 等） | **有** | **没有**（该文件比基线少约 591 行，这 8 条提交全部「不在」theme-work） |
+  | `grouplabel/` | 有 | 有（两边一致，无差异） |
+
+- **证据**：
+  - `git rev-list --count origin/alt-entry..theme-work` = 60，反向 = 164，`merge-base` 为空（仓库为浅克隆，可见历史在 11-12 处被截断）；
+  - `git ls-tree origin/alt-entry .../items/` 与 `baseline-1028` 均无 `groupadmin`，`theme-work`/`theme-fresh-start` 有；
+  - `git diff baseline-1028:.../conversationgroup theme-work:.../conversationgroup` → `ConversationGroupRuntime.kt | 109 +, 700 -`；
+  - `/sdcard/Download` 下 40 个 APK 全部 `GroupAdmin=0`，唯独**手机当前装的那一版**（`versionCode=587`，
+    `base.apk` 21,176,887 字节，写入时间 17:27）`GroupAdmin=1313`。
+
+- **由此解释用户两个现象**（同一根因）：手机上 17:27 被装成了 **587（主题分支构建）**，不是我们的 1038：
+  - 「设置里找不到群管理」→ 我们构建的 alt-entry/1038 本来就没有 groupadmin（历史从未有过）；
+  - 「分组修复回归到未修复前状态」→ 587 是主题分支，里面 `ConversationGroupRuntime` 缺那 700 行修复。
+
+- **下一步（需用户选择）**：
+  1. 只验基线：重装 `Toolbox-720.apk`（1038，代码 = baseline-1028），分组修复即回来，但群管理仍然没有；
+  2. 要群管理：把 `hooks/items/groupadmin/`（21 文件）从 `theme-work` 移植到 `baseline-1028` 之上，只新增文件 + `FeatureRegistry` 注册，不动冻结项；
+  3. 要两者都在：以 `baseline-1028` 为基线做「移植 + 保留分组修复」，之后主题实验只在单独分支跑。
