@@ -278,7 +278,6 @@ import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveMonitorFeature
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveReplyTemplate
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveReplyTemplateBinding
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveMonitorSettings
-import com.aeonlab.toolkit.hooks.items.groupleave.GroupMemberMediaOrder
 import com.aeonlab.toolkit.hooks.items.grouplabel.GroupChatLabel
 import com.aeonlab.toolkit.hooks.items.grouplabel.GroupChatLabelFeature
 import com.aeonlab.toolkit.hooks.items.grouplabel.GroupChatLabelStore
@@ -44745,54 +44744,6 @@ private fun EmptyText(text: String) {
         text = text,
         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         textAlign = TextAlign.Center
-    )
-}
-
-@Composable
-internal fun GroupMemberMediaOrderDialog(
-    current: String,
-    onValueChange: (String) -> Unit,
-    onClose: () -> Unit
-) {
-    var draft by remember(current) { mutableStateOf(GroupMemberMediaOrder.types(current)) }
-    WindowDialog(
-        show = true,
-        title = "媒体类型顺序",
-        onDismissRequest = onClose,
-        content = {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                Text(
-                    text = "顺序只决定发送媒体时先发哪一类；媒体与提示的先后由上一项「媒体顺序」控制，具体文件在各类型行里选。各类型行标题前的序号就是它当前的位置，点按某一类把它上移一位。",
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                SettingsCard {
-                    draft.forEachIndexed { index, type ->
-                        if (index > 0) InsetDivider()
-                        ActionRow(
-                            title = "${index + 1}. " + GroupMemberMediaOrder.label(type),
-                            summary = if (index == 0) "已在最前" else "点按上移一位"
-                        ) {
-                            val next = GroupMemberMediaOrder.moveUp(draft, index)
-                            if (next != draft) {
-                                draft = next
-                                onValueChange(GroupMemberMediaOrder.sequence(next))
-                            }
-                        }
-                    }
-                }
-                ActionRow(
-                    title = "恢复默认顺序",
-                    summary = GroupMemberMediaOrder.summary(GroupLeaveMonitorSettings.DEFAULT_MEDIA_SEQUENCE)
-                ) {
-                    val preset = GroupMemberMediaOrder.types(GroupLeaveMonitorSettings.DEFAULT_MEDIA_SEQUENCE)
-                    draft = preset
-                    onValueChange(GroupMemberMediaOrder.sequence(preset))
-                }
-                BottomActionBar(primaryText = "完成", onPrimaryClick = onClose)
-            }
-        }
     )
 }
 
