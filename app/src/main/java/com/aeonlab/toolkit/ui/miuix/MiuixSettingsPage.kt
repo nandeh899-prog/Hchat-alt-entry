@@ -271,10 +271,14 @@ import com.aeonlab.toolkit.hooks.items.forwardlimit.RemoveForwardLimitFeature
 import com.aeonlab.toolkit.hooks.items.forwardlimit.RemoveForwardLimitSettings
 import com.aeonlab.toolkit.hooks.items.gameemoji.GameEmojiFeature
 import com.aeonlab.toolkit.hooks.items.gameemoji.GameEmojiSettings
+import com.aeonlab.toolkit.hooks.items.groupadmin.GroupAdminFeature
+import com.aeonlab.toolkit.hooks.items.groupadmin.GroupAdminMiuixPage
+import com.aeonlab.toolkit.hooks.items.groupadmin.GroupAdminSettings
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveMonitorFeature
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveReplyTemplate
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveReplyTemplateBinding
 import com.aeonlab.toolkit.hooks.items.groupleave.GroupLeaveMonitorSettings
+import com.aeonlab.toolkit.hooks.items.groupleave.GroupMemberMediaOrder
 import com.aeonlab.toolkit.hooks.items.grouplabel.GroupChatLabel
 import com.aeonlab.toolkit.hooks.items.grouplabel.GroupChatLabelFeature
 import com.aeonlab.toolkit.hooks.items.grouplabel.GroupChatLabelStore
@@ -2691,6 +2695,7 @@ private object AeonLabConfigBackup {
         MessageBlockSettings.PREFS_NAME,
         GroupLeaveMonitorSettings.PREFS_NAME,
         GroupRenameMonitorSettings.PREFS_NAME,
+        GroupAdminSettings.PREFS_NAME,
         MultiRecallSettings.PREFS_NAME,
         VoiceForwardSettings.PREFS_NAME,
         FakeScanCameraSettings.PREFS_NAME,
@@ -3153,7 +3158,8 @@ private fun practicalFeatureGroups(
                 GroupChatLabelFeature.ID,
                 AtAllNotificationBlockFeature.ID,
                 GroupLeaveMonitorFeature.ID,
-                GroupRenameMonitorFeature.ID
+                GroupRenameMonitorFeature.ID,
+                GroupAdminFeature.ID
             )
         ),
         FeatureGroupEntry(
@@ -3909,6 +3915,10 @@ private fun featureSubSearchTerms(featureId: String): List<String> {
         QuickGroupChatLabelFeature.ID -> listOf("快捷设置群聊标签", "群聊标签", "会话长按菜单", "聊天分组", "群聊分类")
         GroupLeaveMonitorFeature.ID -> listOf("进退群监控", "进群邀请", "退群提醒", "监听群", "批量保护", "新群保护", "群成员变化")
         GroupRenameMonitorFeature.ID -> listOf("改名监控", "群昵称", "群内昵称", "改名提醒", "改名卡片", "改名模板", "批量套用", "改名系统消息")
+        GroupAdminFeature.ID -> listOf(
+            "群管理助手", "群管理", "群管理员", "群主", "代理群主", "管理员名单", "白名单", "黑名单",
+            "踢人", "移出群", "拉黑", "豁免", "告别语", "纳管", "群成员", "群昵称"
+        )
         MomentsAutoLikeFeature.ID -> listOf("朋友圈自动点赞", "自动点赞", "点赞自己的朋友圈", "点赞白名单", "点赞黑名单", "同一人每天点赞数量", "每日点赞上限", "随机延迟", "发布时间限制", "关键词过滤", "链接朋友圈", "音乐朋友圈", "卡片朋友圈", "未知类型朋友圈")
         MomentsAutoCommentFeature.ID -> listOf("朋友圈自动评论", "自动评论", "评论内容", "时间变量", "评论时间", "时间格式", "评论自己的朋友圈", "评论白名单", "评论黑名单", "同一人每天评论数量", "每日评论上限", "评论延迟", "随机延迟", "发布时间限制", "关键词过滤", "评论日志", "链接朋友圈", "音乐朋友圈", "卡片朋友圈", "未知类型朋友圈")
         MomentsAutoForwardFeature.ID -> listOf("朋友圈自动转发", "静默转发", "指定好友", "每日上限", "包含关键词", "排除关键词", "替换关键词", "替换规则", "文案替换", "文案模板", "链接朋友圈", "音乐朋友圈", "卡片朋友圈", "未知类型朋友圈")
@@ -4711,6 +4721,7 @@ private fun FeatureSettingsPage(
         GroupChatLabelFeature.ID -> GroupChatLabelMiuixPage(context, provider, onBack)
         GroupLeaveMonitorFeature.ID -> GroupLeaveMonitorMiuixPage(context, provider, onBack)
         GroupRenameMonitorFeature.ID -> GroupRenameMonitorMiuixPage(context, provider, onBack)
+        GroupAdminFeature.ID -> GroupAdminMiuixPage(context, provider, onBack)
         MomentsAutoLikeFeature.ID -> MomentsAutoLikeMiuixPage(context, provider, onBack)
         MomentsAutoCommentFeature.ID -> MomentsAutoCommentPage(context, provider, onBack)
         MomentsAutoForwardFeature.ID -> MomentsAutoForwardMiuixPage(context, provider, onBack)
@@ -44734,6 +44745,53 @@ private fun EmptyText(text: String) {
         text = text,
         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         textAlign = TextAlign.Center
+    )
+}
+
+internal fun GroupMemberMediaOrderDialog(
+    current: String,
+    onValueChange: (String) -> Unit,
+    onClose: () -> Unit
+) {
+    var draft by remember(current) { mutableStateOf(GroupMemberMediaOrder.types(current)) }
+    WindowDialog(
+        show = true,
+        title = "媒体类型顺序",
+        onDismissRequest = onClose,
+        content = {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Text(
+                    text = "顺序只决定发送媒体时先发哪一类；媒体与提示的先后由上一项「媒体顺序」控制，具体文件在各类型行里选。各类型行标题前的序号就是它当前的位置，点按某一类把它上移一位。",
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                SettingsCard {
+                    draft.forEachIndexed { index, type ->
+                        if (index > 0) InsetDivider()
+                        ActionRow(
+                            title = "${index + 1}. " + GroupMemberMediaOrder.label(type),
+                            summary = if (index == 0) "已在最前" else "点按上移一位"
+                        ) {
+                            val next = GroupMemberMediaOrder.moveUp(draft, index)
+                            if (next != draft) {
+                                draft = next
+                                onValueChange(GroupMemberMediaOrder.sequence(next))
+                            }
+                        }
+                    }
+                }
+                ActionRow(
+                    title = "恢复默认顺序",
+                    summary = GroupMemberMediaOrder.summary(GroupLeaveMonitorSettings.DEFAULT_MEDIA_SEQUENCE)
+                ) {
+                    val preset = GroupMemberMediaOrder.types(GroupLeaveMonitorSettings.DEFAULT_MEDIA_SEQUENCE)
+                    draft = preset
+                    onValueChange(GroupMemberMediaOrder.sequence(preset))
+                }
+                BottomActionBar(primaryText = "完成", onPrimaryClick = onClose)
+            }
+        }
     )
 }
 
