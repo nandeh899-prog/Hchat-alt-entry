@@ -1745,25 +1745,15 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     /** 5.5.104：对全部已登记锚定壁纸宿主做一次漂移探测并排定重录。
-     *  710o：真机反馈「小程序面板又出现半透明层、点一下屏幕才透明」——面板开合是 translationY
-     *  属性动画，**不触发布局**，所以 710j 的 addOnGlobalLayoutListener 那条链根本不会排定；
-     *  这里在巡检里盯着漂移：一旦发现动画在跑，就在动画结束后补一次强制重录（710j 的延迟链路）。 */
+     *
+     *  710p：710o 曾在这里加过「漂移 > 2 就排定一次 710j 强制重录」，想修面板半透明层，
+     *  真机 1022 日志证伪：静止页面上驻留的漂移本来就常 > 2，结果每轮巡检都排定补录，
+     *  1 分钟内触发 19 次（`动画结束补录(710o)` 19 条、`布局落定后强制重录(710j)` 累计 12），
+     *  变成自己制造抖动 —— 已按「已修好的路径不许再动」原则**整体撤回**，恢复 710j 的原始形态。
+     *  面板半透明层后续只做取证，不再靠猜改这条链路。 */
     private fun syncAnchoredHosts() {
         if (homeImageDrawables.isEmpty()) return
-        var maxDrift = 0
-        for (d in homeImageDrawables.values.toList()) {
-            runCatching<Unit> { d.requestSyncIfDrifted() }
-            val drift = runCatching { d.driftNow() }.getOrDefault(-1)
-            if (drift > maxDrift) maxDrift = drift
-        }
-        if (maxDrift > 2) {
-            scheduleSettleReRecord710()
-            val now = SystemClock.uptimeMillis()
-            if (now - animDriftLogAt710 >= 3000L) {
-                animDriftLogAt710 = now
-                HLog.i("$TAG 面板/翻页动画中，动画结束补录(710o): 最大漂移=$maxDrift 宿主=${homeImageDrawables.size}")
-            }
-        }
+        for (d in homeImageDrawables.values.toList()) runCatching<Unit> { d.requestSyncIfDrifted() }
     }
 
     /**
@@ -2956,8 +2946,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
     private var stripScanAt710 = 0L
     /** 710n：「列表底内边距再压」的日志节流（宿主可能每帧重写，避免刷屏）。 */
     private var stripRepressLogAt710 = 0L
-    /** 710o：面板/翻页动画（漂移>2）日志节流。 */
-    private var animDriftLogAt710 = 0L
 
     /**
      * 710k：把各页的内容链放到底栏空档里去。
