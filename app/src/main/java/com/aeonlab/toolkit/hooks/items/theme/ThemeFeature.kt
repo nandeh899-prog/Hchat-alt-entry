@@ -2988,35 +2988,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
      * 写死的高度改 `MATCH_PARENT`、底边距与底部内边距归零；顶部让位（topMargin）一律不动，
      * 避免 710g 那样把内容顶到标题栏下面。原值全部记进 `stripFixes710`，恢复底栏时写回。
      */
-    private fun applyBottomGapStretch710(activity: Activity, decor: ViewGroup, snapshot: ThemeSnapshot? = null) {
-        val s = snapshot ?: runCatching { ThemeSettings.snapshot(context.hostContext()) }.getOrNull() ?: return
-        runCatching {
-            // 710l：判定条件只看「隐藏原生底栏」。710k 写成 `tabHideNative && !tabEnabled`，
-            // 但 tabEnabled 默认就是 true（与「自定义底栏」互不冲突，applyBottomTab 里也是
-            // tabHideNative 优先直接 return），条件恒假 → 710k 一次都没执行（1027 真机日志：
-            // 底栏开关=false 隐藏底栏=true，`底栏空档放开` 计数 0）。
-            //
-            // 710m：不再用「已放开」状态位——ViewPager 的页面是懒 inflate 的，启动时只有首页
-            // 那一条链在，切到通讯录/发现/我的之后新容器才出现（1027 真机只命中 2 处）。
-            // 改成按 1.5s 节流幂等扫描：已处理过的视图在 stripFixes710 里直接跳过。
-            val want = s.tabHideNative &&
-                activity.javaClass.name.contains(LAUNCHER_UI_CLASS)
-            if (want) {
-                val nowMs = SystemClock.uptimeMillis()
-                if (nowMs - stripScanAt710 >= STRIP_SCAN_INTERVAL_710) {
-                    stripScanAt710 = nowMs
-                    val before = stripFixes710.size
-                    val n = stretchPageContent710(decor)
-                    if (n > 0) {
-                        HLog.i("$TAG 底栏空档放开(710k): 新增=$n 处 累计=${stripFixes710.size} 处（前=$before）")
-                    }
-                }
-            } else if (stripFixes710.isNotEmpty()) {
-                val back = restoreStripStretch710()
-                HLog.i("$TAG 底栏空档放开已还原(710k): 还原=$back 处")
-            }
-        }.onFailure { HLog.e("$TAG 底栏空档放开异常(710k): ${it.message}") }
-    }
     private fun stretchPageContent710(decor: ViewGroup): Int {
         val screenH = decor.height.coerceAtLeast(decor.measuredHeight)
         if (screenH <= 0) return 0
@@ -7297,20 +7268,7 @@ private class ThemeRuntime(private val context: FeatureContext) {
     }
 
     private fun enforce(activity: Activity, decor: ViewGroup, force: Boolean = false) {
-        if (mountOff703()) {
-            // 1029：mount-off703 的含义是「壁纸层/底衬/行遮罩不安装」（总开关关或四页全关），
-            // 但 710k 是**布局**修复（内容链放开到底），与壁纸无关。
-            // 早退把它一起关掉了 → 1028 真机（启用页面背景关 + 通讯录页面背景关）复现：
-            // 视图树 MMWeUIBounceView 0,288-1240,2598 又回到 2598，
-            // 屏幕 2598..2772 那 174px 没有内容链覆盖，露出页面灰（截图实测 y=2576 起 #EDEDED）。
-            // 所以这里只补跑「底栏空档放开」，其它门控行为一律不变。
-            // 注意：总开关真的关掉时（!enabled）仍然什么都不做——只有「主题开着、但背景/页面开关关了」
-            // 这种情况才需要补跑布局修复，避免模块整体停用时还去改宿主布局。
-            val s1029 = ThemeSettings.snapshot(context.hostContext())
-            if (s1029.enabled) applyBottomGapStretch710(activity, decor, s1029)
-            dumpCounts703("mount-skip if (snapshot.backgroundEnabled) reassertImmersive")
-            return
-        }
+        if (mountOff703()) { dumpCounts703("mount-skip if (snapshot.backgroundEnabled) reassertImmersive"); return }
         if (!decor.isAttachedToWindow) return
         val now = SystemClock.uptimeMillis()
         if (!force && now - lastEnforceAt < ENFORCE_INTERVAL_MS) return
@@ -7347,10 +7305,32 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 用户看到的就是「一条被壁纸盖住、本该透出好友列表的区域」。
         // 所以只在「隐藏原生底栏 && 未开自定义底栏」时，把这半条链放到底（保留顶部让位与标题栏），
         // 恢复底栏时原值写回。
-        //
-        // 1029：整段原样抽成 applyBottomGapStretch710()，唯一目的是让 mount-off703 早退分支也能跑到它
-        // （关背景后底部 174px 灰回归，见 enforce 开头的注释）。判定与写回逻辑一个字节都没改。
-        applyBottomGapStretch710(activity, decor, snapshot)
+        runCatching {
+            // 710l：判定条件只看「隐藏原生底栏」。710k 写成 `tabHideNative && !tabEnabled`，
+            // 但 tabEnabled 默认就是 true（与「自定义底栏」互不冲突，applyBottomTab 里也是
+            // tabHideNative 优先直接 return），条件恒假 → 710k 一次都没执行（1027 真机日志：
+            // 底栏开关=false 隐藏底栏=true，`底栏空档放开` 计数 0）。
+            //
+            // 710m：不再用「已放开」状态位——ViewPager 的页面是懒 inflate 的，启动时只有首页
+            // 那一条链在，切到通讯录/发现/我的之后新容器才出现（1027 真机只命中 2 处）。
+            // 改成按 1.5s 节流幂等扫描：已处理过的视图在 stripFixes710 里直接跳过。
+            val want = snapshot.tabHideNative &&
+                activity.javaClass.name.contains(LAUNCHER_UI_CLASS)
+            if (want) {
+                val nowMs = SystemClock.uptimeMillis()
+                if (nowMs - stripScanAt710 >= STRIP_SCAN_INTERVAL_710) {
+                    stripScanAt710 = nowMs
+                    val before = stripFixes710.size
+                    val n = stretchPageContent710(decor)
+                    if (n > 0) {
+                        HLog.i("$TAG 底栏空档放开(710k): 新增=$n 处 累计=${stripFixes710.size} 处（前=$before）")
+                    }
+                }
+            } else if (stripFixes710.isNotEmpty()) {
+                val back = restoreStripStretch710()
+                HLog.i("$TAG 底栏空档放开已还原(710k): 还原=$back 处")
+            }
+        }.onFailure { HLog.e("$TAG 底栏空档放开异常(710k): ${it.message}") }
         // 710：叠加页兜底巡检——钩子（Instrumentation/Activity#onResume）万一在某些 ROM 上不生效，
         // 这里每轮也看一眼「当前有没有非 Launcher 的可见 Activity」，有就撤壁纸，回来就补铺。
         runCatching {
