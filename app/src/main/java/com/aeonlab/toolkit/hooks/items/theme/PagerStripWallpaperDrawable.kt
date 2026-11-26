@@ -23,24 +23,7 @@ class PagerStripWallpaperDrawable(private val host: ViewGroup) : Drawable() {
 
     private companion object {
         /** 676：未开启背景的页格画这个不透明原生底，挡住窗口壁纸层的透出。 */
-        const val OFF_FILL_GREY = 0xffededed.toInt()
-    }
-
-    /**
-     * 1029：空页格的填充色。
-     *
-     * 背景：676 起空页格一律画 #EDEDED，用来挡住窗口壁纸透出。副作用是「关掉页面背景」之后，
-     * 通讯录这类列表最后一行下面那一段（内容盖不住的区域）就露出一条 #EDEDED 灰带。
-     * 用户 710d 时代的预期是「关背景时窗口底改白」，所以这里改成可调：
-     * 主背景开关关闭 → 白色；只关单页（其它页有壁纸）→ 仍用原生灰。
-     */
-    @Volatile
-    private var offFillColor = OFF_FILL_GREY
-
-    fun setOffFillColor(color: Int) {
-        if (offFillColor == color) return
-        offFillColor = color
-        invalidateSelf()
+        const val OFF_FILL = 0xffededed.toInt()
     }
 
     private val slots = arrayOfNulls<Bitmap>(8)
@@ -79,7 +62,7 @@ class PagerStripWallpaperDrawable(private val host: ViewGroup) : Drawable() {
                 // 之前空槽不画，页面上没被内容盖住的地方就透出窗口那层壁纸（用户 11-23 08:34 截图：
                 // 只开主页时通讯录/发现底部仍见壁纸）。这里只动我们自己的绘制层，不写宿主属性。
                 paint.alpha = 255
-                paint.color = offFillColor
+                paint.color = OFF_FILL
                 canvas.drawRect(cellLeft, 0f, cellLeft + w, h.toFloat(), paint)
                 continue
             }

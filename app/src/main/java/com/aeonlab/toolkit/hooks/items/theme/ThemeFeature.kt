@@ -3017,25 +3017,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
             }
         }.onFailure { HLog.e("$TAG 底栏空档放开异常(710k): ${it.message}") }
     }
-
-    /**
-     * 1029：让「空页格填充色」跟随主背景开关。
-     *
-     * - 主背景开关关（`!backgroundEnabled`）→ 白色（回到 710d「关背景时窗口底改白」的原意）；
-     * - 主开关开、只是某几页关 → 保持 #EDEDED 原生灰（676 起验证过的观感，不动）。
-     *
-     * 只改我们自己那一层 Drawable 的填充色，不写宿主任何属性。
-     */
-    private fun syncPagerOffFill1029(s: ThemeSnapshot) {
-        if (pagerUnderlays.isEmpty()) return
-        val want = if (s.backgroundEnabled) 0xffededed.toInt() else 0xffffffff.toInt()
-        for ((_, d) in pagerUnderlays.entries.toList()) {
-            (d as? PagerStripWallpaperDrawable)?.setOffFillColor(want)
-        }
-    }
-
-    /** 1029：mount-off 分支的工作节流（该分支在 OnPreDraw 上，不能每帧读配置/扫树）。 */
-    @Volatile private var lastMountOffWork1029 = 0L
     private fun stretchPageContent710(decor: ViewGroup): Int {
         val screenH = decor.height.coerceAtLeast(decor.measuredHeight)
         if (screenH <= 0) return 0
@@ -7322,19 +7303,11 @@ private class ThemeRuntime(private val context: FeatureContext) {
             // 早退把它一起关掉了 → 1028 真机（启用页面背景关 + 通讯录页面背景关）复现：
             // 视图树 MMWeUIBounceView 0,288-1240,2598 又回到 2598，
             // 屏幕 2598..2772 那 174px 没有内容链覆盖，露出页面灰（截图实测 y=2576 起 #EDEDED）。
-            // 所以这里只补跑「底栏空档放开」+「空页格填充色」，其它门控行为一律不变。
+            // 所以这里只补跑「底栏空档放开」，其它门控行为一律不变。
             // 注意：总开关真的关掉时（!enabled）仍然什么都不做——只有「主题开着、但背景/页面开关关了」
-            // 这种情况才需要补跑，避免模块整体停用时还去改宿主布局。
-            // 节流 300ms：这段在 OnPreDraw 上，不能每帧读配置。
-            val t1029 = SystemClock.uptimeMillis()
-            if (t1029 - lastMountOffWork1029 >= 300L) {
-                lastMountOffWork1029 = t1029
-                val s1029 = ThemeSettings.snapshot(context.hostContext())
-                if (s1029.enabled) {
-                    applyBottomGapStretch710(activity, decor, s1029)
-                    syncPagerOffFill1029(s1029)
-                }
-            }
+            // 这种情况才需要补跑布局修复，避免模块整体停用时还去改宿主布局。
+            val s1029 = ThemeSettings.snapshot(context.hostContext())
+            if (s1029.enabled) applyBottomGapStretch710(activity, decor, s1029)
             dumpCounts703("mount-skip if (snapshot.backgroundEnabled) reassertImmersive")
             return
         }
@@ -7378,9 +7351,6 @@ private class ThemeRuntime(private val context: FeatureContext) {
         // 1029：整段原样抽成 applyBottomGapStretch710()，唯一目的是让 mount-off703 早退分支也能跑到它
         // （关背景后底部 174px 灰回归，见 enforce 开头的注释）。判定与写回逻辑一个字节都没改。
         applyBottomGapStretch710(activity, decor, snapshot)
-        // 1029：主开关开着时把空页格填充色拉回原生灰（关闭时是白），两个方向都由这一处收敛。
-        runCatching { syncPagerOffFill1029(snapshot) }
-            .onFailure { HLog.e("$TAG 空页格填充色同步异常(1029): ${it.message}") }
         // 710：叠加页兜底巡检——钩子（Instrumentation/Activity#onResume）万一在某些 ROM 上不生效，
         // 这里每轮也看一眼「当前有没有非 Launcher 的可见 Activity」，有就撤壁纸，回来就补铺。
         runCatching {
