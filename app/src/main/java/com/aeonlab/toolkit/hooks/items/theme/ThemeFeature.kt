@@ -1118,6 +1118,9 @@ private class ThemeRuntime(private val context: FeatureContext) {
         scrimTree(page, page, pageWidth, pageHeight, scrim, gapPx, false, counters, sample, detail, isHome)
         val skipped710q = skippedRowRewrite710q
         skippedRowRewrite710q = 0
+        // 711 取证：只读打印行缩进链路，不写任何布局。
+        runCatching { probeRowInsets711(page, pageWidth) }
+            .onFailure { HLog.e("$TAG 行缩进取证调用异常(711): ${it.message}") }
         runCatching { headerHousekeeping(page, pageWidth, pageHeight, detail) }
             .onFailure { HLog.e("$TAG 头部清理异常: ${it.message}", it) }
         val scrimmedTotal = counters[0] + counters[1] + counters[2] + counters[3]
@@ -8469,6 +8472,79 @@ private class ThemeRuntime(private val context: FeatureContext) {
         Collections.synchronizedMap(WeakHashMap<View, IntArray>())
     /** 710q：本轮被幂等跳过的通栏行重写次数（只用于日志，不参与任何判定）。 */
     @Volatile private var skippedRowRewrite710q = 0
+    /** 711 取证：行缩进探针的时间节流与上一次快照（只读，不改任何布局）。 */
+    @Volatile private var rowProbeAt711 = 0L
+    private val rowProbeSeen711: MutableMap<View, IntArray> =
+        Collections.synchronizedMap(WeakHashMap<View, IntArray>())
+
+    /**
+     * 711 取证：把当前页里每个「行」的缩进链路打出来。
+     *
+     * 背景：1024 真机日志证明发现页/我的页的行**从未被我们的通栏行逻辑碰过**
+     * （`通栏行压半透明 0 个`、`钉缩进` 零样本），但截图像素测量显示 6 行里有 2 行
+     * 图标+标题整体右移 48px（≈16dp），即那 4 行的左缩进是 0。
+     * 所以要找出：行自身 padding、背景 .9 的 padding、第一个孩子的 left 三者里，
+     * 究竟哪一个是 0、以及它在什么时刻被改（本函数只读 + 打印差异，绝不写回）。
+     */
+    private fun probeRowInsets711(page: View, pageWidth: Int) {
+        val now = SystemClock.uptimeMillis()
+        if (now - rowProbeAt711 < 4000L) return
+        rowProbeAt711 = now
+        val rows = ArrayList<View>()
+        runCatching { collectRows711(page, pageWidth, rows, 0) }
+            .onFailure { HLog.e("$TAG 行缩进取证异常(711): ${it.message}") }
+        if (rows.isEmpty()) return
+        rows.sortBy { it.top }
+        val sb = StringBuilder()
+        sb.append("$TAG 行缩进取证(711) 页=${page.javaClass.simpleName} 行=${rows.size}")
+        for (v in rows.take(14)) {
+            val lp = v.layoutParams
+            val pad = intArrayOf(v.paddingLeft, v.paddingTop, v.paddingRight, v.paddingBottom)
+            val bg = v.background
+            val bgPad = IntArray(4)
+            if (bg != null) {
+                val r = android.graphics.Rect()
+                if (runCatching { bg.getPadding(r) }.getOrDefault(false)) {
+                    bgPad[0] = r.left; bgPad[1] = r.top; bgPad[2] = r.right; bgPad[3] = r.bottom
+                }
+            }
+            val c0 = (v as? ViewGroup)?.let { g -> if (g.childCount > 0) g.getChildAt(0) else null }
+            val cL = c0?.left ?: -1
+            sb.append(
+                "\n$TAG   行 ${v.javaClass.simpleName}#${idName(v)} ${v.width}x${v.height} top=${v.top}" +
+                    " pad=${pad.toList()} bg=${bg?.javaClass?.simpleName} bgPad=${bgPad.toList()}" +
+                    " 子数=${(v as? ViewGroup)?.childCount ?: -1} 子0=${c0?.javaClass?.simpleName}@left=$cL 宽=${c0?.width ?: -1}" +
+                    " lp=${lp?.javaClass?.simpleName}:${lp?.width}x${lp?.height}"
+            )
+            val key = intArrayOf(pad[0], pad[2], cL, v.width)
+            val old = rowProbeSeen711.put(v, key)
+            if (old != null && !old.contentEquals(key)) {
+                sb.append(" [缩进被改 前=${old.toList()}]")
+            }
+        }
+        HLog.i(sb.toString())
+    }
+
+    private fun collectRows711(v: View, pageWidth: Int, out: MutableList<View>, depth: Int) {
+        if (depth > 26) return
+        val w = v.width
+        val h = v.height
+        if (w >= (pageWidth * 0.55f).toInt() && h in 60..300 && v is ViewGroup &&
+            v.childCount in 1..8
+        ) {
+            out.add(v)
+            if (out.size >= 40) return
+            return
+        }
+        if (v is ViewGroup) {
+            val n = minOf(v.childCount, 40)
+            for (i in 0 until n) {
+                val c = v.getChildAt(i) ?: continue
+                collectRows711(c, pageWidth, out, depth + 1)
+                if (out.size >= 40) return
+            }
+        }
+    }
     private val panelBarAnchored: MutableSet<View> =
         Collections.newSetFromMap(WeakHashMap<View, Boolean>())
     @Volatile private var lastPanelBarLogAt = 0L
