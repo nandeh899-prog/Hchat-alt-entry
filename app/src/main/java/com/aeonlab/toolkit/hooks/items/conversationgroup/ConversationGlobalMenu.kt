@@ -338,16 +338,18 @@ internal object ConversationGlobalMenu {
                 // 只在「首页会话列表可见」时补挂，避免 A 跑到通讯录/发现/我 这些页面的标题栏上。
                 if (!homeListVisible()) return true
                 val now = SystemClock.elapsedRealtime()
-                if (now - lastGuardMountAt < 500L) return true
+                if (now - lastGuardMountAt < 150L) return true
                 lastGuardMountAt = now
                 guardRemountPosted = true
-                main.postDelayed({
+                // 不用 postDelayed：ActionBar 重建后立刻补挂，只在同一帧内缺失，
+                // 肉眼几乎看不到；此前延迟 80ms 会明显闪一下。
+                main.post {
                     guardRemountPosted = false
-                    val current = entryGuardActivity?.get() ?: return@postDelayed
-                    if (current.isFinishing || current.isDestroyed) return@postDelayed
+                    val current = entryGuardActivity?.get() ?: return@post
+                    if (current.isFinishing || current.isDestroyed) return@post
                     runCatching { ensureTopEntry(current) }
                         .onFailure { HLog.e("$TAG 守护补挂入口失败: ${it.message}", it) }
-                }, 80L)
+                }
                 return true
             }
         })
@@ -367,7 +369,6 @@ internal object ConversationGlobalMenu {
         }
         val targets = menuTargets(activity)
         targets.forEach { detachMenu(it) }
-        removeOwnEntry(activity)
         // 首选：自己往标题栏容器里插一个纯文字 View。
         // 不走宿主的 addXxxOptionMenu，就不会出现「iconRes=0 被宿主渲染成默认图标」这类内部行为。
         if (mountOwnEntry(activity)) {
@@ -467,7 +468,16 @@ internal object ConversationGlobalMenu {
             return false
         }
         return runCatching {
-            val entry = buildEntryView(activity)
+            // 复用上一次插入的那个 View：ActionBar 重建后只是把它换到新容器里，
+            // 不新建、不销毁，视觉上不会出现「消失→出现」的闪动。
+            val root = activity.window?.decorView
+            val reused = root?.let { findViewByTag(it, ENTRY_TAG) }
+            val entry = reused ?: buildEntryView(activity)
+            if (entry.parent === host) {
+                ownEntryRef = java.lang.ref.WeakReference(entry)
+                return true
+            }
+            (entry.parent as? ViewGroup)?.removeView(entry)
             val params = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -557,6 +567,18 @@ private fun hasOwnEntry(activity: Activity): Boolean {
      */
     private fun hideGhostTitleIcons(activity: Activity) {
         runCatching {
+            // 快速路径：上一轮隐藏过的 View 都还挂在树上且仍是 INVISIBLE，
+            // 说明宿主没有再显示它们，不必每帧都全树扫描（这个函数每次 resume/轮询都会调）。
+            if (ghostHiddenViews.isNotEmpty()) {
+                var allHidden = true
+                for (view in ghostHiddenViews.keys) {
+                    if (!view.isAttachedToWindow || view.visibility != View.INVISIBLE) {
+                        allHidden = false
+                        break
+                    }
+                }
+                if (allHidden) return
+            }
             val root: View = activity.window?.decorView ?: return
             val ids = GHOST_ICON_IDS.mapNotNull { name ->
                 val id = runCatching {
@@ -665,7 +687,26 @@ private fun hasOwnEntry(activity: Activity): Boolean {
                     list.javaClass.getMethod("getAdapter").invoke(list)
                 }.getOrNull()
                 if (adapter != null) {
-                    runCatching { adapter.javaClass.getMethod("notifyDataSetChanged").invoke(adapter) }
+                    // 关键：ListView 加过 header 时拿到的是 HeaderViewListAdapter，
+                    // 它的 notifyDataSetChanged() 是**空实现**（observer 注册在内层 adapter 上），
+                    // 所以要一路 getWrappedAdapter 解包，通知真正干活的 adapter。
+                    var target: Any = adapter
+                    var depth = 0
+                    while (depth < 6) {
+                        val wrapped = runCatching {
+                            target.javaClass.getMethod("getWrappedAdapter").invoke(target)
+                        }.getOrNull()
+                        if (wrapped == null || wrapped === target) break
+                        target = wrapped
+                        depth++
+                    }
+                    if (target !== adapter && loggedKeys.add("adapterUnwrap")) {
+                        HLog.i(
+                            "$TAG 列表 adapter 解包: ${adapter.javaClass.simpleName}" +
+                                " → ${target.javaClass.simpleName}"
+                        )
+                    }
+                    runCatching { target.javaClass.getMethod("notifyDataSetChanged").invoke(target) }
                         .onFailure { HLog.e("$TAG notifyDataSetChanged 失败: ${it.message}", it) }
                 } else if (loggedKeys.add("noadapter")) {
                     HLog.i("$TAG 列表 ${list.javaClass.simpleName} 没有 adapter，跳过刷新")
