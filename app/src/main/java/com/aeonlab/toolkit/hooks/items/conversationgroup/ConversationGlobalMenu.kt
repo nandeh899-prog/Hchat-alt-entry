@@ -234,7 +234,7 @@ internal object ConversationGlobalMenu {
                         MENU_ITEM_ID
                     }
                 }
-                type == Boolean.TYPE -> false
+                type == java.lang.Boolean.TYPE -> false
                 else -> null
             }
         }
