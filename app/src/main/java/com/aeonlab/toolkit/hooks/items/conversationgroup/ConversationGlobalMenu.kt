@@ -12,6 +12,7 @@ import android.view.Gravity
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
@@ -99,6 +100,13 @@ internal object ConversationGlobalMenu {
             ConversationGroupMenu.toast(activity, "没有可处理的会话")
             return
         }
+        // 批量动作改的是微信自己的免打扰 / 已读状态，分组里的行是我们在刷新，
+        // 但「没被收进分组」的会话行属于微信原生 adapter，必须让它自己 notify 一次，
+        // 否则就是「分组内图标会变、分组外不变」。
+        val refreshAll: () -> Unit = {
+            refreshHome()
+            notifyHomeList(activity)
+        }
         VoiceForwardMiuixDialog.showListChoices(
             activity = activity,
             title = "全局批量操作",
@@ -110,9 +118,9 @@ internal object ConversationGlobalMenu {
                     // 标已读 / 免打扰 / 发送 都先选目标会话（和批量删除的交互保持一致，
                     // 避免“一按就作用于全部会话”，尤其发送是不可撤销的）。
                     KEY_MARK_READ -> pickTargets(activity, ids, "所有消息标为已读") { chosen ->
-                        ConversationGroupMenu.markIdsRead(activity, chosen, refreshHome)
+                        ConversationGroupMenu.markIdsRead(activity, chosen, refreshAll)
                     }
-                    KEY_CLEAR -> ConversationGroupMenu.clearMessagesOf(activity, ids, refreshHome)
+                    KEY_CLEAR -> ConversationGroupMenu.clearMessagesOf(activity, ids, refreshAll)
                     KEY_BLOCK -> ConversationGroupMenu.blockActionFor(activity, ids)
                     KEY_DND_ON -> pickDoNotDisturbTargets(activity, ids, enabled = true)
                     KEY_DND_OFF -> pickDoNotDisturbTargets(activity, ids, enabled = false)
@@ -162,7 +170,7 @@ internal object ConversationGlobalMenu {
                 ) { picked ->
                     val chosen = picked.map { it.id }
                     if (chosen.isEmpty()) return@showConversationPicker
-                    ConversationGroupMenu.setDoNotDisturbFor(activity, chosen, enabled, refreshHome)
+                    ConversationGroupMenu.setDoNotDisturbFor(activity, chosen, enabled, refreshAll)
                 }
             }
         )
@@ -254,6 +262,9 @@ internal object ConversationGlobalMenu {
         if (loggedKeys.add("ensure:" + Process.myPid())) {
             HLog.i("$TAG 开始挂载首页顶部入口 pid=${Process.myPid()}")
         }
+        // 列表头部那条假标题栏会在重建头部行时把两个图标重新显示出来，
+        // 所以每次回到首页（onResume / onWindowFocusChanged / 点击）都顺手压一次。
+        hideGhostTitleIcons(activity)
         install(activity, attempt = 1)
     }
 
@@ -273,7 +284,11 @@ internal object ConversationGlobalMenu {
         if (attempt < 40) {
             // 标题栏可能还没 inflate（实测开微信后要等一会儿、甚至滑动一下才建好）。
             // 慢轮询最多 20 秒，期间只走自绘路径，绝不碰宿主菜单项系统。
-            main.postDelayed({ install(activity, attempt + 1) }, 500L)
+            // 头部行通常比标题栏更晚建好，所以每轮都重新扫一次幽灵图标。
+            main.postDelayed({
+                hideGhostTitleIcons(activity)
+                install(activity, attempt + 1)
+            }, 500L)
             return
         }
         if (!ALLOW_LEGACY_FALLBACK) {
@@ -320,6 +335,24 @@ internal object ConversationGlobalMenu {
     // ------------------------------------------------------------ 自绘入口（不经宿主菜单系统）
     /** 我们插进标题栏那个 View 的 tag，用来在重建时精确定位并移除。 */
     private const val ENTRY_TAG = "aeonlab_global_menu_entry"
+
+    /**
+     * 会话 `ListView` 头部那条「假标题栏」里两个图标的资源 id 名。
+     *
+     * 实测（1059 + 无过滤 UI 树）：真 ActionBar 里的图标是 `ImageView id=h5n`（外层
+     * `RelativeLayout id=jha/jga`），`meb` / `plus_icon` **只**出现在列表头部行，
+     * 因此可以放心按名字找，再用「祖先含 ListView」把范围锁死在假标题栏上。
+     */
+    private val GHOST_ICON_IDS = arrayOf("meb", "plus_icon")
+
+    /** 已经隐藏过的 View，避免每轮轮询都重复置位与刷日志。 */
+    private val ghostHiddenViews = java.util.WeakHashMap<View, Boolean>()
+
+    /** 已经挂了绘制前守护的列表（弱引用，列表随 Activity 重建时自动换新的）。 */
+    private var ghostGuardList: java.lang.ref.WeakReference<View>? = null
+
+    /** 防止「缓存全部失效」时刷屏式重扫。 */
+    private var ghostRescanPosted = false
 
     /**
      * 自己往标题栏容器里塞一个纯文字 View。
@@ -412,6 +445,158 @@ private fun hasOwnEntry(activity: Activity): Boolean {
         return null
     }
 
+
+    /**
+     * 隐藏「列表头部那条假标题栏」里的两个图标。
+     *
+     * 微信首页的会话 `ListView` 里自带一条复刻标题栏的行（`FrameLayout#wk` → `RelativeLayout#cg7`，
+     * 里面有 `ImageView#meb`（搜索）和 `ImageView#plus_icon`（＋），还有一个 `TextView#text1`）。
+     * 正常情况下它被真 ActionBar 完整盖住，看不见；但主题把标题栏做成透明后，
+     * 这一层会透出来，变成「两个 🔍 两个 ＋」——尤其我们往真标题栏里加上 `A` 之后，
+     * 真标题栏整体左移约 78px，两层的错位直接暴露。
+     *
+     * 这里只把**祖先链里含 ListView** 的那两个图标置为 INVISIBLE：
+     * 不动假标题栏的标题文字（它参与微信的滚动/下拉效果），也不动真 ActionBar 的图标。
+     */
+    private fun hideGhostTitleIcons(activity: Activity) {
+        runCatching {
+            val root: View = activity.window?.decorView ?: return
+            val ids = GHOST_ICON_IDS.mapNotNull { name ->
+                val id = runCatching {
+                    activity.resources.getIdentifier(name, "id", activity.packageName)
+                }.getOrDefault(0)
+                if (id == 0) null else name to id
+            }
+            if (ids.isEmpty()) return
+            ids.forEach { (name, id) ->
+                val hits = ArrayList<View>(2)
+                collectViewsById(root, id, hits)
+                var hitInList = 0
+                hits.forEach { view ->
+                    // 只处理「祖先含 ListView/RecyclerView」的那一份，真 ActionBar 的图标一概不动。
+                    if (!hasListViewAncestor(view)) return@forEach
+                    hitInList++
+                    if (view.visibility == View.INVISIBLE) return@forEach
+                    view.visibility = View.INVISIBLE
+                    ghostHiddenViews[view] = true
+                }
+                if (hitInList > 0 && loggedKeys.add("ghost:" + name)) {
+                    HLog.i("$TAG 已隐藏列表头部的幽灵标题栏图标 id=$name 数量=$hitInList")
+                }
+            }
+            installGhostGuard(activity, root)
+        }.onFailure { HLog.e("$TAG 隐藏幽灵标题栏图标失败: ${it.message}", it) }
+    }
+
+    /**
+     * 绘制前守护：微信重建列表头部行时会把两个图标重新 setVisible（例如切 Tab、刷新标题计数）。
+     *
+     * 直接挂 `OnPreDrawListener` 每帧重扫整棵树太贵，这里只遍历我们缓存过的几个 View，
+     * 常量级开销；缓存全部失效（头部行被整体重建）时才安排一次重新扫描。
+     */
+    private fun installGhostGuard(activity: Activity, root: View) {
+        if (ghostHiddenViews.isEmpty()) return
+        val list = findConversationList(root) ?: return
+        if (ghostGuardList?.get() === list) return
+        ghostGuardList = java.lang.ref.WeakReference<View>(list)
+        val observer = list.viewTreeObserver ?: return
+        observer.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                var alive = 0
+                ghostHiddenViews.keys.toList().forEach { view ->
+                    if (!view.isAttachedToWindow) {
+                        ghostHiddenViews.remove(view)
+                        return@forEach
+                    }
+                    alive++
+                    if (view.visibility != View.INVISIBLE) view.visibility = View.INVISIBLE
+                }
+                if (alive == 0 && !ghostRescanPosted) {
+                    ghostRescanPosted = true
+                    main.postDelayed({
+                        ghostRescanPosted = false
+                        runCatching { hideGhostTitleIcons(activity) }
+                    }, 200L)
+                }
+                return true
+            }
+        })
+        HLog.i("$TAG 幽灵图标绘制前守护已挂上 list=${list.javaClass.simpleName}")
+    }
+
+    /**
+     * 收集整棵树里所有 `id` 匹配的 View。
+     *
+     * 不用 `root.findViewById` 是因为它只返回**第一个**命中项：一旦微信把某个图标
+     * 提前插进别处，我们就可能改错对象（1056 就是这么踩到列表头部行的）。
+     */
+    private fun collectViewsById(view: View, id: Int, out: MutableList<View>) {
+        if (view.id == id) out.add(view)
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                collectViewsById(view.getChildAt(index), id, out)
+            }
+        }
+    }
+
+    private fun hasListViewAncestor(view: View): Boolean {
+        var current = view.parent
+        var depth = 0
+        while (current != null && depth < 16) {
+            val name = current.javaClass.simpleName
+            if (name.contains("ListView") || name.contains("RecyclerView")) return true
+            current = current.parent
+            depth++
+        }
+        return false
+    }
+
+    /** 让微信原生会话列表自己刷新一次（免打扰 / 未读等图标由它的 adapter 绘制）。 */
+    private fun notifyHomeList(activity: Activity) {
+        main.post {
+            runCatching {
+                val root: View = activity.window?.decorView ?: return@post
+                val list = findConversationList(root) ?: return@post
+                // 用反射调 adapter.notifyDataSetChanged()，这样 ListView / RecyclerView 都能覆盖，
+                // 也不用为了一个刷新方法去引入 recyclerview 依赖。
+                val adapter = runCatching {
+                    list.javaClass.getMethod("getAdapter").invoke(list)
+                }.getOrNull()
+                if (adapter != null) {
+                    runCatching { adapter.javaClass.getMethod("notifyDataSetChanged").invoke(adapter) }
+                        .onFailure { HLog.e("$TAG notifyDataSetChanged 失败: ${it.message}", it) }
+                } else if (loggedKeys.add("noadapter")) {
+                    HLog.i("$TAG 列表 ${list.javaClass.simpleName} 没有 adapter，跳过刷新")
+                }
+                // 重绑过程中微信可能把头部行的两个图标重新显示出来，紧跟一次压制。
+                main.postDelayed({ runCatching { hideGhostTitleIcons(activity) } }, 150L)
+            }.onFailure { HLog.e("$TAG 刷新首页会话列表失败: ${it.message}", it) }
+        }
+    }
+
+    private fun findConversationList(view: View?): android.widget.ListView? =
+        findListView(view, requireConversationName = true)
+            ?: findListView(view, requireConversationName = false)
+
+    private fun findListView(view: View?, requireConversationName: Boolean): android.widget.ListView? {
+        val current = view ?: return null
+        if (current is android.widget.ListView &&
+            (!requireConversationName ||
+                current.javaClass.simpleName.contains("Conversation", ignoreCase = true))
+        ) {
+            if (!requireConversationName && loggedKeys.add("list:" + current.javaClass.name)) {
+                HLog.i("$TAG 首页列表类名不含 Conversation，按兜底规则命中 ${current.javaClass.name}")
+            }
+            return current
+        }
+        if (current is ViewGroup) {
+            for (index in 0 until current.childCount) {
+                val found = findListView(current.getChildAt(index), requireConversationName)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
 
     /**
      * 定位**真标题栏**右侧那个横排容器。
