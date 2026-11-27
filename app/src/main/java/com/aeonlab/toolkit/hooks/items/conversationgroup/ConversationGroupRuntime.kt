@@ -2390,9 +2390,21 @@ object ConversationGroupRuntime {
                 "$TAG 已关闭聊天分组：待还原 ${plan.restoring.size} 个会话，" +
                     "实际写入 ${restored.size} 个，缺少原始父级 ${plan.unresolved.size} 个"
             )
-            // 会话还没还原完时不能删虚拟父行，否则那些会话会彻底失去归属。
-            if (plan.unresolved.isEmpty() && restored.containsAll(plan.updates.keys)) {
-                cleanupVirtualRows(database, emptySet())
+            // 删虚拟父行之前必须先确认没有任何真实会话还指着它：父行一旦没了，那些会话
+            // 既不在分组里也不在根级，会从首页彻底消失（主题支线版踩过这个坑）。
+            // 顺序固定为：先还原父级 → 再回查引用 → 最后清理。
+            val references = runCatching { loadVirtualRowReferences(database) }
+                .onFailure { HLog.e("$TAG 读取残留分组引用失败: ${it.message}", it) }
+                .getOrNull()
+            when {
+                references == null ->
+                    HLog.e("$TAG 读取残留引用失败，跳过虚拟分组行清理以免会话丢失")
+                references.realTalkers.isNotEmpty() ->
+                    HLog.e(
+                        "$TAG 仍有 ${references.realTalkers.size} 个会话未还原父级，保留分组行: " +
+                            references.realTalkers.take(10)
+                    )
+                else -> cleanupVirtualRows(database, emptySet())
             }
             return
         }
@@ -2803,6 +2815,39 @@ object ConversationGroupRuntime {
         }
         return actual == expected
     }
+
+    /**
+     * 关闭分组时回查「还有哪些真实会话挂在模块父级下」。
+     *
+     * 删除虚拟父行必须以后置引用检查为前提：父行没了而真实会话的 parentRef 仍指向它时，
+     * 微信首页既不会把这些会话归到分组，也不会归到根级，它们会直接消失。
+     */
+    private fun loadVirtualRowReferences(
+        database: com.aeonlab.toolkit.hooks.api.runtime.WeChatDatabaseApi
+    ): VirtualRowReferences {
+        val cursor = database.rawQuery(
+            "SELECT username,parentRef FROM rconversation WHERE parentRef LIKE ? OR parentRef LIKE ?",
+            arrayOf("$VIRTUAL_PREFIX%", "$PARENT_PREFIX%")
+        ) ?: throw IllegalStateException("读取残留分组引用失败")
+        val realTalkers = linkedSetOf<String>()
+        val virtualTalkers = linkedSetOf<String>()
+        try {
+            val username = cursor.getColumnIndexOrThrow("username")
+            while (cursor.moveToNext()) {
+                val talker = cursor.getString(username).orEmpty()
+                if (talker.isBlank()) continue
+                if (isVirtualTalker(talker)) virtualTalkers.add(talker) else realTalkers.add(talker)
+            }
+        } finally {
+            cursor.close()
+        }
+        return VirtualRowReferences(realTalkers, virtualTalkers)
+    }
+
+    private data class VirtualRowReferences(
+        val realTalkers: Set<String>,
+        val virtualTalkers: Set<String>
+    )
 
     private fun cleanupVirtualRows(
         database: com.aeonlab.toolkit.hooks.api.runtime.WeChatDatabaseApi,
