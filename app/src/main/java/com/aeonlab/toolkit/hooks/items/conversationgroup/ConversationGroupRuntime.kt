@@ -1376,6 +1376,14 @@ object ConversationGroupRuntime {
                 runCatching { KavaReflector.accessible(method) }
                 hook(method, object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
+                        // 首页列表任意一次点击都顺手补挂一次入口：实测标题栏有时要等交互后才 inflate。
+                        runCatching {
+                            val clicked = param.args?.getOrNull(1) as? View
+                            val clickedActivity = clicked?.let { findActivity(it.context) }
+                            if (clickedActivity != null) {
+                                ConversationGlobalMenu.ensureTopEntry(clickedActivity)
+                            }
+                        }
                         val adapter = param.args?.getOrNull(0) as? AdapterView<*> ?: return
                         val view = param.args?.getOrNull(1) as? View ?: return
                         val position = param.args?.getOrNull(2) as? Int ?: return

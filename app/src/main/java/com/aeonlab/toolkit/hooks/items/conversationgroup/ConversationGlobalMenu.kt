@@ -52,9 +52,19 @@ internal object ConversationGlobalMenu {
      */
     private const val USE_ICON_ENTRY = false
 
+    /**
+     * 是否还允许退回「宿主菜单项」路径。
+     *
+     * 1052~1055 实测：走 `addTextOptionMenu` 时微信会额外渲染一个搜索图标和一个 ＋，
+     * 标题栏会变成两个 🔍 两个 ＋。现在已改成自己往标题栏容器插 View，
+     * 所以这条兜底默认**关闭**：宁可不出现，也不要污染标题栏。
+     */
+    private const val ALLOW_LEGACY_FALLBACK = false
+
     private val main = Handler(Looper.getMainLooper())
 
     private val inventoryCache = HashMap<Class<*>, List<Method>>()
+    private var lastEnsureAt = 0L
 
     private val loggedKeys = HashSet<String>()
 
@@ -238,6 +248,9 @@ internal object ConversationGlobalMenu {
      */
     fun ensureTopEntry(activity: Activity) {
         if (activity.isFinishing || activity.isDestroyed) return
+        val now = System.currentTimeMillis()
+        if (now - lastEnsureAt < 300L) return
+        lastEnsureAt = now
         if (loggedKeys.add("ensure:" + Process.myPid())) {
             HLog.i("$TAG 开始挂载首页顶部入口 pid=${Process.myPid()}")
         }
@@ -246,17 +259,29 @@ internal object ConversationGlobalMenu {
 
     private fun install(activity: Activity, attempt: Int) {
         if (activity.isFinishing || activity.isDestroyed) return
+        // 已经挂好就什么都不做：多条轮询链（onCreate/onResume 各起一条）不会互相打架、也不会闪烁。
+        if (hasOwnEntry(activity)) return
         val targets = menuTargets(activity)
         targets.forEach { detachMenu(it) }
-        dumpTopBarOnce(activity)
         removeOwnEntry(activity)
         // 首选：自己往标题栏容器里插一个纯文字 View。
         // 不走宿主的 addXxxOptionMenu，就不会出现「iconRes=0 被宿主渲染成默认图标」这类内部行为。
-        if (mountOwnEntry(activity)) return
-        if (attempt < 6) {
-            // 标题栏容器 / 图标可能还没 inflate 完，先只重试自绘路径；
-            // 全部重试都失败才退回宿主菜单项（会多出图标，仅作兜底）。
-            main.postDelayed({ install(activity, attempt + 1) }, 350L * attempt)
+        if (mountOwnEntry(activity)) {
+            dumpTopBarOnce(activity)
+            return
+        }
+        if (attempt < 40) {
+            // 标题栏可能还没 inflate（实测开微信后要等一会儿、甚至滑动一下才建好）。
+            // 慢轮询最多 20 秒，期间只走自绘路径，绝不碰宿主菜单项系统。
+            main.postDelayed({ install(activity, attempt + 1) }, 500L)
+            return
+        }
+        if (!ALLOW_LEGACY_FALLBACK) {
+            dumpTopBarOnce(activity)
+            HLog.e(
+                "$TAG 首页顶部入口始终没找到标题栏容器: ${activity.javaClass.name}",
+                RuntimeException("mountTopEntry")
+            )
             return
         }
         val listener = MenuItem.OnMenuItemClickListener {
@@ -370,6 +395,11 @@ internal object ConversationGlobalMenu {
             (found.parent as? ViewGroup)?.removeView(found)
         }.onFailure { HLog.e("$TAG 移除旧入口失败: ${it.message}", it) }
     }
+private fun hasOwnEntry(activity: Activity): Boolean {
+        val root = activity.window?.decorView ?: return false
+        val view = findViewByTag(root, ENTRY_TAG) ?: return false
+        return view.isAttachedToWindow
+    }
 
     private fun findViewByTag(view: View, tag: String): View? {
         if (tag == view.tag) return view
@@ -383,13 +413,46 @@ internal object ConversationGlobalMenu {
     }
 
     /**
-     * 找标题栏右侧那个横排容器。
+     * 定位标题栏右侧容器。
      *
-     * 在窗口顶部一小块区域内收集「可点击的图标 View」，取它们**最深的公共父容器**
-     * （子数不超过 8，避免误判成整页根布局）。微信标题栏的 🔍 与 ＋ 就并排放在这种容器里，
-     * 我们把入口追加到末尾，视觉上紧跟在 ＋ 之后。
+     * 实测（1055 日志）微信 8.0.49 首页标题栏的两个图标是 `WeImageView`，
+     * 资源 id 分别是 `plus_icon`（＋）与 `meb`（搜索 🔍）。
+     * 直接按 id 找到 ＋，再向上取「横向 LinearLayout」父容器，比猜公共父容器稳得多：
+     * 旧启发式会把标题栏以外的控件（h5n / jxs）也算进候选，永远凑不出公共父容器。
      */
     private fun findTitleContainer(activity: Activity): ViewGroup? {
+        val packageName = activity.packageName
+        for (anchor in arrayOf("plus_icon", "meb")) {
+            val id = runCatching { activity.resources.getIdentifier(anchor, "id", packageName) }
+                .getOrDefault(0)
+            if (id == 0) continue
+            val view = runCatching { activity.findViewById<View>(id) }.getOrNull() ?: continue
+            var parent = view.parent as? ViewGroup
+            var depth = 0
+            while (parent != null && depth < 4) {
+                val group = parent
+                if (group is LinearLayout && group.orientation == LinearLayout.HORIZONTAL &&
+                    group.childCount in 2..8
+                ) {
+                    if (loggedKeys.add("anchor:" + anchor)) {
+                        HLog.i(
+                            "$TAG 标题栏容器定位 anchor=$anchor 容器=${group.javaClass.name} " +
+                                "children=${group.childCount}"
+                        )
+                    }
+                    return group
+                }
+                parent = group.parent as? ViewGroup
+                depth++
+            }
+        }
+        if (loggedKeys.add("anchorMiss")) {
+            HLog.i("$TAG 没有 plus_icon / meb 锚点，改用图标启发式")
+        }
+        return findTitleContainerByIcons(activity)
+    }
+
+    private fun findTitleContainerByIcons(activity: Activity): ViewGroup? {
         val root = activity.window?.decorView ?: return null
         val rootLocation = IntArray(2)
         root.getLocationOnScreen(rootLocation)
