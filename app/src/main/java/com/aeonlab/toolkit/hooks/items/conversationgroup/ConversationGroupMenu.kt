@@ -19,53 +19,64 @@ internal object ConversationGroupMenu {
     private const val TAG = "[AeonLab:ConversationGroup]"
     private val main = Handler(Looper.getMainLooper())
 
+    /**
+     * 分组页菜单项。**按 key 分发，不再按数组下标分发**——
+     * 以前 `when (index) { 0..12 }` 只要动一项，后面全错位（这次加全局菜单就先吃了这个亏）。
+     */
+    private enum class MenuEntry(val title: String, val description: String) {
+        MODULE("AeonLab模块", "打开 AeonLab 设置"),
+        MARK_READ("所有消息标为已读", "标记当前分组及子分组内全部会话"),
+        CLEAR("批量删除消息", "选择会话并清空聊天记录"),
+        BLOCK("批量屏蔽消息", "选择会话并屏蔽后续收到的消息"),
+        DND_ON("消息免打扰", "开启当前分组内会话的微信免打扰"),
+        DND_OFF("解除消息免打扰", "关闭当前分组内会话的微信免打扰"),
+        SEND("发送", "批量发送文字、媒体、收藏、名片或 XML"),
+        CHATROOM_INVITE("发送群聊邀请", "选择群聊并邀请当前分组内好友"),
+        ADD("添加", "选择会话加入当前分组"),
+        REMOVE("移出", "将直属会话移回微信首页"),
+        MOVE("移至", "将直属会话移到其他分组"),
+        SEARCH("搜索", "搜索当前分组及子分组内会话"),
+        SETTINGS("设置", "设置当前分组的显示方式")
+    }
+
     fun show(activity: Activity, groupId: String, onChanged: () -> Unit) {
         val group = group(activity, groupId) ?: return
+        val entries = MenuEntry.entries
         VoiceForwardMiuixDialog.showListChoices(
             activity = activity,
             title = group.name,
             summary = "",
-            choices = listOf(
-                "AeonLab模块" to "打开 AeonLab 设置",
-                "所有消息标为已读" to "标记当前分组及子分组内全部会话",
-                "批量删除消息" to "选择会话并清空聊天记录",
-                "批量屏蔽消息" to "选择会话并屏蔽后续收到的消息",
-                "消息免打扰" to "开启当前分组内会话的微信免打扰",
-                "解除消息免打扰" to "关闭当前分组内会话的微信免打扰",
-                "发送" to "批量发送文字、媒体、收藏、名片或 XML",
-                "发送群聊邀请" to "选择群聊并邀请当前分组内好友",
-                "添加" to "选择会话加入当前分组",
-                "移出" to "将直属会话移回微信首页",
-                "移至" to "将直属会话移到其他分组",
-                "搜索" to "搜索当前分组及子分组内会话",
-                "设置" to "设置当前分组的显示方式"
-            ),
+            choices = entries.map { it.title to it.description },
             onSelected = { index ->
-                when (index) {
-                    0 -> SettingsUI.show(activity)
-                    1 -> markAllRead(activity, groupId, onChanged)
-                    2 -> chooseAndClearMessages(activity, groupId, onChanged)
-                    3 -> chooseMessageBlockAction(activity, groupId)
-                    4 -> setDoNotDisturb(activity, groupId, true, onChanged)
-                    5 -> setDoNotDisturb(activity, groupId, false, onChanged)
-                    6 -> chooseSendType(activity, groupId)
-                    7 -> sendChatroomInvitation(activity, groupId)
-                    8 -> addConversations(activity, groupId, onChanged)
-                    9 -> removeConversations(activity, groupId, onChanged)
-                    10 -> moveConversations(activity, groupId, onChanged)
-                    11 -> searchConversations(activity, groupId)
-                    12 -> showSettings(activity, groupId, onChanged)
+                when (entries.getOrNull(index)) {
+                    MenuEntry.MODULE -> SettingsUI.show(activity)
+                    MenuEntry.MARK_READ -> markAllRead(activity, groupId, onChanged)
+                    MenuEntry.CLEAR -> chooseAndClearMessages(activity, groupId, onChanged)
+                    MenuEntry.BLOCK -> chooseMessageBlockAction(activity, groupId)
+                    MenuEntry.DND_ON -> setDoNotDisturb(activity, groupId, true, onChanged)
+                    MenuEntry.DND_OFF -> setDoNotDisturb(activity, groupId, false, onChanged)
+                    MenuEntry.SEND -> chooseSendType(activity, groupId)
+                    MenuEntry.CHATROOM_INVITE -> sendChatroomInvitation(activity, groupId)
+                    MenuEntry.ADD -> addConversations(activity, groupId, onChanged)
+                    MenuEntry.REMOVE -> removeConversations(activity, groupId, onChanged)
+                    MenuEntry.MOVE -> moveConversations(activity, groupId, onChanged)
+                    MenuEntry.SEARCH -> searchConversations(activity, groupId)
+                    MenuEntry.SETTINGS -> showSettings(activity, groupId, onChanged)
+                    null -> Unit
                 }
             },
             onDismiss = {}
         )
     }
 
-    private fun markAllRead(activity: Activity, groupId: String, onChanged: () -> Unit) {
+    private fun markAllRead(activity: Activity, groupId: String, onChanged: () -> Unit) =
+        markIdsRead(activity, allConversationIds(activity, groupId), onChanged)
+
+    /** 按会话集合标已读：分组页传分组后代，首页全局入口传全部会话。 */
+    internal fun markIdsRead(activity: Activity, ids: List<String>, onChanged: () -> Unit) {
         val context = activity.applicationContext
-        val ids = allConversationIds(activity, groupId)
         if (ids.isEmpty()) {
-            toast(activity, "当前分组没有会话")
+            toast(activity, "没有可处理的会话")
             return
         }
         runBatch(
@@ -87,13 +98,15 @@ internal object ConversationGroupMenu {
         )
     }
 
-    private fun chooseAndClearMessages(
+    private fun chooseAndClearMessages(activity: Activity, groupId: String, onChanged: () -> Unit) =
+        clearMessagesOf(activity, allConversationIds(activity, groupId), onChanged)
+
+    internal fun clearMessagesOf(
         activity: Activity,
-        groupId: String,
+        ids: List<String>,
         onChanged: () -> Unit
     ) {
         val context = activity.applicationContext
-        val ids = allConversationIds(activity, groupId)
         showConversationPicker(
             activity = activity,
             ids = ids,
@@ -113,7 +126,7 @@ internal object ConversationGroupMenu {
                         "正在清空聊天记录...",
                         task = { canceled ->
                             val store = WeChatApis.messageStore()
-                            val currentIds = allConversationIds(context, groupId).toSet()
+                            val currentIds = ids.toSet()
                             val existingIds = WeChatApis.conversations()
                                 ?.getRecentConversationUsernames(10000)
                                 .orEmpty()
@@ -143,10 +156,12 @@ internal object ConversationGroupMenu {
         }
     }
 
-    private fun chooseMessageBlockAction(activity: Activity, groupId: String) {
-        val ids = allConversationIds(activity, groupId)
+    private fun chooseMessageBlockAction(activity: Activity, groupId: String) =
+        blockActionFor(activity, allConversationIds(activity, groupId))
+
+    internal fun blockActionFor(activity: Activity, ids: List<String>) {
         if (ids.isEmpty()) {
-            toast(activity, "当前分组没有会话")
+            toast(activity, "没有可处理的会话")
             return
         }
         val quickBlocked = MessageBlockSettings(activity).quickBlockedTalkers()
@@ -154,7 +169,7 @@ internal object ConversationGroupMenu {
         VoiceForwardMiuixDialog.showListChoices(
             activity = activity,
             title = "批量屏蔽消息",
-            summary = "当前分组及子分组共 ${ids.size} 个会话，已快捷屏蔽 $blockedCount 个",
+            summary = "所选范围共 ${ids.size} 个会话，已快捷屏蔽 $blockedCount 个",
             choices = listOf(
                 "屏蔽所选会话" to "屏蔽后续收到的所有消息，不影响已有聊天记录",
                 "解除所选会话" to "只解除聊天分组快捷屏蔽，保留原有规则"
@@ -180,7 +195,7 @@ internal object ConversationGroupMenu {
     ) {
         val action = if (blocked) "屏蔽" else "解除屏蔽"
         if (ids.isEmpty()) {
-            toast(activity, if (blocked) "当前分组没有会话" else "当前分组没有快捷屏蔽的会话")
+            toast(activity, if (blocked) "没有可处理的会话" else "没有快捷屏蔽的会话")
             return
         }
         showConversationPicker(
@@ -221,17 +236,23 @@ internal object ConversationGroupMenu {
         groupId: String,
         enabled: Boolean,
         onChanged: () -> Unit
+    ) = setDoNotDisturbFor(activity, allConversationIds(activity, groupId), enabled, onChanged)
+
+    internal fun setDoNotDisturbFor(
+        activity: Activity,
+        ids: List<String>,
+        enabled: Boolean,
+        onChanged: () -> Unit
     ) {
-        val ids = allConversationIds(activity, groupId)
         if (ids.isEmpty()) {
-            toast(activity, "当前分组没有会话")
+            toast(activity, "没有可处理的会话")
             return
         }
         val action = if (enabled) "开启消息免打扰" else "解除消息免打扰"
         VoiceForwardMiuixDialog.showConfirm(
             activity = activity,
             title = action,
-            message = "将对当前分组及子分组内 ${ids.size} 个会话执行此操作。",
+            message = "将对 ${ids.size} 个会话执行此操作。",
             onResult = { confirmed ->
                 if (!confirmed) return@showConfirm
                 runBatch(
@@ -258,16 +279,18 @@ internal object ConversationGroupMenu {
         )
     }
 
-    private fun chooseSendType(activity: Activity, groupId: String) {
-        val ids = allConversationIds(activity, groupId)
+    private fun chooseSendType(activity: Activity, groupId: String) =
+        sendTo(activity, allConversationIds(activity, groupId))
+
+    internal fun sendTo(activity: Activity, ids: List<String>) {
         if (ids.isEmpty()) {
-            toast(activity, "当前分组没有会话")
+            toast(activity, "没有可处理的会话")
             return
         }
         VoiceForwardMiuixDialog.showListChoices(
             activity = activity,
             title = "发送",
-            summary = "发送给当前分组及子分组内 ${ids.size} 个会话",
+            summary = "发送给 ${ids.size} 个会话",
             choices = SendContentType.entries.map { it.title to it.summary },
             onSelected = { index ->
                 when (val type = SendContentType.entries.getOrNull(index)) {
@@ -291,7 +314,7 @@ internal object ConversationGroupMenu {
         VoiceForwardMiuixDialog.showTextInput(
             activity = activity,
             title = "发送",
-            summary = "发送给当前分组及子分组内 ${ids.size} 个会话",
+            summary = "发送给 ${ids.size} 个会话",
             placeholder = "输入要发送的文字",
             maxLength = 5000,
             onConfirm = { content ->
@@ -364,7 +387,7 @@ internal object ConversationGroupMenu {
         VoiceForwardMiuixDialog.showTextInput(
             activity = activity,
             title = "发送 XML",
-            summary = "发送给当前分组及子分组内 ${ids.size} 个会话",
+            summary = "发送给 ${ids.size} 个会话",
             placeholder = "输入 XML / AppMsg 内容",
             maxLength = 100000,
             singleLine = false,
@@ -418,7 +441,7 @@ internal object ConversationGroupMenu {
                     VoiceForwardMiuixDialog.showListChoices(
                         activity = activity,
                         title = "选择收藏",
-                        summary = "发送给当前分组及子分组内 ${ids.size} 个会话",
+                        summary = "发送给 ${ids.size} 个会话",
                         choices = favorites.map { favorite ->
                             favorite.displayTitle() to
                                 "${favorite.typeLabel()} · ${favorite.displaySummary()}"
@@ -764,7 +787,7 @@ internal object ConversationGroupMenu {
                 result.onSuccess { items ->
                     if (items.isEmpty()) {
                         if (current.conversationOrderIds.isEmpty()) {
-                            toast(activity, "当前分组没有会话")
+                            toast(activity, "没有可处理的会话")
                         } else {
                             VoiceForwardMiuixDialog.showChoices(
                                 activity = activity,
@@ -1059,7 +1082,7 @@ internal object ConversationGroupMenu {
         if (success) onChanged()
     }
 
-    private fun showConversationPicker(
+    internal fun showConversationPicker(
         activity: Activity,
         ids: Collection<String>,
         title: String,
@@ -1156,7 +1179,7 @@ internal object ConversationGroupMenu {
             }
     }
 
-    private fun runBatch(
+    internal fun runBatch(
         activity: Activity,
         title: String,
         message: String,
@@ -1177,7 +1200,7 @@ internal object ConversationGroupMenu {
         )
     }
 
-    private fun toastBatch(activity: Activity, result: BatchResult) {
+    internal fun toastBatch(activity: Activity, result: BatchResult) {
         val message = when {
             result.failed -> "${result.action}失败"
             result.success == result.total -> "${result.action}完成: ${result.success}/${result.total}"
@@ -1186,7 +1209,7 @@ internal object ConversationGroupMenu {
         toast(activity, message)
     }
 
-    private fun toast(activity: Activity, message: String) {
+    internal fun toast(activity: Activity, message: String) {
         main.post {
             if (!activity.isFinishing && !activity.isDestroyed) {
                 Toast.makeText(activity.applicationContext, message, Toast.LENGTH_SHORT).show()
@@ -1194,7 +1217,7 @@ internal object ConversationGroupMenu {
         }
     }
 
-    private data class BatchResult(
+    internal data class BatchResult(
         val success: Int,
         val total: Int,
         val action: String,

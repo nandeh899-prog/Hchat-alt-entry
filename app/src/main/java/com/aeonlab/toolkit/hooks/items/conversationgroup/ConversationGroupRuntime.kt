@@ -913,6 +913,9 @@ object ConversationGroupRuntime {
                     launcherViewRef = WeakReference(activity)
                     // 首页列表点击：在微信之前把虚拟分组行吞掉（不依赖 DexKit 锚点）。
                     runCatching { installHomeListClickHook(activity) }
+                    // 首页顶部「全局批量操作」入口。LauncherUI 是四个 Tab 共用容器，
+                    // ActionBar 可能被重建，所以每次 onCreate/onResume/onNewIntent 都幂等补挂一次。
+                    runCatching { ConversationGlobalMenu.ensureTopEntry(activity) }
                     if (!pendingVirtualChatExit || activity.isFinishing) return
                     // 退出分组页时 LauncherUI 会把虚拟父会话的空白聊天视图挂上来。先在恢复这一帧
                     // 把它藏掉，用户就不会看到「空白页闪一下再被返回键关掉」；返回键仍按原逻辑下发，
