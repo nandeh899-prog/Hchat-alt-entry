@@ -599,16 +599,31 @@ internal object ConversationGlobalMenu {
         anchor.getLocationOnScreen(anchorLocation)
         val hostLocation = IntArray(2)
         host.getLocationOnScreen(hostLocation)
-        val x = anchorLocation[0] - hostLocation[0] + anchor.width
-        val y = anchorLocation[1] - hostLocation[1]
+        // 注意：入口不再占用标题栏布局，微信会把 ＋ 号一路推到屏幕右边缘（实测 jga=[1091,1240]），
+        // 右侧已经没有空位。所以贴「操作容器左侧」——也就是它以前插在容器里时占据的那一格。
+        val container = (anchor.parent as? View) ?: anchor
+        val containerLocation = IntArray(2)
+        container.getLocationOnScreen(containerLocation)
+        val containerLeft = containerLocation[0] - hostLocation[0]
+        val containerTop = containerLocation[1] - hostLocation[1]
+        val containerHeight = if (container.height > 0) container.height else height
+        var x = containerLeft - width
+        var y = containerTop
+        var heightToUse = containerHeight
         val screenWidth = activity.resources.displayMetrics.widthPixels
-        if (width <= 0 || x + width > screenWidth) {
+        if (width <= 0 || x < 0) {
+            // 容器贴着屏幕左边（理论上不会出现在首页），退回「贴 ＋ 号右侧」。
+            x = anchorLocation[0] - hostLocation[0] + anchor.width
+            y = anchorLocation[1] - hostLocation[1]
+            heightToUse = height
+        }
+        if (width <= 0 || x < 0 || x + width > screenWidth) {
             if (entry.visibility != View.INVISIBLE) entry.visibility = View.INVISIBLE
             return
         }
         val params = entry.layoutParams
-        if (params != null && params.height != height) {
-            params.height = height
+        if (params != null && params.height != heightToUse) {
+            params.height = heightToUse
             entry.layoutParams = params
         }
         // 微信重建 ActionBar 时可能把自己重新加到 decorView 上层，把我们的入口盖住
