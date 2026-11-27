@@ -37,6 +37,15 @@ internal object ConversationGlobalMenu {
 
     private const val MENU_TEXT = "菜单"
 
+    /**
+     * 是否用自绘图标挂入口。
+     * 1050 / 1051 实测：在首页 `MainUI` 上用 `addIconOptionMenu(...)` 加项，
+     * 标题栏会在原有「搜索 🔍 + ＋」之间多渲染一个搜索图标（两种带 Drawable 的重载都试过），
+     * 属于宿主 ActionBar 内部行为，不值得我们为了图标去和它较劲。
+     * 先固定用文字「菜单」——位置稳定、语义明确，也不额外占用标题栏绘图资源。
+     */
+    private const val USE_ICON_ENTRY = false
+
     private val main = Handler(Looper.getMainLooper())
 
     private val inventoryCache = HashMap<Class<*>, List<Method>>()
@@ -89,12 +98,8 @@ internal object ConversationGlobalMenu {
                     }
                     KEY_CLEAR -> ConversationGroupMenu.clearMessagesOf(activity, ids, refreshHome)
                     KEY_BLOCK -> ConversationGroupMenu.blockActionFor(activity, ids)
-                    KEY_DND_ON -> pickTargets(activity, ids, "消息免打扰") { chosen ->
-                        ConversationGroupMenu.setDoNotDisturbFor(activity, chosen, true, refreshHome)
-                    }
-                    KEY_DND_OFF -> pickTargets(activity, ids, "解除消息免打扰") { chosen ->
-                        ConversationGroupMenu.setDoNotDisturbFor(activity, chosen, false, refreshHome)
-                    }
+                    KEY_DND_ON -> pickDoNotDisturbTargets(activity, ids, enabled = true)
+                    KEY_DND_OFF -> pickDoNotDisturbTargets(activity, ids, enabled = false)
                     KEY_SEND -> pickTargets(activity, ids, "发送") { chosen ->
                         ConversationGroupMenu.sendTo(activity, chosen)
                     }
@@ -103,6 +108,47 @@ internal object ConversationGlobalMenu {
                 }
             },
             onDismiss = {}
+        )
+    }
+
+    /**
+     * 免打扰 / 解除免打扰：先把「当前已经是该状态」的会话勾上，
+     * 这样用户一眼能看见现在哪些是免打扰（解除时不用一个个试），
+     * 也能直接沿用勾选做增量操作。状态读取放在后台线程，避免几百个会话卡主线程。
+     */
+    private fun pickDoNotDisturbTargets(activity: Activity, ids: List<String>, enabled: Boolean) {
+        val title = if (enabled) "消息免打扰" else "解除消息免打扰"
+        ConversationGroupTask.launch(
+            activity = activity,
+            title = title,
+            message = "正在读取免打扰状态...",
+            task = { _ ->
+                val api = WeChatApis.conversations()
+                ids.filter { talker ->
+                    runCatching { api?.isWechatDoNotDisturb(talker) == true }.getOrDefault(false)
+                }.toSet()
+            },
+            onComplete = { result ->
+                val selected = result.getOrElse {
+                    HLog.e("$TAG 读取免打扰状态失败: ${it.message}", it)
+                    emptySet()
+                }
+                if (!enabled && selected.isEmpty()) {
+                    ConversationGroupMenu.toast(activity, "没有已开启免打扰的会话")
+                    return@launch
+                }
+                ConversationGroupMenu.showConversationPicker(
+                    activity = activity,
+                    ids = ids,
+                    title = title,
+                    confirmText = "下一步",
+                    initialSelectedIds = selected
+                ) { picked ->
+                    val chosen = picked.map { it.id }
+                    if (chosen.isEmpty()) return@showConversationPicker
+                    ConversationGroupMenu.setDoNotDisturbFor(activity, chosen, enabled, refreshHome)
+                }
+            }
         )
     }
 
@@ -198,7 +244,7 @@ internal object ConversationGlobalMenu {
                 .onFailure { HLog.e("$TAG 打开全局批量操作菜单失败: ${it.message}", it) }
             true
         }
-        for (wantIcon in listOf(true, false)) {
+        for (wantIcon in if (USE_ICON_ENTRY) listOf(true, false) else listOf(false)) {
             for (target in targets) {
                 val method = pickMenuMethod(target, wantIcon) ?: continue
                 if (invokeMenuAdd(target, method, listener)) {
@@ -359,7 +405,8 @@ internal object ConversationGlobalMenu {
         }
         return methods.firstOrNull { method ->
             val types = method.parameterTypes
-            types.isNotEmpty() &&
+            method.name.startsWith("addTextOptionMenu") &&
+                types.isNotEmpty() &&
                 types.any { it == Integer.TYPE } &&
                 types.last() == MenuItem.OnMenuItemClickListener::class.java &&
                 types.any { it == String::class.java }

@@ -1088,6 +1088,7 @@ internal object ConversationGroupMenu {
         title: String,
         confirmText: String,
         singleSelection: Boolean = false,
+        initialSelectedIds: Set<String> = emptySet(),
         onConfirm: (List<VoiceForwardMiuixDialog.ContactItem>) -> Unit
     ) {
         val normalized = ids.map(String::trim).filter(String::isNotBlank).distinct()
@@ -1116,6 +1117,7 @@ internal object ConversationGroupMenu {
                         confirmText = confirmText,
                         showGroupFilter = true,
                         singleSelection = singleSelection,
+                        initialSelectedIds = initialSelectedIds,
                         onConfirm = onConfirm,
                         onDismiss = {}
                     )
