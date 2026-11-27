@@ -331,8 +331,12 @@ internal object ConversationGlobalMenu {
         observer.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
             override fun onPreDraw(): Boolean {
                 val entry = ownEntryRef?.get()
-                if (entry != null && entry.isAttachedToWindow) return true
+                // isShown 比 isAttachedToWindow 更严：ActionBar 重建后旧 View 可能还挂在
+                // 已隐藏的旧容器上，只看 attach 会误判为「还在」。
+                if (entry != null && entry.isAttachedToWindow && entry.isShown) return true
                 if (guardRemountPosted) return true
+                // 只在「首页会话列表可见」时补挂，避免 A 跑到通讯录/发现/我 这些页面的标题栏上。
+                if (!homeListVisible()) return true
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastGuardMountAt < 500L) return true
                 lastGuardMountAt = now
@@ -631,7 +635,6 @@ private fun hasOwnEntry(activity: Activity): Boolean {
             }
         }
     }
-
     private fun hasListViewAncestor(view: View): Boolean {
         var current = view.parent
         var depth = 0
@@ -676,6 +679,16 @@ private fun hasOwnEntry(activity: Activity): Boolean {
     private fun findConversationList(view: View?): android.widget.ListView? =
         findListView(view, requireConversationName = true)
             ?: findListView(view, requireConversationName = false)
+
+    /** 首页会话列表此刻是否真的在屏幕上（用于判断「现在是不是首页」）。 */
+    private fun homeListVisible(): Boolean {
+        val root = entryGuardRoot?.get() ?: return false
+        if (!root.isShown) return false
+        val list = findListView(root, requireConversationName = true)
+            ?: findConversationList(root)
+            ?: return false
+        return list.isAttachedToWindow && list.isShown && list.width > 0
+    }
 
     private fun findListView(view: View?, requireConversationName: Boolean): android.widget.ListView? {
         val current = view ?: return null
