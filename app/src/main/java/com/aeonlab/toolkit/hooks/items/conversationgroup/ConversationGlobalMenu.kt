@@ -253,7 +253,9 @@ internal object ConversationGlobalMenu {
                             "target=${target.javaClass.simpleName} method=${method.name}(" +
                             method.parameterTypes.joinToString(",") { it.simpleName } + ")"
                     )
+                    polishMenuAppearance(target, activity)
                     refreshMenu(target)
+                    logMenuBar(activity, "after")
                     return
                 }
             }
@@ -477,5 +479,96 @@ internal object ConversationGlobalMenu {
                 method.invoke(target)
             }
         }
+    }
+
+    /**
+     * 收尾：微信用 `addTextOptionMenu` 加项时内部仍是「图标项 + 文字」两层，
+     * `iconRes` 传 0 会渲染出一个默认图标（实测是放大镜），于是标题栏会多一个 🔍。
+     * 这里把该项的图标换成宿主自带的透明资源，只留文字；并显式再写一次文字防止被覆盖。
+     */
+    private fun polishMenuAppearance(target: Any, activity: Activity) {
+        val transparent = transparentDrawableId(activity)
+        if (transparent != 0) {
+            val ok = invokeWithInt(target, "updateOptionMenuIcon", MENU_ITEM_ID, transparent)
+            HLog.i(
+                "$TAG 菜单图标换成透明资源 res=0x${Integer.toHexString(transparent)} ok=$ok"
+            )
+        } else {
+            HLog.i("$TAG 宿主没有可用的透明 drawable，图标槽保持原样")
+        }
+        val textOk = invokeWithString(target, "updateOptionMenuText", MENU_ITEM_ID, MENU_TEXT)
+        HLog.i("$TAG 设置菜单文字「$MENU_TEXT」 ok=$textOk")
+        invokeWithIntBool(target, "showOptionMenu", MENU_ITEM_ID, true)
+    }
+
+    /** 在宿主资源里找一个「透明/空」drawable，用来清掉菜单项自带的图标槽。 */
+    private fun transparentDrawableId(activity: Activity): Int {
+        val resources = activity.resources
+        val packageName = activity.packageName
+        listOf(
+            "transparent", "mm_transparent", "icons_filled_transparent",
+            "empty_drawable", "mm_title_btn_transparent"
+        ).forEach { name ->
+            val id = runCatching { resources.getIdentifier(name, "drawable", packageName) }
+                .getOrDefault(0)
+            if (id != 0) return id
+        }
+        return 0
+    }
+
+    private fun invokeWithInt(target: Any, methodName: String, id: Int, value: Int): Boolean {
+        val method = menuMethods(target).firstOrNull {
+            it.name == methodName && it.parameterTypes.size == 2 &&
+                it.parameterTypes[0] == Integer.TYPE && it.parameterTypes[1] == Integer.TYPE
+        } ?: return false
+        return runCatching { method.invoke(target, id, value); true }.getOrDefault(false)
+    }
+
+    private fun invokeWithString(target: Any, methodName: String, id: Int, value: String): Boolean {
+        val method = menuMethods(target).firstOrNull {
+            it.name == methodName && it.parameterTypes.size == 2 &&
+                it.parameterTypes[0] == Integer.TYPE &&
+                it.parameterTypes[1] == String::class.java
+        } ?: return false
+        return runCatching { method.invoke(target, id, value); true }.getOrDefault(false)
+    }
+
+    private fun invokeWithIntBool(
+        target: Any,
+        methodName: String,
+        id: Int,
+        value: Boolean
+    ): Boolean {
+        val method = menuMethods(target).firstOrNull {
+            it.name == methodName && it.parameterTypes.size == 2 &&
+                it.parameterTypes[0] == Integer.TYPE &&
+                it.parameterTypes[1] == java.lang.Boolean.TYPE
+        } ?: return false
+        return runCatching { method.invoke(target, id, value); true }.getOrDefault(false)
+    }
+
+    /** 诊断：ActionBar 的菜单容器里有几项（应只比微信自身多 1 项）。 */
+    private fun logMenuBar(activity: Activity, stage: String) {
+        runCatching {
+            val root = activity.window?.decorView ?: return
+            val container = findActionMenuView(root) ?: return
+            HLog.i("$TAG ActionMenuView($stage) children=${container.childCount}")
+        }
+    }
+
+    private fun findActionMenuView(view: View?): ViewGroup? {
+        val current = view ?: return null
+        if (current is ViewGroup &&
+            current.javaClass.simpleName.contains("ActionMenuView", ignoreCase = true)
+        ) {
+            return current
+        }
+        if (current is ViewGroup) {
+            for (index in 0 until current.childCount) {
+                val found = findActionMenuView(current.getChildAt(index))
+                if (found != null) return found
+            }
+        }
+        return null
     }
 }
