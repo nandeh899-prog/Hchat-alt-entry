@@ -59,12 +59,12 @@ internal object ConversationGlobalMenu {
     private const val KEY_REGROUP = "regroup"
 
     private val ENTRIES: List<Triple<String, String, String>> = listOf(
-        Triple(KEY_MARK_READ, "所有消息标为已读", "标记全部会话（含已收进分组的会话）"),
+        Triple(KEY_MARK_READ, "所有消息标为已读", "先选择会话，再批量标记已读"),
         Triple(KEY_CLEAR, "批量删除消息", "选择会话并清空聊天记录"),
         Triple(KEY_BLOCK, "批量屏蔽消息", "选择会话并屏蔽后续收到的消息"),
-        Triple(KEY_DND_ON, "消息免打扰", "开启全部会话的微信免打扰"),
-        Triple(KEY_DND_OFF, "解除消息免打扰", "关闭全部会话的微信免打扰"),
-        Triple(KEY_SEND, "发送", "批量发送文字、媒体、收藏、名片或 XML"),
+        Triple(KEY_DND_ON, "消息免打扰", "先选择会话，再批量开启微信免打扰"),
+        Triple(KEY_DND_OFF, "解除消息免打扰", "先选择会话，再批量关闭微信免打扰"),
+        Triple(KEY_SEND, "发送", "先选择会话，再批量发送文字/媒体/收藏/名片/XML"),
         Triple(KEY_REGROUP, "批量归组", "选择会话并归入指定分组")
     )
 
@@ -82,20 +82,47 @@ internal object ConversationGlobalMenu {
             onSelected = { index ->
                 // 按稳定 key 分发：以后增删项不会像以前那样整列错位。
                 when (ENTRIES.getOrNull(index)?.first) {
-                    KEY_MARK_READ -> ConversationGroupMenu.markIdsRead(activity, ids, refreshHome)
+                    // 标已读 / 免打扰 / 发送 都先选目标会话（和批量删除的交互保持一致，
+                    // 避免“一按就作用于全部会话”，尤其发送是不可撤销的）。
+                    KEY_MARK_READ -> pickTargets(activity, ids, "所有消息标为已读") { chosen ->
+                        ConversationGroupMenu.markIdsRead(activity, chosen, refreshHome)
+                    }
                     KEY_CLEAR -> ConversationGroupMenu.clearMessagesOf(activity, ids, refreshHome)
                     KEY_BLOCK -> ConversationGroupMenu.blockActionFor(activity, ids)
-                    KEY_DND_ON ->
-                        ConversationGroupMenu.setDoNotDisturbFor(activity, ids, true, refreshHome)
-                    KEY_DND_OFF ->
-                        ConversationGroupMenu.setDoNotDisturbFor(activity, ids, false, refreshHome)
-                    KEY_SEND -> ConversationGroupMenu.sendTo(activity, ids)
+                    KEY_DND_ON -> pickTargets(activity, ids, "消息免打扰") { chosen ->
+                        ConversationGroupMenu.setDoNotDisturbFor(activity, chosen, true, refreshHome)
+                    }
+                    KEY_DND_OFF -> pickTargets(activity, ids, "解除消息免打扰") { chosen ->
+                        ConversationGroupMenu.setDoNotDisturbFor(activity, chosen, false, refreshHome)
+                    }
+                    KEY_SEND -> pickTargets(activity, ids, "发送") { chosen ->
+                        ConversationGroupMenu.sendTo(activity, chosen)
+                    }
                     KEY_REGROUP -> regroup(activity, ids)
                     else -> Unit
                 }
             },
             onDismiss = {}
         )
+    }
+
+    /** 统一的多选会话入口：确认后把选中的 talker 集合交给 [action]。 */
+    private fun pickTargets(
+        activity: Activity,
+        ids: List<String>,
+        title: String,
+        action: (List<String>) -> Unit
+    ) {
+        ConversationGroupMenu.showConversationPicker(
+            activity = activity,
+            ids = ids,
+            title = title,
+            confirmText = "下一步"
+        ) { selected ->
+            val chosen = selected.map { it.id }
+            if (chosen.isEmpty()) return@showConversationPicker
+            action(chosen)
+        }
     }
 
     /**
@@ -177,7 +204,8 @@ internal object ConversationGlobalMenu {
                 if (invokeMenuAdd(target, method, listener)) {
                     HLog.i(
                         "$TAG 首页顶部入口已挂载(${if (wantIcon) "图标" else "文字"}) " +
-                            "target=${target.javaClass.simpleName} method=${method.name}"
+                            "target=${target.javaClass.simpleName} method=${method.name}(" +
+                            method.parameterTypes.joinToString(",") { it.simpleName } + ")"
                     )
                     refreshMenu(target)
                     return
@@ -302,22 +330,39 @@ internal object ConversationGlobalMenu {
     }
 
     /**
-     * 选方法：图标优先要 Drawable 形参；文字要 String 形参。
-     * 两者都要求「参数里有 int（menuId）+ 最后一个参数是 OnMenuItemClickListener」，
-     * 其余参数（颜色、boolean、描述等）由 [buildArgs] 按类型兜底填。
+     * 选方法。实测 `MainUI` 上同名重载很多，其中带 Drawable 的有三种：
+     * `(int,int,Drawable,listener)`、`(int,String,Drawable,listener)`、`(int,Drawable,listener)`。
+     * **优先 `(int,String,Drawable,listener)`**：三个参数语义都完整（id / 描述 / 图标），
+     * 不会出现 `(int,int,Drawable,...)` 里第二个 int 只能填 0、导致标题栏多渲染一个占位图标的问题。
      */
     private fun pickMenuMethod(target: Any, wantIcon: Boolean): Method? {
         val methods = menuMethods(target)
+        if (wantIcon) {
+            val iconMethods = methods.filter { method ->
+                val types = method.parameterTypes
+                types.isNotEmpty() &&
+                    types.last() == MenuItem.OnMenuItemClickListener::class.java &&
+                    types.any { Drawable::class.java.isAssignableFrom(it) }
+            }
+            return iconMethods.minByOrNull { method ->
+                val types = method.parameterTypes
+                when {
+                    // id + 描述 + 图标 + 监听：最完整，优先
+                    types.size == 4 && types[0] == Integer.TYPE &&
+                        types[1] == String::class.java -> 0
+                    // id + 图标 + 监听：其次
+                    types.size == 3 && types[0] == Integer.TYPE -> 1
+                    // id + 未知 int + 图标 + 监听：最后（那个 int 只能填 0）
+                    else -> 2
+                }
+            }
+        }
         return methods.firstOrNull { method ->
             val types = method.parameterTypes
             types.isNotEmpty() &&
                 types.any { it == Integer.TYPE } &&
                 types.last() == MenuItem.OnMenuItemClickListener::class.java &&
-                if (wantIcon) {
-                    types.any { Drawable::class.java.isAssignableFrom(it) }
-                } else {
-                    types.any { it == String::class.java }
-                }
+                types.any { it == String::class.java }
         }
     }
 
