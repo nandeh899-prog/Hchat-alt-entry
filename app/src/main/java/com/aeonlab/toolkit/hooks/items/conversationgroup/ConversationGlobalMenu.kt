@@ -74,6 +74,15 @@ internal object ConversationGlobalMenu {
     /** 我们插进去那个 A 的弱引用，守护靠它做 O(1) 判断。 */
     private var ownEntryRef: java.lang.ref.WeakReference<View>? = null
 
+    /** 覆盖层入口（挂在 decorView 上，不随 ActionBar 重建）。 */
+    private var overlayEntry: java.lang.ref.WeakReference<TextView>? = null
+
+    /** 覆盖层入口的定位锚点缓存（标题栏右侧 ＋ 号 / 搜索）。 */
+    private var overlayAnchor: java.lang.ref.WeakReference<View>? = null
+
+    /** 幽灵图标扫描的节流标志。 */
+    private var ghostScanPosted = false
+
     /** 已经挂了入口守护的 Activity / decorView（重建后自动换新的）。 */
     private var entryGuardActivity: java.lang.ref.WeakReference<Activity>? = null
     private var entryGuardRoot: java.lang.ref.WeakReference<View>? = null
@@ -330,30 +339,56 @@ internal object ConversationGlobalMenu {
         val observer = root.viewTreeObserver ?: return
         observer.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
             override fun onPreDraw(): Boolean {
-                val entry = ownEntryRef?.get()
-                // isShown 比 isAttachedToWindow 更严：ActionBar 重建后旧 View 可能还挂在
-                // 已隐藏的旧容器上，只看 attach 会误判为「还在」。
-                if (entry != null && entry.isAttachedToWindow && entry.isShown) return true
-                if (guardRemountPosted) return true
-                // 只在「首页会话列表可见」时补挂，避免 A 跑到通讯录/发现/我 这些页面的标题栏上。
-                if (!homeListVisible()) return true
-                val now = SystemClock.elapsedRealtime()
-                if (now - lastGuardMountAt < 150L) return true
-                lastGuardMountAt = now
-                guardRemountPosted = true
-                // 不用 postDelayed：ActionBar 重建后立刻补挂，只在同一帧内缺失，
-                // 肉眼几乎看不到；此前延迟 80ms 会明显闪一下。
-                main.post {
-                    guardRemountPosted = false
-                    val current = entryGuardActivity?.get() ?: return@post
-                    if (current.isFinishing || current.isDestroyed) return@post
-                    runCatching { ensureTopEntry(current) }
-                        .onFailure { HLog.e("$TAG 守护补挂入口失败: ${it.message}", it) }
+                val current = entryGuardActivity?.get()
+                val host = entryGuardRoot?.get() as? ViewGroup
+                if (current != null && host != null) {
+                    val entry = overlayEntry?.get()
+                    if (entry != null && entry.parent === host) {
+                        // 入口就在覆盖层上：只更新位置，不重建、不移除，切页面时完全无闪动。
+                        positionOverlayEntry(current, host, entry)
+                    } else if (!guardRemountPosted && homeListVisible()) {
+                        val now = SystemClock.elapsedRealtime()
+                        if (now - lastGuardMountAt >= 150L) {
+                            lastGuardMountAt = now
+                            guardRemountPosted = true
+                            main.post {
+                                guardRemountPosted = false
+                                val act = entryGuardActivity?.get() ?: return@post
+                                if (act.isFinishing || act.isDestroyed) return@post
+                                runCatching { ensureTopEntry(act) }
+                                    .onFailure { HLog.e("$TAG 守护补挂入口失败: ${it.message}", it) }
+                            }
+                        }
+                    }
+                    // 幽灵图标：宿主一旦把 meb / plus_icon 重新设成可见，就在**同一帧绘制前**压回去。
+                    // 以前要等下一轮 hideGhostTitleIcons（150ms~500ms 后），中间那几帧就是用户
+                    // 看到的「搜索 ＋」露出来又被压掉——也就是切换页面时的闪动。
+                    suppressGhostIcons()
                 }
                 return true
             }
         })
         HLog.i("$TAG 入口绘制前守护已挂上 root=${root.javaClass.simpleName}")
+    }
+
+    /** 绘制前把已被我们隐藏的幽灵图标再压一次（只遍历缓存，常量级开销）。 */
+    private fun suppressGhostIcons() {
+        if (ghostHiddenViews.isEmpty()) {
+            if (!ghostScanPosted) {
+                ghostScanPosted = true
+                main.post {
+                    ghostScanPosted = false
+                    val act = entryGuardActivity?.get() ?: return@post
+                    runCatching { hideGhostTitleIcons(act) }
+                }
+            }
+            return
+        }
+        for (view in ghostHiddenViews.keys) {
+            if (view.isAttachedToWindow && view.visibility != View.INVISIBLE) {
+                view.visibility = View.INVISIBLE
+            }
+        }
     }
 
     private fun install(activity: Activity, attempt: Int) {
@@ -369,7 +404,13 @@ internal object ConversationGlobalMenu {
         }
         val targets = menuTargets(activity)
         targets.forEach { detachMenu(it) }
-        // 首选：自己往标题栏容器里插一个纯文字 View。
+        // 首选：挂到 decorView 覆盖层上（生命周期与 LauncherUI 一致，切页面不重建）。
+        if (mountOverlayEntry(activity)) {
+            installInFlight = false
+            dumpTopBarOnce(activity)
+            return
+        }
+        // 退路：塞进标题栏容器（覆盖层挂不上时才会走到）。
         // 不走宿主的 addXxxOptionMenu，就不会出现「iconRes=0 被宿主渲染成默认图标」这类内部行为。
         if (mountOwnEntry(activity)) {
             installInFlight = false
@@ -495,6 +536,98 @@ internal object ConversationGlobalMenu {
             HLog.e("$TAG 标题栏自绘入口挂载失败: ${it.message}", it)
             false
         }
+    }
+
+    /**
+     * 把入口挂到 `decorView` 的**覆盖层**上（不放进 ActionBar 容器里）。
+     *
+     * 1066 之前的做法是塞进标题栏的横排容器：位置天然正确，但 `LauncherUI` 切页面时
+     * ActionBar 会整体重建，我们那个 View 跟着旧容器一起被丢弃 —— 用户看到的就是
+     * 「切页面闪一下」。挂到覆盖层以后，这个 View 的生命周期和 LauncherUI 一致，
+     * 重建 ActionBar 与它无关，只需要每帧把位置对齐到 ＋ 号右侧即可。
+     */
+    private fun mountOverlayEntry(activity: Activity): Boolean {
+        val host = activity.window?.decorView as? ViewGroup ?: return false
+        return runCatching {
+            val entry: TextView = overlayEntry?.get()
+                ?: buildEntryView(activity).also { overlayEntry = java.lang.ref.WeakReference(it) }
+            if (entry.parent !== host) {
+                (entry.parent as? ViewGroup)?.removeView(entry)
+                // 清掉可能残留的「容器插入版」旧入口，避免同时出现两个 A。
+                findViewByTag(host, ENTRY_TAG)?.let { stale ->
+                    if (stale !== entry) (stale.parent as? ViewGroup)?.removeView(stale)
+                }
+                host.addView(
+                    entry,
+                    ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                )
+                entry.bringToFront()
+                HLog.i("$TAG 覆盖层入口已挂上 decorView pid=${Process.myPid()}")
+            }
+            ownEntryRef = java.lang.ref.WeakReference(entry)
+            positionOverlayEntry(activity, host, entry)
+            true
+        }.getOrElse {
+            HLog.e("$TAG 覆盖层入口挂载失败: ${it.message}", it)
+            false
+        }
+    }
+
+    /**
+     * 每帧把覆盖层入口对齐到标题栏 ＋ 号的右侧空白处。
+     *
+     * 空间不够（例如通讯录页 ＋ 号就贴着屏幕右边缘）时把它设成 INVISIBLE ——
+     * 既不会遮挡宿主的按钮，也不会触发任何重建，所以不会闪。
+     */
+    private fun positionOverlayEntry(activity: Activity, host: ViewGroup, entry: View) {
+        val anchor = resolveOverlayAnchor(host)
+        if (anchor == null) {
+            if (entry.visibility != View.INVISIBLE) entry.visibility = View.INVISIBLE
+            return
+        }
+        val height = anchor.height
+        if (height <= 0) return
+        entry.measure(
+            View.MeasureSpec.makeMeasureSpec(host.width.coerceAtLeast(1), View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
+        )
+        val width = entry.measuredWidth
+        val anchorLocation = IntArray(2)
+        anchor.getLocationOnScreen(anchorLocation)
+        val hostLocation = IntArray(2)
+        host.getLocationOnScreen(hostLocation)
+        val x = anchorLocation[0] - hostLocation[0] + anchor.width
+        val y = anchorLocation[1] - hostLocation[1]
+        val screenWidth = activity.resources.displayMetrics.widthPixels
+        if (width <= 0 || x + width > screenWidth) {
+            if (entry.visibility != View.INVISIBLE) entry.visibility = View.INVISIBLE
+            return
+        }
+        val params = entry.layoutParams
+        if (params != null && params.height != height) {
+            params.height = height
+            entry.layoutParams = params
+        }
+        // 微信重建 ActionBar 时可能把自己重新加到 decorView 上层，把我们的入口盖住
+        // （被盖住等于点不到、也可能看不见），发现不在最上层就提一次。
+        if (host.childCount > 0 && host.getChildAt(host.childCount - 1) !== entry) {
+            entry.bringToFront()
+        }
+        if (entry.visibility != View.VISIBLE) entry.visibility = View.VISIBLE
+        if (entry.x != x.toFloat()) entry.x = x.toFloat()
+        if (entry.y != y.toFloat()) entry.y = y.toFloat()
+    }
+
+    /** 覆盖层入口的定位锚点：标题栏右侧「更多功能按钮」，退化时用「搜索」。 */
+    private fun resolveOverlayAnchor(host: ViewGroup): View? {
+        val cached = overlayAnchor?.get()
+        if (cached != null && cached.isAttachedToWindow && cached.isShown) return cached
+        val found = findViewByDesc(host, "更多功能按钮") ?: findViewByDesc(host, "搜索")
+        if (found != null) overlayAnchor = java.lang.ref.WeakReference(found)
+        return found
     }
 
     private fun buildEntryView(activity: Activity): TextView {
