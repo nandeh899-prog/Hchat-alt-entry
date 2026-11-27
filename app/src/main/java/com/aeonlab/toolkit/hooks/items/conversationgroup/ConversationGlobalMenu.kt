@@ -8,6 +8,7 @@ import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.MenuItem
 import android.view.View
@@ -67,6 +68,18 @@ internal object ConversationGlobalMenu {
     private val inventoryCache = HashMap<Class<*>, List<Method>>()
     private var lastEnsureAt = 0L
 
+    /** 只跑一条挂载重试链，避免切页面时叠出多条 500ms 轮询。 */
+    private var installInFlight = false
+
+    /** 我们插进去那个 A 的弱引用，守护靠它做 O(1) 判断。 */
+    private var ownEntryRef: java.lang.ref.WeakReference<View>? = null
+
+    /** 已经挂了入口守护的 Activity / decorView（重建后自动换新的）。 */
+    private var entryGuardActivity: java.lang.ref.WeakReference<Activity>? = null
+    private var entryGuardRoot: java.lang.ref.WeakReference<View>? = null
+    private var lastGuardMountAt = 0L
+    private var guardRemountPosted = false
+
     private val loggedKeys = HashSet<String>()
 
     private val refreshHome: () -> Unit = {
@@ -82,8 +95,27 @@ internal object ConversationGlobalMenu {
      * 否则会出现「分组内的免打扰图标会变、分组外的不变」。
      */
     private fun refreshAllFor(activity: Activity): () -> Unit = {
+        scheduleHomeRefresh(activity)
+    }
+
+    /**
+     * 多轮延迟刷新。
+     *
+     * 非要延迟好几轮的原因：群聊免打扰走的是 RoomSDK 异步提交，私聊走联系人更新，
+     * 两条路都是「先落库、再回调」，我们调用返回时微信自己的会话数据往往还没变。
+     * 只刷一次会得到一个中间态——分组内的行（我们自己读状态）已经变了，
+     * 未分组的原生行（微信 adapter 读自己的数据）还是旧图标。
+     */
+    private fun scheduleHomeRefresh(activity: Activity) {
         refreshHome()
         notifyHomeList(activity)
+        listOf(300L, 900L, 2000L, 3500L).forEach { delay ->
+            main.postDelayed({
+                if (activity.isFinishing || activity.isDestroyed) return@postDelayed
+                refreshHome()
+                notifyHomeList(activity)
+            }, delay)
+        }
     }
 
     // ------------------------------------------------------------------ 菜单内容
@@ -265,6 +297,8 @@ internal object ConversationGlobalMenu {
      */
     fun ensureTopEntry(activity: Activity) {
         if (activity.isFinishing || activity.isDestroyed) return
+        // 先挂「绘制前守护」：它不依赖任何生命周期回调，切 Tab / 进聊天再返回时也能把 A 补回来。
+        installEntryGuard(activity)
         val now = System.currentTimeMillis()
         if (now - lastEnsureAt < 300L) return
         lastEnsureAt = now
@@ -277,16 +311,63 @@ internal object ConversationGlobalMenu {
         install(activity, attempt = 1)
     }
 
+    /**
+     * 绘制前守护：保证「A」在任何页面切换后都能自己回来。
+     *
+     * 实测（1062）：`LauncherUI` 是四个 Tab 共用的容器，切 Tab 时 ActionBar 会重建，
+     * 我们插进去的 View 随旧容器一起被丢弃；而这种切换**不会**触发 onCreate / onResume /
+     * onPostResume，所以此前只能靠「切后台再回来」才有生命周期事件把入口补上。
+     *
+     * 挂在 `decorView` 的 `OnPreDrawListener` 上就不依赖任何具体回调：每帧只做一次
+     * O(1) 判断（弱引用+l已挂载状态），发现入口不在就节流重挂。
+     */
+    private fun installEntryGuard(activity: Activity) {
+        if (activity.isFinishing || activity.isDestroyed) return
+        val root: View = activity.window?.decorView ?: return
+        if (entryGuardActivity?.get() === activity && entryGuardRoot?.get() === root) return
+        entryGuardActivity = java.lang.ref.WeakReference(activity)
+        entryGuardRoot = java.lang.ref.WeakReference(root)
+        val observer = root.viewTreeObserver ?: return
+        observer.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                val entry = ownEntryRef?.get()
+                if (entry != null && entry.isAttachedToWindow) return true
+                if (guardRemountPosted) return true
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastGuardMountAt < 500L) return true
+                lastGuardMountAt = now
+                guardRemountPosted = true
+                main.postDelayed({
+                    guardRemountPosted = false
+                    val current = entryGuardActivity?.get() ?: return@postDelayed
+                    if (current.isFinishing || current.isDestroyed) return@postDelayed
+                    runCatching { ensureTopEntry(current) }
+                        .onFailure { HLog.e("$TAG 守护补挂入口失败: ${it.message}", it) }
+                }, 80L)
+                return true
+            }
+        })
+        HLog.i("$TAG 入口绘制前守护已挂上 root=${root.javaClass.simpleName}")
+    }
+
     private fun install(activity: Activity, attempt: Int) {
         if (activity.isFinishing || activity.isDestroyed) return
         // 已经挂好就什么都不做：多条轮询链（onCreate/onResume 各起一条）不会互相打架、也不会闪烁。
         if (hasOwnEntry(activity)) return
+        // 同一时刻只允许一条重试链在跑，否则切页面时会叠出好几条 500ms 轮询、
+        // 日志里全是「没找到可插入的标题栏容器」。
+        if (!installInFlight) {
+            installInFlight = true
+        } else if (attempt > 1) {
+            return
+        }
         val targets = menuTargets(activity)
         targets.forEach { detachMenu(it) }
         removeOwnEntry(activity)
         // 首选：自己往标题栏容器里插一个纯文字 View。
         // 不走宿主的 addXxxOptionMenu，就不会出现「iconRes=0 被宿主渲染成默认图标」这类内部行为。
         if (mountOwnEntry(activity)) {
+            installInFlight = false
             dumpTopBarOnce(activity)
             return
         }
@@ -301,6 +382,7 @@ internal object ConversationGlobalMenu {
             return
         }
         if (!ALLOW_LEGACY_FALLBACK) {
+            installInFlight = false
             dumpTopBarOnce(activity)
             HLog.e(
                 "$TAG 首页顶部入口始终没找到标题栏容器: ${activity.javaClass.name}",
@@ -389,6 +471,7 @@ internal object ConversationGlobalMenu {
             params.gravity = Gravity.CENTER_VERTICAL
             val before = host.childCount
             host.addView(entry, params)
+            ownEntryRef = java.lang.ref.WeakReference(entry)
             HLog.i(
                 "$TAG 标题栏自绘入口已挂载 host=${host.javaClass.simpleName} " +
                     "children=$before→${host.childCount} pid=${Process.myPid()}"
@@ -435,6 +518,7 @@ internal object ConversationGlobalMenu {
             val root = activity.window?.decorView ?: return
             val found = findViewByTag(root, ENTRY_TAG) ?: return
             (found.parent as? ViewGroup)?.removeView(found)
+            if (ownEntryRef?.get() === found) ownEntryRef = null
         }.onFailure { HLog.e("$TAG 移除旧入口失败: ${it.message}", it) }
     }
 private fun hasOwnEntry(activity: Activity): Boolean {
@@ -566,6 +650,12 @@ private fun hasOwnEntry(activity: Activity): Boolean {
             runCatching {
                 val root: View = activity.window?.decorView ?: return@post
                 val list = findConversationList(root) ?: return@post
+                if (loggedKeys.add("notifyHit")) {
+                    HLog.i(
+                        "$TAG 通知首页列表刷新 list=${list.javaClass.simpleName} " +
+                            "pid=${Process.myPid()}"
+                    )
+                }
                 // 用反射调 adapter.notifyDataSetChanged()，这样 ListView / RecyclerView 都能覆盖，
                 // 也不用为了一个刷新方法去引入 recyclerview 依赖。
                 val adapter = runCatching {
