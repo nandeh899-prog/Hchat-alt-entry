@@ -112,3 +112,19 @@
   - 不要在改文案时顺手把「24 条规则全部可用」写成已验证结论。
 - **未验证声明**：24 条规则的真实生效范围**尚未逐条真机验证**；
   `IMPLEMENTED` 只代表「代码里已接线」，不代表「真机实测通过」。逐条验证请另立待办。
+
+---
+## 已闭环
+### 4. 会话分组「退出闪屏 / 两次返回 / 开关不释放」（1047 修好，已并入基线）
+- **状态**：2026-11-27 真机验收通过（用户原话「这次测试全过」），已合入 `baseline-1047`（= `adbcbc9`）。
+- **根因一句话**：兼容层 `isOverridden()` 只看 `result != null`，所以分组里所有
+  `param.result = null` 的「吞点击 / 拦虚拟会话」全是空转——微信自己也开了一个分组页（要返回两次）、
+  也照样建了空白聊天层（退出闪屏），`startChatting` 拦截同样无效（1042「点不进群聊」）。
+- **修法**：兼容层补 `returnEarly`，`setResult(...)` / `setThrowable(...)`（含 null）真正跳过原方法；
+  分组文件 12 处吞拦截改用 `param.setResult(null)`。保留「非空 result 即覆盖」旧语义，
+  因此其他功能里 `param.result = 非空值` 的拦截行为不变。
+- **完整记录（现象 / 证据 / 改动清单 / 验证清单 / 回退）**：`docs/CONVERSATION_GROUP_EXIT_1047.md`。
+- **禁止做法**：
+  - 不要再写 `param.result = null` 表达「吞掉」；只能写 `param.setResult(null)`；
+  - 不要再靠 `hideChattingLayer` / 按返回键补救「拦截没生效」的后果——先确认拦截真的生效。
+- **回退**：`git reset --hard baseline-1042`（43f2386）；只想摘兼容层改动 `git revert adbcbc9`。
