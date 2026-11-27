@@ -595,42 +595,39 @@ internal object ConversationGlobalMenu {
             if (entry.visibility != View.INVISIBLE) entry.visibility = View.INVISIBLE
             return
         }
-        val height = anchor.height
-        if (height <= 0) return
-        entry.measure(
-            View.MeasureSpec.makeMeasureSpec(host.width.coerceAtLeast(1), View.MeasureSpec.AT_MOST),
-            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
-        )
-        val width = entry.measuredWidth
+        val container = (anchor.parent as? View) ?: anchor
+        val containerLocation = IntArray(2)
+        container.getLocationOnScreen(containerLocation)
         val anchorLocation = IntArray(2)
         anchor.getLocationOnScreen(anchorLocation)
         val hostLocation = IntArray(2)
         host.getLocationOnScreen(hostLocation)
-        // 注意：入口不再占用标题栏布局，微信会把 ＋ 号一路推到屏幕右边缘（实测 jga=[1091,1240]），
-        // 右侧已经没有空位。所以贴「操作容器左侧」——也就是它以前插在容器里时占据的那一格。
-        val container = (anchor.parent as? View) ?: anchor
-        val containerLocation = IntArray(2)
-        container.getLocationOnScreen(containerLocation)
         val containerLeft = containerLocation[0] - hostLocation[0]
         val containerTop = containerLocation[1] - hostLocation[1]
-        val containerHeight = if (container.height > 0) container.height else height
-        var x = containerLeft - width
-        var y = containerTop
-        var heightToUse = containerHeight
+        val containerHeight =
+            if (container.height > 0) container.height else anchor.height.coerceAtLeast(1)
+        // 跟 ＋ 号那个图标同尺寸（实测 ＋ 号图标 74px，坐在 149px 高的按钮里，正好一半），
+        // 并垂直居中，看起来就像宿主自己的一枚图标。
+        val density = activity.resources.displayMetrics.density
+        val size = (containerHeight * 0.5f).toInt().coerceAtLeast((density * 20).toInt())
         val screenWidth = activity.resources.displayMetrics.widthPixels
-        if (width <= 0 || x < 0) {
+        // 注意：入口不再占用标题栏布局，微信会把 ＋ 号一路推到屏幕右边缘（实测 jga=[1091,1240]），
+        // 右侧已经没有空位。所以贴「操作容器左侧」——也就是它以前插在容器里时占据的那一格。
+        var x = containerLeft - size
+        var y = containerTop + (containerHeight - size) / 2
+        if (x < 0) {
             // 容器贴着屏幕左边（理论上不会出现在首页），退回「贴 ＋ 号右侧」。
-            x = anchorLocation[0] - hostLocation[0] + anchor.width
-            y = anchorLocation[1] - hostLocation[1]
-            heightToUse = height
+            x = anchorLocation[0] - hostLocation[0] + anchor.width + (size / 4)
+            y = anchorLocation[1] - hostLocation[1] + (anchor.height - size) / 2
         }
-        if (width <= 0 || x < 0 || x + width > screenWidth) {
+        if (x < 0 || x + size > screenWidth) {
             if (entry.visibility != View.INVISIBLE) entry.visibility = View.INVISIBLE
             return
         }
         val params = entry.layoutParams
-        if (params != null && params.height != heightToUse) {
-            params.height = heightToUse
+        if (params != null && (params.width != size || params.height != size)) {
+            params.width = size
+            params.height = size
             entry.layoutParams = params
         }
         // 微信重建 ActionBar 时可能把自己重新加到 decorView 上层，把我们的入口盖住
@@ -653,15 +650,16 @@ internal object ConversationGlobalMenu {
     }
 
     private fun buildEntryView(activity: Activity): TextView {
+        val color = titleTextColor(activity)
         val tv = TextView(activity)
         tv.text = MENU_TEXT
         tv.textSize = 15f
         tv.gravity = Gravity.CENTER
+        tv.includeFontPadding = false
         tv.setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-        tv.setTextColor(titleTextColor(activity))
-        val density = activity.resources.displayMetrics.density
-        val horizontal = (density * 8).toInt()
-        tv.setPadding(horizontal, 0, horizontal, 0)
+        tv.setTextColor(color)
+        // 与 ＋ 号菜单里的图标同一风格：圆角方框 + 中间一个字母，透明底、只描边。
+        tv.background = buildFrameDrawable(activity, color)
         tv.isClickable = true
         tv.setOnClickListener {
             runCatching { show(activity) }
@@ -669,6 +667,17 @@ internal object ConversationGlobalMenu {
         }
         tv.tag = ENTRY_TAG
         return tv
+    }
+
+    /** 圆角描边方框（透明填充），用来把入口画成宿主菜单图标的样子。 */
+    private fun buildFrameDrawable(activity: Activity, color: Int): android.graphics.drawable.Drawable {
+        val density = activity.resources.displayMetrics.density
+        val drawable = android.graphics.drawable.GradientDrawable()
+        drawable.shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+        drawable.setColor(Color.TRANSPARENT)
+        drawable.cornerRadius = 7f * density
+        drawable.setStroke((1.8f * density).toInt().coerceAtLeast(2), color)
+        return drawable
     }
 
     /** 标题栏文字颜色跟宿主主题走，深浅色主题下都不至于看不见。 */
