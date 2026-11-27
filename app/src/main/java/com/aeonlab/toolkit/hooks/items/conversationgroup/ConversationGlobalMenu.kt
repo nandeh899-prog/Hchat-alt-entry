@@ -412,97 +412,79 @@ private fun hasOwnEntry(activity: Activity): Boolean {
         return null
     }
 
+
     /**
-     * 定位标题栏右侧容器。
+     * 定位**真标题栏**右侧那个横排容器。
      *
-     * 实测（1055 日志）微信 8.0.49 首页标题栏的两个图标是 `WeImageView`，
-     * 资源 id 分别是 `plus_icon`（＋）与 `meb`（搜索 🔍）。
-     * 直接按 id 找到 ＋，再向上取「横向 LinearLayout」父容器，比猜公共父容器稳得多：
-     * 旧启发式会把标题栏以外的控件（h5n / jxs）也算进候选，永远凑不出公共父容器。
+     * 踩过的坑（1056）：按资源 id `plus_icon` / `meb` 上溯，命中的其实是
+     * 会话 `ListView` 的**列表头部行**（里面也有两个 74px 小图标），
+     * 主题把 ActionBar 背景做透明后那一条会透出来，于是看起来像「多了个 🔍 和 ＋」。
+     *
+     * 现在改为语义锚点：
+     * 1. 找 contentDescription 为「更多功能按钮」（＋）或「搜索」的控件；
+     * 2. 向上找第一个横向 LinearLayout，且**祖先里必须有 ActionBarContainer / Toolbar**；
+     * 3. 把入口加进这个容器，紧跟在 ＋ 之后。
      */
     private fun findTitleContainer(activity: Activity): ViewGroup? {
-        val packageName = activity.packageName
-        for (anchor in arrayOf("plus_icon", "meb")) {
-            val id = runCatching { activity.resources.getIdentifier(anchor, "id", packageName) }
-                .getOrDefault(0)
-            if (id == 0) continue
-            val view = runCatching { activity.findViewById<View>(id) }.getOrNull() ?: continue
-            var parent = view.parent as? ViewGroup
-            var depth = 0
-            while (parent != null && depth < 4) {
-                val group = parent
-                if (group is LinearLayout && group.orientation == LinearLayout.HORIZONTAL &&
-                    group.childCount in 2..8
-                ) {
-                    if (loggedKeys.add("anchor:" + anchor)) {
-                        HLog.i(
-                            "$TAG 标题栏容器定位 anchor=$anchor 容器=${group.javaClass.name} " +
-                                "children=${group.childCount}"
-                        )
-                    }
-                    return group
-                }
-                parent = group.parent as? ViewGroup
-                depth++
-            }
-        }
-        if (loggedKeys.add("anchorMiss")) {
-            HLog.i("$TAG 没有 plus_icon / meb 锚点，改用图标启发式")
-        }
-        return findTitleContainerByIcons(activity)
-    }
-
-    private fun findTitleContainerByIcons(activity: Activity): ViewGroup? {
         val root = activity.window?.decorView ?: return null
-        val rootLocation = IntArray(2)
-        root.getLocationOnScreen(rootLocation)
-        val rootTop = rootLocation[1]
-        val limitY = rootTop + (root.height * 14) / 100
-        val icons = ArrayList<View>(4)
-        collectTopIcons(root, rootTop, limitY, icons)
-        if (icons.size < 2) {
-            HLog.i("$TAG 标题栏区域只找到 ${icons.size} 个可点图标，无法定位容器")
+        val anchor = findViewByDesc(root, "更多功能按钮")
+            ?: findViewByDesc(root, "搜索")
+        if (anchor == null) {
+            if (loggedKeys.add("anchorMiss")) {
+                HLog.i("$TAG 找不到「更多功能按钮 / 搜索」锚点，无法定位标题栏容器")
+            }
             return null
         }
-        if (loggedKeys.add("iconCandidates")) {
-            icons.forEach { icon ->
-                HLog.i("$TAG 标题栏图标候选: ${icon.javaClass.name} id=${idName(icon)}")
-            }
-        }
-        var candidate = icons.first().parent as? ViewGroup
+        var parent = anchor.parent as? ViewGroup
         var depth = 0
-        while (candidate != null && depth < 8) {
-            val group = candidate
-            if (group !== root && group.childCount in 1..8 && icons.all { isDescendant(group, it) }) {
-                HLog.i("$TAG 标题栏容器=${group.javaClass.name} children=${group.childCount}")
+        while (parent != null && depth < 6) {
+            val group = parent
+            if (group is LinearLayout && group.orientation == LinearLayout.HORIZONTAL &&
+                isInsideActionBar(group)
+            ) {
+                if (loggedKeys.add("anchorHit")) {
+                    HLog.i(
+                        "$TAG 标题栏容器定位 anchor=${anchor.contentDescription} " +
+                            "容器=${group.javaClass.simpleName} children=${group.childCount}"
+                    )
+                }
                 return group
             }
-            candidate = group.parent as? ViewGroup
+            parent = group.parent as? ViewGroup
             depth++
         }
-        HLog.i("$TAG 没找到标题栏图标的公共父容器")
+        if (loggedKeys.add("anchorNotInBar")) {
+            HLog.i("$TAG 锚点上溯没有找到 ActionBarContainer 内的横向容器")
+        }
         return null
     }
 
-    private fun collectTopIcons(view: View, rootTop: Int, limitY: Int, out: MutableList<View>) {
-        if (view.visibility != View.VISIBLE) return
-        if (ENTRY_TAG == view.tag) return
-        val location = IntArray(2)
-        view.getLocationOnScreen(location)
-        val top = location[1]
-        if (top > limitY || top + view.height < rootTop) return
-        val clickable = view.isClickable || (view.parent as? View)?.isClickable == true
-        val looksLikeIcon = view is android.widget.ImageView ||
-            view.javaClass.simpleName.contains("Image", ignoreCase = true)
-        if (clickable && looksLikeIcon && view.width in 1..(view.height * 4)) {
-            out += view
-            return
+    /** 祖先里是否有 ActionBarContainer / Toolbar —— 用来区分「真标题栏」和「列表头部行」。 */
+    private fun isInsideActionBar(view: View): Boolean {
+        var current = view.parent
+        var depth = 0
+        while (current != null && depth < 12) {
+            val name = current.javaClass.simpleName
+            if (name.contains("ActionBarContainer") || name.contains("Toolbar") ||
+                name.contains("ActionBar")
+            ) {
+                return true
+            }
+            current = current.parent
+            depth++
         }
+        return false
+    }
+
+    private fun findViewByDesc(view: View, desc: String): View? {
+        if (desc.contentEquals(view.contentDescription ?: "")) return view
         if (view is ViewGroup) {
             for (index in 0 until view.childCount) {
-                collectTopIcons(view.getChildAt(index), rootTop, limitY, out)
+                val found = findViewByDesc(view.getChildAt(index), desc)
+                if (found != null) return found
             }
         }
+        return null
     }
 
     private fun idName(view: View): String {
