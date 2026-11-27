@@ -31,25 +31,31 @@ open class XC_MethodHook @JvmOverloads constructor(
 
         @JvmField
         var result: Any? = null
-
         @JvmField
         var throwable: Throwable? = null
-
+        /**
+         * 是否显式要求跳过原方法。
+         *
+         * 关键坑（真机 2026-11-27 定位）：legacy 语义里只有 setResult/setThrowable 会把
+         * returnEarly 置位；直接写字段 `param.result = null` 在 null 情况下等于「什么都没做」，
+         * 原方法照样执行。分组功能里大量拦截点写的是 `param.result = null`（吞掉点击 / 拦截
+         * 虚拟会话），于是「吞掉」全部无效：微信自己又开了一个分组页（要返回两次）、
+         * 又建了空白聊天层（退出闪屏）。所以这里补上 flag，并让 setResult(null) 真正生效。
+         */
+        private var returnEarly = false
         private var extras: MutableMap<String, Any?>? = null
-
         fun getResult(): Any? = result
-
         fun setResult(value: Any?) {
             result = value
             throwable = null
+            returnEarly = true
         }
 
         fun hasThrowable(): Boolean = throwable != null
-
         fun getThrowable(): Throwable? = throwable
-
         fun setThrowable(value: Throwable?) {
             throwable = value
+            returnEarly = true
         }
 
         fun getObjectExtra(key: String): Any? = extras?.get(key)
@@ -63,8 +69,13 @@ open class XC_MethodHook @JvmOverloads constructor(
             extras?.remove(key)
         }
 
-        /** 与 legacy 判定一致：result 或 throwable 非空即视为已覆盖原方法 */
-        internal fun isOverridden(): Boolean = result != null || throwable != null
+        /**
+         * legacy 判定：result / throwable 非空，或显式 setResult/setThrowable 过（含 null）。
+         * 后半句是本次补的关键语义 —— 以前的实现只看非空，导致 `setResult(null)`
+         * 依然会把原方法跑一遍。
+         */
+        internal fun isOverridden(): Boolean =
+            returnEarly || result != null || throwable != null
 
         internal fun seedAfterPhase(value: Any?, error: Throwable?) {
             result = value

@@ -340,7 +340,7 @@ object ConversationGroupRuntime {
                     if (isVirtualTalker(nativeGroupPageParent.get()) &&
                         param.args?.getOrNull(0) == NATIVE_GROUP_PLACEHOLDER
                     ) {
-                        param.result = null
+                        param.setResult(null)
                     }
                 }
             })
@@ -550,7 +550,7 @@ object ConversationGroupRuntime {
                 val item = runCatching { adapter.getItemAtPosition(position) }.getOrNull() ?: return
                 val talker = virtualTalkerFromItem(item) ?: return
                 val activity = findActivity(view.context) ?: return
-                param.result = null
+                param.setResult(null)
                 main.post {
                     val groupId = ConversationGroupStore.load(activity)
                         .firstOrNull { virtualTalker(it.id) == talker }
@@ -592,7 +592,7 @@ object ConversationGroupRuntime {
                 if (!isVirtualTalker(parent)) return
 
                 if (WeChatApis.conversations()?.deleteConversation(talker) == true) {
-                    param.result = null
+                    param.setResult(null)
                 } else {
                     HLog.e(
                         "$TAG 隐藏分组会话失败，继续执行微信原逻辑: " +
@@ -641,7 +641,7 @@ object ConversationGroupRuntime {
                 val item = param.args?.getOrNull(0) as? MenuItem ?: return
                 if (item.itemId != MENU_ITEM_ID) return
                 val target = menuBindings.remove(item) ?: return
-                param.result = null
+                param.setResult(null)
                 main.post {
                     val activity = target.activity.get() ?: return@post
                     if (!activity.isFinishing && !activity.isDestroyed) {
@@ -723,7 +723,7 @@ object ConversationGroupRuntime {
                 val item = runCatching { adapter.getItemAtPosition(position) }.getOrNull() ?: return
                 val talker = conversationTalkerFromItem(item)
                 val activity = findActivity(view.context) ?: return
-                param.result = null
+                param.setResult(null)
                 if (talker.isNullOrBlank()) {
                     HLog.e("$TAG 微信原生分组列表无法解析会话: item=${item.javaClass.name}")
                     return
@@ -757,7 +757,7 @@ object ConversationGroupRuntime {
         val talker = conversationTalkerFromItem(item) ?: return
         if (!isVirtualTalker(talker)) return
         val activity = findActivity(view.context) ?: return
-        param.result = null
+        param.setResult(null)
         HLog.e(
             "$TAG 首页点击虚拟分组行，拦截微信默认聊天入口: talker=$talker",
             RuntimeException("homeVirtualGroupClick")
@@ -1013,7 +1013,7 @@ object ConversationGroupRuntime {
                     // 只有“正在关闭的那个页面”才需要切断父会话。之前这里是全局 5 秒开关，
                     // 结果退出后马上再进分组时，新页面也拿不到 talker，退化成微信原生的
                     // “折叠的群聊 / 暂无群聊”。
-                    param.result = null
+                    param.setResult(null)
                     return
                 }
                 param.result = talker
@@ -1046,7 +1046,7 @@ object ConversationGroupRuntime {
                         val activity = param.thisObject as? Activity ?: return
                         if (!isVirtualGroupPage(activity)) return
                         beginGroupPageExit(activity)
-                        param.result = null
+                        param.setResult(null)
                         runCatching { activity.finish() }.onFailure {
                             HLog.e("$TAG 关闭微信原生分组页面失败: ${it.message}", it)
                         }
@@ -1142,7 +1142,7 @@ object ConversationGroupRuntime {
                                 "method=${method.name}/${method.parameterTypes.size}"
                         )
                         clearPendingChatTarget(param.thisObject as? Activity)
-                        param.result = null
+                        param.setResult(null)
                     }
                 })
             }
@@ -1171,7 +1171,7 @@ object ConversationGroupRuntime {
                         )
                         clearPendingChatTarget(param.thisObject as? Activity)
                         when (method.returnType) {
-                            Void.TYPE -> param.result = null
+                            Void.TYPE -> param.setResult(null)
                             Integer.TYPE -> param.result = 0
                             java.lang.Long.TYPE -> param.result = 0L
                             java.lang.Boolean.TYPE -> param.result = false
@@ -1381,7 +1381,7 @@ object ConversationGroupRuntime {
                         val talker = conversationTalkerFromItem(item) ?: return
                         if (!isVirtualTalker(talker)) return
                         val host = findActivity(view.context) ?: return
-                        param.result = null
+                        param.setResult(null)
                         HLog.e("$TAG 首页点击虚拟分组行（运行时拦截）: talker=$talker")
                         clearPendingChatTarget(host)
                         main.post {
@@ -1690,7 +1690,7 @@ object ConversationGroupRuntime {
     private fun handleNativeGroupChildMenuClick(param: XC_MethodHook.MethodHookParam) {
         val item = param.args?.getOrNull(0) as? MenuItem ?: return
         val binding = nativeGroupMenuBindings.remove(item) ?: return
-        param.result = null
+        param.setResult(null)
         main.post {
             val target = binding.target
             val activity = target.activity.get() ?: return@post
