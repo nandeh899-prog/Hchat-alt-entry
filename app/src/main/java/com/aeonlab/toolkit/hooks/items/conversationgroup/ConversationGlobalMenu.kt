@@ -2,12 +2,18 @@ package com.aeonlab.toolkit.hooks.items.conversationgroup
 
 import android.app.Activity
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
+import android.view.Gravity
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.TextView
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.ui.AeonLabMenuDotDrawable
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
@@ -232,6 +238,9 @@ internal object ConversationGlobalMenu {
      */
     fun ensureTopEntry(activity: Activity) {
         if (activity.isFinishing || activity.isDestroyed) return
+        if (loggedKeys.add("ensure:" + Process.myPid())) {
+            HLog.i("$TAG 开始挂载首页顶部入口 pid=${Process.myPid()}")
+        }
         install(activity, attempt = 1)
     }
 
@@ -239,6 +248,17 @@ internal object ConversationGlobalMenu {
         if (activity.isFinishing || activity.isDestroyed) return
         val targets = menuTargets(activity)
         targets.forEach { detachMenu(it) }
+        dumpTopBarOnce(activity)
+        removeOwnEntry(activity)
+        // 首选：自己往标题栏容器里插一个纯文字 View。
+        // 不走宿主的 addXxxOptionMenu，就不会出现「iconRes=0 被宿主渲染成默认图标」这类内部行为。
+        if (mountOwnEntry(activity)) return
+        if (attempt < 6) {
+            // 标题栏容器 / 图标可能还没 inflate 完，先只重试自绘路径；
+            // 全部重试都失败才退回宿主菜单项（会多出图标，仅作兜底）。
+            main.postDelayed({ install(activity, attempt + 1) }, 350L * attempt)
+            return
+        }
         val listener = MenuItem.OnMenuItemClickListener {
             runCatching { show(activity) }
                 .onFailure { HLog.e("$TAG 打开全局批量操作菜单失败: ${it.message}", it) }
@@ -269,6 +289,209 @@ internal object ConversationGlobalMenu {
                     "targets=${targets.joinToString("|") { it.javaClass.name }}",
                 RuntimeException("installTopEntry")
             )
+        }
+    }
+
+    // ------------------------------------------------------------ 自绘入口（不经宿主菜单系统）
+    /** 我们插进标题栏那个 View 的 tag，用来在重建时精确定位并移除。 */
+    private const val ENTRY_TAG = "aeonlab_global_menu_entry"
+
+    /**
+     * 自己往标题栏容器里塞一个纯文字 View。
+     *
+     * 好处：数量、外观、间距完全由我们决定，宿主不会在它的菜单项系统里额外渲染任何图标。
+     * 只在宿主容器是 [LinearLayout] 时执行（微信 8.0.49 首页标题栏右侧就是横排容器），
+     * 其他类型直接返回 false 交给反射路径，并把容器类名写进日志供下一次精确适配。
+     */
+    private fun mountOwnEntry(activity: Activity): Boolean {
+        val host = findTitleContainer(activity)
+        if (host == null) {
+            HLog.i("$TAG 没找到可插入的标题栏容器，退回宿主菜单项路径")
+            return false
+        }
+        if (host !is LinearLayout) {
+            HLog.i("$TAG 标题栏容器是 ${host.javaClass.name}，暂不直接插入，退回宿主菜单项路径")
+            return false
+        }
+        return runCatching {
+            val entry = buildEntryView(activity)
+            val params = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            params.gravity = Gravity.CENTER_VERTICAL
+            val before = host.childCount
+            host.addView(entry, params)
+            HLog.i(
+                "$TAG 标题栏自绘入口已挂载 host=${host.javaClass.simpleName} " +
+                    "children=$before→${host.childCount} pid=${Process.myPid()}"
+            )
+            true
+        }.getOrElse {
+            HLog.e("$TAG 标题栏自绘入口挂载失败: ${it.message}", it)
+            false
+        }
+    }
+
+    private fun buildEntryView(activity: Activity): TextView {
+        val tv = TextView(activity)
+        tv.text = MENU_TEXT
+        tv.textSize = 15f
+        tv.gravity = Gravity.CENTER
+        tv.setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+        tv.setTextColor(titleTextColor(activity))
+        val density = activity.resources.displayMetrics.density
+        val horizontal = (density * 8).toInt()
+        tv.setPadding(horizontal, 0, horizontal, 0)
+        tv.isClickable = true
+        tv.setOnClickListener {
+            runCatching { show(activity) }
+                .onFailure { HLog.e("$TAG 打开全局批量操作菜单失败: ${it.message}", it) }
+        }
+        tv.tag = ENTRY_TAG
+        return tv
+    }
+
+    /** 标题栏文字颜色跟宿主主题走，深浅色主题下都不至于看不见。 */
+    private fun titleTextColor(activity: Activity): Int {
+        return runCatching {
+            val attrs = activity.obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary))
+            val color = attrs.getColor(0, Color.WHITE)
+            attrs.recycle()
+            color
+        }.getOrDefault(Color.WHITE)
+    }
+
+    /** 移除上一次插进去的入口（ActionBar 重建后 View 会残留在旧树上）。 */
+    private fun removeOwnEntry(activity: Activity) {
+        runCatching {
+            val root = activity.window?.decorView ?: return
+            val found = findViewByTag(root, ENTRY_TAG) ?: return
+            (found.parent as? ViewGroup)?.removeView(found)
+        }.onFailure { HLog.e("$TAG 移除旧入口失败: ${it.message}", it) }
+    }
+
+    private fun findViewByTag(view: View, tag: String): View? {
+        if (tag == view.tag) return view
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                val found = findViewByTag(view.getChildAt(index), tag)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    /**
+     * 找标题栏右侧那个横排容器。
+     *
+     * 在窗口顶部一小块区域内收集「可点击的图标 View」，取它们**最深的公共父容器**
+     * （子数不超过 8，避免误判成整页根布局）。微信标题栏的 🔍 与 ＋ 就并排放在这种容器里，
+     * 我们把入口追加到末尾，视觉上紧跟在 ＋ 之后。
+     */
+    private fun findTitleContainer(activity: Activity): ViewGroup? {
+        val root = activity.window?.decorView ?: return null
+        val rootLocation = IntArray(2)
+        root.getLocationOnScreen(rootLocation)
+        val rootTop = rootLocation[1]
+        val limitY = rootTop + (root.height * 14) / 100
+        val icons = ArrayList<View>(4)
+        collectTopIcons(root, rootTop, limitY, icons)
+        if (icons.size < 2) {
+            HLog.i("$TAG 标题栏区域只找到 ${icons.size} 个可点图标，无法定位容器")
+            return null
+        }
+        if (loggedKeys.add("iconCandidates")) {
+            icons.forEach { icon ->
+                HLog.i("$TAG 标题栏图标候选: ${icon.javaClass.name} id=${idName(icon)}")
+            }
+        }
+        var candidate = icons.first().parent as? ViewGroup
+        var depth = 0
+        while (candidate != null && depth < 8) {
+            val group = candidate
+            if (group !== root && group.childCount in 1..8 && icons.all { isDescendant(group, it) }) {
+                HLog.i("$TAG 标题栏容器=${group.javaClass.name} children=${group.childCount}")
+                return group
+            }
+            candidate = group.parent as? ViewGroup
+            depth++
+        }
+        HLog.i("$TAG 没找到标题栏图标的公共父容器")
+        return null
+    }
+
+    private fun collectTopIcons(view: View, rootTop: Int, limitY: Int, out: MutableList<View>) {
+        if (view.visibility != View.VISIBLE) return
+        if (ENTRY_TAG == view.tag) return
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        val top = location[1]
+        if (top > limitY || top + view.height < rootTop) return
+        val clickable = view.isClickable || (view.parent as? View)?.isClickable == true
+        val looksLikeIcon = view is android.widget.ImageView ||
+            view.javaClass.simpleName.contains("Image", ignoreCase = true)
+        if (clickable && looksLikeIcon && view.width in 1..(view.height * 4)) {
+            out += view
+            return
+        }
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                collectTopIcons(view.getChildAt(index), rootTop, limitY, out)
+            }
+        }
+    }
+
+    private fun idName(view: View): String {
+        val id = view.id
+        if (id == View.NO_ID) return "-"
+        return runCatching { view.resources.getResourceEntryName(id) }
+            .getOrDefault("0x" + Integer.toHexString(id))
+    }
+
+    /** 诊断：把标题栏那一带的视图树打一次（每个 Activity 实例只打一次）。 */
+    private fun dumpTopBarOnce(activity: Activity) {
+        if (!loggedKeys.add("topbar:" + System.identityHashCode(activity))) return
+        runCatching {
+            val root = activity.window?.decorView ?: return
+            val location = IntArray(2)
+            root.getLocationOnScreen(location)
+            val rootTop = location[1]
+            val limitY = rootTop + (root.height * 16) / 100
+            val builder = StringBuilder()
+            dumpTree(root, 0, rootTop, limitY, builder, intArrayOf(0))
+            HLog.i("$TAG 标题栏视图树 begin\n$builder$TAG 标题栏视图树 end")
+        }.onFailure { HLog.e("$TAG dump 标题栏失败: ${it.message}", it) }
+    }
+
+    private fun dumpTree(
+        view: View,
+        depth: Int,
+        rootTop: Int,
+        limitY: Int,
+        builder: StringBuilder,
+        budget: IntArray
+    ) {
+        if (budget[0] > 220) return
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        val top = location[1] - rootTop
+        val bottom = top + view.height
+        if (bottom < 0 || top > limitY - rootTop) return
+        budget[0]++
+        repeat(depth) { builder.append(' ') }
+        builder.append(view.javaClass.simpleName)
+            .append(" id=").append(idName(view))
+            .append(" [").append(top).append("..").append(bottom).append(']')
+            .append(" w=").append(view.width)
+            .append(" n=").append((view as? ViewGroup)?.childCount ?: -1)
+            .append(" vis=").append(view.visibility)
+        if (view is TextView) builder.append(" text=").append(view.text)
+        builder.append('\n')
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                dumpTree(view.getChildAt(index), depth + 1, rootTop, limitY, builder, budget)
+            }
         }
     }
 
