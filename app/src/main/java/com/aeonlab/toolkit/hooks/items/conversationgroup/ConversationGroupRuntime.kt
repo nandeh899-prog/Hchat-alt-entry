@@ -940,8 +940,20 @@ object ConversationGroupRuntime {
             listOf(
                 KavaReflector.findMethodRecursive(launcherClass, "onCreate", Bundle::class.java),
                 KavaReflector.findMethodRecursive(launcherClass, "onResume"),
+                KavaReflector.findMethodRecursive(launcherClass, "onPostResume"),
+                KavaReflector.findMethodRecursive(launcherClass, "onWindowFocusChanged", java.lang.Boolean.TYPE),
                 KavaReflector.findMethodRecursive(launcherClass, "onNewIntent", Intent::class.java)
             ).filterNotNull().forEach { hook(it, remember) }
+        }
+        // 特性是在 LauncherUI 的 onCreate 之后才装载的，那之后没有 onResume 就意味着
+        // 没人再去补挂顶部入口（实测表现为「必须进一次分组再退出来」才出现）。
+        // 这里主动补几次：拿到当前正在跑的 LauncherUI 调一次幂等挂载。
+        repeat(3) { round ->
+            main.postDelayed({
+                runCatching {
+                    currentLauncherActivity()?.let { ConversationGlobalMenu.ensureTopEntry(it) }
+                }
+            }, 1200L * (round + 1))
         }
         // 临时诊断探针：虚拟分组的空白聊天视图里必定有一个 EditText 输入框（首页会话列表没有）。
         // 只在“刚退出分组页”的窗口期内记录它的构造调用栈，用来定位微信把聊天视图挂上来的真实入口；
@@ -3510,6 +3522,28 @@ object ConversationGroupRuntime {
         return sequenceOf("field_username", "username", "userName")
             .mapNotNull { KavaReflector.readField(item, it)?.toString() }
             .firstOrNull { it.isNotBlank() }
+    }
+
+    private fun currentLauncherActivity(): Activity? {
+        return runCatching {
+            val atClass = Class.forName("android.app.ActivityThread")
+            val activityThread = atClass.getMethod("currentActivityThread").invoke(null)
+            val field = atClass.getDeclaredField("mActivities")
+            field.isAccessible = true
+            val records = field.get(activityThread) as? Map<*, *> ?: return null
+            records.values.forEach { record ->
+                if (record == null) return@forEach
+                val actField = record.javaClass.getDeclaredField("activity")
+                actField.isAccessible = true
+                val activity = actField.get(record) as? Activity ?: return@forEach
+                if (!activity.isFinishing && !activity.isDestroyed &&
+                    activity.javaClass.name.contains("LauncherUI")
+                ) {
+                    return activity
+                }
+            }
+            null
+        }.getOrNull()
     }
 
     private fun findActivity(context: Context?): Activity? {
