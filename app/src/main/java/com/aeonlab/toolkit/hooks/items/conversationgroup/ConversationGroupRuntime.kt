@@ -2893,13 +2893,29 @@ object ConversationGroupRuntime {
                 KavaReflector.invokeOrThrow(method, receiver, usernames, parentRef, true, true)
             }
             val placeholders = List(talkers.size) { "?" }.joinToString(",")
-            val args = (talkers + parentRef).toTypedArray()
-            val matched = database.queryFirstString(
-                "SELECT COUNT(*) AS matched FROM rconversation " +
-                    "WHERE username IN ($placeholders) AND IFNULL(parentRef,'')=?",
-                args,
-                "matched"
-            ).toIntOrNull() ?: 0
+            // 根级必须落成 SQL NULL：微信首页按 parentRef is null 查询，
+            // 只写空串照样查不到，会话会继续藏在列表外（支线版踩过这个坑）。
+            val matched = if (parentRef.isEmpty()) {
+                database.update(
+                    "rconversation",
+                    ContentValues().apply { putNull("parentRef") },
+                    "username IN ($placeholders)",
+                    talkers.toTypedArray()
+                )
+                database.queryFirstString(
+                    "SELECT COUNT(*) AS matched FROM rconversation " +
+                        "WHERE username IN ($placeholders) AND parentRef IS NULL",
+                    talkers.toTypedArray(),
+                    "matched"
+                ).toIntOrNull() ?: 0
+            } else {
+                database.queryFirstString(
+                    "SELECT COUNT(*) AS matched FROM rconversation " +
+                        "WHERE username IN ($placeholders) AND IFNULL(parentRef,'')=?",
+                    (talkers + parentRef).toTypedArray(),
+                    "matched"
+                ).toIntOrNull() ?: 0
+            }
             if (matched != talkers.size) {
                 throw IllegalStateException("数据库仅更新 $matched/${talkers.size} 条会话")
             }
