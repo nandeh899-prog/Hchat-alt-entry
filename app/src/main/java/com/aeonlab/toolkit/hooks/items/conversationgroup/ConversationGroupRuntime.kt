@@ -914,6 +914,12 @@ object ConversationGroupRuntime {
                     // 首页列表点击：在微信之前把虚拟分组行吞掉（不依赖 DexKit 锚点）。
                     runCatching { installHomeListClickHook(activity) }
                     if (!pendingVirtualChatExit || activity.isFinishing) return
+                    // 退出分组页时 LauncherUI 会把虚拟父会话的空白聊天视图挂上来。先在恢复这一帧
+                    // 把它藏掉，用户就不会看到「空白页闪一下再被返回键关掉」；返回键仍按原逻辑下发，
+                    // 用来把这个不在返回栈里的内嵌视图真正销毁。
+                    if (findChattingEditText(activity.window?.decorView) != null) {
+                        hideChattingLayer(activity)
+                    }
                     // 刚退出分组页：如果 LauncherUI 恢复时已经挂着空白聊天视图，直接下发一次返回键。
                     main.postDelayed({
                         if (!pendingVirtualChatExit || activity.isFinishing) return@postDelayed
@@ -1125,7 +1131,12 @@ object ConversationGroupRuntime {
                             .firstOrNull()
                             ?: args.filterIsInstance<String>().firstOrNull()
                             ?: return
-                        if (!isVirtualTalker(talker)) return
+                        if (!isVirtualTalker(talker)) {
+                            // 真实会话：进入前把退出分组页时被隐藏的聊天层恢复回来，
+                            // 否则 LauncherUI 上打开的任何聊天都会落在一层 GONE 里。
+                            showChattingLayer(param.thisObject as? Activity)
+                            return
+                        }
                         HLog.e(
                             "$TAG 拦截 LauncherUI 打开虚拟分组会话: talker=$talker " +
                                 "method=${method.name}/${method.parameterTypes.size}"
@@ -2406,6 +2417,9 @@ object ConversationGroupRuntime {
                     )
                 else -> cleanupVirtualRows(database, emptySet())
             }
+            // 还原根级是 SQL 直写 NULL，宿主不会替我们发首页通知，这里补一次刷新，
+            // 否则会话虽然已经回到首页，界面要等用户摸一下屏幕才重查（真机 2026-11-27）。
+            ConversationGroupHomeProjection.refresh()
             return
         }
         val automaticResolution = if (enabled) {
@@ -2503,9 +2517,11 @@ object ConversationGroupRuntime {
                     (officialProjectionChanged || it.first.id in virtualRows.changedGroupIds)
             }
         )
-        if (officialProjectionChanged || homeProjectionChanged) {
-            ConversationGroupHomeProjection.refresh()
-        }
+        if (homeProjectionChanged) HLog.i("$TAG 首页投影集有变化，随本次刷新一起重绘")
+        // 无论投影集有没有变都要刷一次首页：本模块写 parentRef 走的是微信原生归拢方法
+        // 或 SQL 直写 NULL，这两条都不会稳定触发宿主自己的首页通知，不刷就表现为
+        // 「开关切了、列表要摸一下屏幕才变」（真机 2026-11-27 实测）。
+        ConversationGroupHomeProjection.refresh()
         // Never remove a parent row while a real conversation still needs recovery.
         if (plan.unresolved.isEmpty() && parentUpdatesSucceeded.containsAll(plan.updates.keys)) {
             cleanupVirtualRows(
