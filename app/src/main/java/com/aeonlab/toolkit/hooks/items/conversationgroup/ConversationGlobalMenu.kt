@@ -6,10 +6,13 @@ import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.view.MenuItem
+import android.view.View
+import android.view.ViewGroup
 import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.ui.AeonLabMenuDotDrawable
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.utils.HLog
+import java.lang.reflect.Method
 
 /**
  * 首页顶部的「全局批量操作」入口。
@@ -21,8 +24,9 @@ import com.aeonlab.toolkit.utils.HLog
  *   标已读 / 删消息 / 屏蔽消息 / 免打扰 / 解除免打扰 / 发送 / 归组。
  * - 「AeonLab模块」入口也不搬：＋ 号菜单里已经有一份。
  *
- * 入口是幂等的：LauncherUI 是四个 Tab 共用的容器，ActionBar 可能被重建，
- * 所以每次 onResume / onNewIntent 都会先摘掉再挂一次（见 [ensureTopEntry]）。
+ * 挂载方式不写死签名（1049 实测 `LauncherUI` 上既没有 `addIconOptionMenu*`，
+ * 也没有 `addTextOptionMenu(int,String,listener)`），改成：
+ * 扫描宿主真实的 `*OptionMenu*` 方法 → Activity 与首页 Fragment 逐个试 → 签名全部写进日志。
  */
 internal object ConversationGlobalMenu {
 
@@ -35,7 +39,9 @@ internal object ConversationGlobalMenu {
 
     private val main = Handler(Looper.getMainLooper())
 
-    private val loggedClasses = HashSet<String>()
+    private val inventoryCache = HashMap<Class<*>, List<Method>>()
+
+    private val loggedKeys = HashSet<String>()
 
     private val refreshHome: () -> Unit = {
         runCatching { ConversationGroupHomeProjection.refresh() }
@@ -148,8 +154,8 @@ internal object ConversationGlobalMenu {
     // ------------------------------------------------------------------ 入口挂载
 
     /**
-     * 幂等挂载：先摘掉可能残留的旧菜单项，再尝试添加。
-     * 图标路（addIconOptionMenu + 自绘 Drawable）优先，宿主没这签名就退回文字「菜单」。
+     * 幂等挂载：先摘掉可能残留的旧菜单项，再按「图标 → 文字」、按「Activity → 首页 Fragment」逐个试。
+     * 每次 onCreate / onResume / onNewIntent 都会调（LauncherUI 是四 Tab 共用容器，ActionBar 会重建）。
      */
     fun ensureTopEntry(activity: Activity) {
         if (activity.isFinishing || activity.isDestroyed) return
@@ -158,60 +164,178 @@ internal object ConversationGlobalMenu {
 
     private fun install(activity: Activity, attempt: Int) {
         if (activity.isFinishing || activity.isDestroyed) return
-        detach(activity)
+        val targets = menuTargets(activity)
+        targets.forEach { detachMenu(it) }
         val listener = MenuItem.OnMenuItemClickListener {
             runCatching { show(activity) }
                 .onFailure { HLog.e("$TAG 打开全局批量操作菜单失败: ${it.message}", it) }
             true
         }
-        if (installIconEntry(activity, listener)) {
-            HLog.i("$TAG 首页顶部图标入口已挂载: ${activity.javaClass.simpleName}")
-            return
+        for (wantIcon in listOf(true, false)) {
+            for (target in targets) {
+                val method = pickMenuMethod(target, wantIcon) ?: continue
+                if (invokeMenuAdd(target, method, listener)) {
+                    HLog.i(
+                        "$TAG 首页顶部入口已挂载(${if (wantIcon) "图标" else "文字"}) " +
+                            "target=${target.javaClass.simpleName} method=${method.name}"
+                    )
+                    refreshMenu(target)
+                    return
+                }
+            }
         }
-        if (installTextEntry(activity, listener)) {
-            HLog.i("$TAG 首页顶部图标入口不可用，已回退文字入口「$MENU_TEXT」")
-            return
-        }
-        if (attempt < 3) {
-            // onCreate 阶段 ActionBar 可能还没建好，隔一帧再试。
+        if (attempt < 4) {
+            // onCreate 阶段 ActionBar / Fragment 可能还没建好，隔一帧再试。
             main.postDelayed({ install(activity, attempt + 1) }, 400L * attempt)
         } else {
             HLog.e(
-                "$TAG 首页顶部菜单入口挂载失败（图标与文字都失败）: ${activity.javaClass.name}",
+                "$TAG 首页顶部菜单入口挂载失败: ${activity.javaClass.name} " +
+                    "targets=${targets.joinToString("|") { it.javaClass.name }}",
                 RuntimeException("installTopEntry")
             )
         }
     }
 
-    private fun detach(activity: Activity) {
+    /** 候选宿主：Activity 本身 + 当前首页 Fragment（ActionBar 实际常挂在 Fragment 上）。 */
+    private fun menuTargets(activity: Activity): List<Any> {
+        val targets = mutableListOf<Any>(activity)
         runCatching {
-            val remove = activity.javaClass.methods.firstOrNull { method ->
-                method.name == "removeOptionMenu" && method.parameterTypes.size == 1 &&
-                    (method.parameterTypes[0] == Integer.TYPE ||
-                        method.parameterTypes[0] == Integer::class.java)
-            } ?: return
-            remove.invoke(activity, MENU_ITEM_ID)
+            val homeFragment = homeFragment(activity)
+            if (homeFragment != null) {
+                targets += homeFragment
+            } else if (loggedKeys.add("nofrag:" + activity.javaClass.name)) {
+                HLog.i("$TAG 没找到首页 Fragment，只在 ${activity.javaClass.simpleName} 上挂")
+            }
+        }.onFailure { HLog.e("$TAG 枚举首页 fragment 失败: ${it.message}", it) }
+        return targets
+    }
+
+    private fun homeFragment(activity: Activity): Any? {
+        val list = findConversationListView(activity.window?.decorView) ?: return null
+        val fragments = fragmentsOf(activity)
+        if (loggedKeys.add("frags")) {
+            HLog.i(
+                "$TAG 首页容器 ${activity.javaClass.simpleName} 的 fragment=" +
+                    fragments.joinToString("|") { it.javaClass.name }
+            )
+        }
+        fragments.forEach { fragment ->
+            val root = runCatching {
+                fragment.javaClass.getMethod("getView").invoke(fragment) as? View
+            }.getOrNull() ?: return@forEach
+            if (isDescendant(root, list)) return fragment
+        }
+        return null
+    }
+
+    private fun fragmentsOf(activity: Activity): List<Any> {
+        return runCatching {
+            var current: Class<*>? = activity.javaClass
+            var manager: Any? = null
+            while (current != null && manager == null) {
+                val getter = current.declaredMethods.firstOrNull {
+                    it.name == "getSupportFragmentManager" && it.parameterTypes.isEmpty()
+                }
+                if (getter != null) {
+                    manager = runCatching {
+                        getter.isAccessible = true
+                        getter.invoke(activity)
+                    }.getOrNull()
+                }
+                current = current.superclass
+            }
+            val fragments = manager?.javaClass?.methods
+                ?.firstOrNull { it.name == "getFragments" && it.parameterTypes.isEmpty() }
+                ?.invoke(manager) as? List<*>
+            fragments.orEmpty().filterNotNull()
+        }.getOrDefault(emptyList())
+    }
+
+    private fun findConversationListView(root: View?): View? {
+        val view = root ?: return null
+        if (view is android.widget.ListView &&
+            view.javaClass.simpleName.contains("Conversation", ignoreCase = true)
+        ) {
+            return view
+        }
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                val found = findConversationListView(view.getChildAt(index))
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    private fun isDescendant(root: View, target: View): Boolean {
+        var current: View? = target
+        var depth = 0
+        while (current != null && depth < 80) {
+            if (current === root) return true
+            current = current.parent as? View
+            depth++
+        }
+        return false
+    }
+
+    // ------------------------------------------------------------------ 反射调用
+
+    /** 宿主上所有 `*OptionMenu*` 方法，按类缓存，只打印一次签名。 */
+    private fun menuMethods(target: Any): List<Method> {
+        val clazz = target.javaClass
+        inventoryCache[clazz]?.let { return it }
+        val methods = clazz.methods.filter { it.name.contains("OptionMenu", ignoreCase = true) }
+        inventoryCache[clazz] = methods
+        if (loggedKeys.add("inv:" + clazz.name)) {
+            if (methods.isEmpty()) {
+                HLog.i("$TAG ${clazz.name} 没有任何 *OptionMenu* 方法")
+            } else {
+                methods.forEach { method ->
+                    HLog.i(
+                        "$TAG ${clazz.name} menu方法: ${method.name}(" +
+                            method.parameterTypes.joinToString(",") { it.simpleName } + ")"
+                    )
+                }
+            }
+        }
+        return methods
+    }
+
+    /**
+     * 选方法：图标优先要 Drawable 形参；文字要 String 形参。
+     * 两者都要求「参数里有 int（menuId）+ 最后一个参数是 OnMenuItemClickListener」，
+     * 其余参数（颜色、boolean、描述等）由 [buildArgs] 按类型兜底填。
+     */
+    private fun pickMenuMethod(target: Any, wantIcon: Boolean): Method? {
+        val methods = menuMethods(target)
+        return methods.firstOrNull { method ->
+            val types = method.parameterTypes
+            types.isNotEmpty() &&
+                types.any { it == Integer.TYPE } &&
+                types.last() == MenuItem.OnMenuItemClickListener::class.java &&
+                if (wantIcon) {
+                    types.any { Drawable::class.java.isAssignableFrom(it) }
+                } else {
+                    types.any { it == String::class.java }
+                }
         }
     }
 
-    private fun installIconEntry(
-        activity: Activity,
+    private fun invokeMenuAdd(
+        target: Any,
+        method: Method,
         listener: MenuItem.OnMenuItemClickListener
     ): Boolean {
-        val methods = activity.javaClass.methods.filter { it.name.startsWith("addIconOptionMenu") }
-        logCandidatesOnce(activity, methods)
-        val pick = methods.firstOrNull { method ->
-            val types = method.parameterTypes
-            types.isNotEmpty() &&
-                types.last() == MenuItem.OnMenuItemClickListener::class.java &&
-                types.any { Drawable::class.java.isAssignableFrom(it) }
-        } ?: return false
-        val args = buildArgs(pick.parameterTypes, AeonLabMenuDotDrawable(), listener)
         return runCatching {
-            pick.invoke(activity, *args)
+            val args = buildArgs(method.parameterTypes, AeonLabMenuDotDrawable(), listener)
+            method.isAccessible = true
+            method.invoke(target, *args)
             true
         }.getOrElse {
-            HLog.e("$TAG 调用 ${pick.name} 失败: ${it.message}", it)
+            HLog.e(
+                "$TAG 调用 ${target.javaClass.simpleName}.${method.name} 失败: ${it.message}",
+                it
+            )
             false
         }
     }
@@ -240,40 +364,26 @@ internal object ConversationGlobalMenu {
         }
     }
 
-    private fun installTextEntry(
-        activity: Activity,
-        listener: MenuItem.OnMenuItemClickListener
-    ): Boolean {
-        val add = activity.javaClass.methods.firstOrNull { method ->
-            method.name == "addTextOptionMenu" &&
-                method.parameterTypes.size == 3 &&
-                method.parameterTypes[0] == Integer.TYPE &&
-                method.parameterTypes[1] == String::class.java &&
-                method.parameterTypes[2] == MenuItem.OnMenuItemClickListener::class.java
-        } ?: return false
-        return runCatching {
-            add.invoke(activity, MENU_ITEM_ID, MENU_TEXT, listener)
-            true
-        }.getOrElse {
-            HLog.e("$TAG 调用 addTextOptionMenu 失败: ${it.message}", it)
-            false
+    private fun detachMenu(target: Any) {
+        runCatching {
+            val remove = menuMethods(target).firstOrNull { method ->
+                method.name.startsWith("remove") && method.parameterTypes.size == 1 &&
+                    method.parameterTypes[0] == Integer.TYPE
+            } ?: return
+            remove.isAccessible = true
+            remove.invoke(target, MENU_ITEM_ID)
         }
     }
 
-    /**
-     * 只打印一次宿主上所有 `addIconOptionMenu*` 签名。真机 8.0.49 的签名是不可预知的
-     * （可能是 `(int,int,listener)`，也可能是 `(int,Drawable,listener)`），
-     * 打出来以后就不用再猜，也方便下一版直接按最优签名精确调用。
-     */
-    private fun logCandidatesOnce(activity: Activity, methods: List<java.lang.reflect.Method>) {
-        val className = activity.javaClass.name
-        if (!loggedClasses.add(className)) return
-        if (methods.isEmpty()) {
-            HLog.i("$TAG $className 上没有 addIconOptionMenu*，走文字入口")
-            return
-        }
-        methods.forEach { method ->
-            HLog.i("$TAG addIconOptionMenu候选: ${method.name}(${method.parameterTypes.joinToString(",") { it.simpleName }})")
+    /** 加完菜单项通知 ActionBar 重排，否则有些页面要等下次 invalidate 才显示。 */
+    private fun refreshMenu(target: Any) {
+        listOf("supportInvalidateOptionsMenu", "invalidateOptionsMenu").forEach { name ->
+            runCatching {
+                val method = target.javaClass.methods.firstOrNull {
+                    it.name == name && it.parameterTypes.isEmpty()
+                } ?: return@runCatching
+                method.invoke(target)
+            }
         }
     }
 }
