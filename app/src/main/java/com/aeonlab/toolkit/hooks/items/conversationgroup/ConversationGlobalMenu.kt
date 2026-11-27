@@ -300,12 +300,19 @@ internal object ConversationGlobalMenu {
 
     // ------------------------------------------------------------------ 入口挂载
 
+    /** 是不是微信首页那个 Activity（`LauncherUI`，四 Tab 共用容器）。 */
+    private fun isLauncherActivity(activity: Activity): Boolean =
+        activity.javaClass.name.endsWith(".ui.LauncherUI")
+
     /**
      * 幂等挂载：先摘掉可能残留的旧菜单项，再按「图标 → 文字」、按「Activity → 首页 Fragment」逐个试。
      * 每次 onCreate / onResume / onNewIntent 都会调（LauncherUI 是四 Tab 共用容器，ActionBar 会重建）。
      */
     fun ensureTopEntry(activity: Activity) {
         if (activity.isFinishing || activity.isDestroyed) return
+        // 只认微信首页那个 Activity。ConversationGroupRuntime 会在各种 Activity 上回调这里，
+        // 之前把入口在多个 decorView 之间搬来搬去，既闪又有可能落到聊天页/群资料页的标题栏上。
+        if (!isLauncherActivity(activity)) return
         // 先挂「绘制前守护」：它不依赖任何生命周期回调，切 Tab / 进聊天再返回时也能把 A 补回来。
         installEntryGuard(activity)
         val now = System.currentTimeMillis()
@@ -822,7 +829,12 @@ private fun hasOwnEntry(activity: Activity): Boolean {
         main.post {
             runCatching {
                 val root: View = activity.window?.decorView ?: return@post
-                val list = findConversationList(root) ?: return@post
+                val list = findConversationList(root) ?: run {
+                    if (loggedKeys.add("noList")) {
+                        HLog.i("$TAG 找不到首页会话列表，跳过原生列表刷新")
+                    }
+                    return@post
+                }
                 if (loggedKeys.add("notifyHit")) {
                     HLog.i(
                         "$TAG 通知首页列表刷新 list=${list.javaClass.simpleName} " +
@@ -859,6 +871,10 @@ private fun hasOwnEntry(activity: Activity): Boolean {
                 } else if (loggedKeys.add("noadapter")) {
                     HLog.i("$TAG 列表 ${list.javaClass.simpleName} 没有 adapter，跳过刷新")
                 }
+                // 再让 ListView 自己把可见行重新 bind 一次（invalidateViews 会清掉视觉缓存、
+                // 重新调 adapter.getView），这是把行内「免打扰图标」这种状态刷出来的最直接手段。
+                runCatching { list.javaClass.getMethod("invalidateViews").invoke(list) }
+                    .onFailure { HLog.e("$TAG invalidateViews 失败: ${it.message}", it) }
                 // 重绑过程中微信可能把头部行的两个图标重新显示出来，紧跟一次压制。
                 main.postDelayed({ runCatching { hideGhostTitleIcons(activity) } }, 150L)
             }.onFailure { HLog.e("$TAG 刷新首页会话列表失败: ${it.message}", it) }
