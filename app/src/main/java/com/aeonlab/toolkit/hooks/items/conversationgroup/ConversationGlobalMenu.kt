@@ -74,6 +74,18 @@ internal object ConversationGlobalMenu {
         Unit
     }
 
+    /**
+     * 批量动作之后的统一刷新入口。
+     *
+     * 分组内的行由我们自己投影绘制（[refreshHome] 就够），但「没被收进分组」的行
+     * 是微信原生 adapter 画的，必须让它自己 `notifyDataSetChanged()` 一次，
+     * 否则会出现「分组内的免打扰图标会变、分组外的不变」。
+     */
+    private fun refreshAllFor(activity: Activity): () -> Unit = {
+        refreshHome()
+        notifyHomeList(activity)
+    }
+
     // ------------------------------------------------------------------ 菜单内容
 
     private const val KEY_MARK_READ = "mark_read"
@@ -103,10 +115,7 @@ internal object ConversationGlobalMenu {
         // 批量动作改的是微信自己的免打扰 / 已读状态，分组里的行是我们在刷新，
         // 但「没被收进分组」的会话行属于微信原生 adapter，必须让它自己 notify 一次，
         // 否则就是「分组内图标会变、分组外不变」。
-        val refreshAll: () -> Unit = {
-            refreshHome()
-            notifyHomeList(activity)
-        }
+        val refreshAll: () -> Unit = refreshAllFor(activity)
         VoiceForwardMiuixDialog.showListChoices(
             activity = activity,
             title = "全局批量操作",
@@ -170,7 +179,7 @@ internal object ConversationGlobalMenu {
                 ) { picked ->
                     val chosen = picked.map { it.id }
                     if (chosen.isEmpty()) return@showConversationPicker
-                    ConversationGroupMenu.setDoNotDisturbFor(activity, chosen, enabled, refreshAll)
+                    ConversationGroupMenu.setDoNotDisturbFor(activity, chosen, enabled, refreshAllFor(activity))
                 }
             }
         )
