@@ -35,7 +35,7 @@ internal object ConversationGlobalMenu {
     /** 新入口的 itemId（避开 0x48434752 会话长按 / 0x4843474D 分组页菜单 / 0x48434654 朋友圈过滤）。 */
     const val MENU_ITEM_ID = 0x48434754
 
-    private const val MENU_TEXT = "菜单"
+    private const val MENU_TEXT = "A"
 
     /**
      * 是否用自绘图标挂入口。
