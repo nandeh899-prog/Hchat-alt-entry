@@ -52,7 +52,7 @@ internal object ConversationDndRefresh {
         private var subscription: WeChatContactChangeApi.Subscription? = null
         private var registered = false
         private var closed = false
-        private var pending = false
+        private var completed = false
         private var expiresAt = SystemClock.uptimeMillis() + TIMEOUT_MS
 
         private fun alive(): Activity? {
@@ -75,11 +75,16 @@ internal object ConversationDndRefresh {
         private val settle = Runnable { synchronized(lock) { refreshOnce() } }
         private val refresh = Runnable {
             synchronized(lock) {
-                pending = false
+                if (alive() != null && completed) refreshOnce()
+            }
+        }
+        private val firstRefresh = Runnable {
+            synchronized(lock) {
                 if (alive() != null) {
                     refreshOnce()
+                    // Fallback when the SDK write emits no matching contact notification.
                     main.removeCallbacks(settle)
-                    main.postDelayed(settle, 1200L)
+                    main.postDelayed(settle, 900L)
                 }
             }
         }
@@ -99,9 +104,11 @@ internal object ConversationDndRefresh {
                 if (db != null && db.table.equals("rcontact", ignoreCase = true) &&
                     (change.wxId() in targets || db.whereArgs?.any { it in targets } == true)) {
                     synchronized(lock) {
-                        if (!closed && !pending && !canceled.get()) {
-                            pending = true
-                            main.postDelayed(refresh, 400L)
+                        if (!closed && completed && !canceled.get()) {
+                            // Trailing debounce: only the latest notification needs correction.
+                            main.removeCallbacks(refresh)
+                            main.removeCallbacks(settle)
+                            main.postDelayed(refresh, 250L)
                         }
                     }
                 }
@@ -114,7 +121,13 @@ internal object ConversationDndRefresh {
         }
 
         fun finish(completed: Boolean) = synchronized(lock) {
-            if (!completed || canceled.get()) close() else keepAlive()
+            if (!completed || canceled.get()) {
+                close()
+            } else if (!closed && !this.completed) {
+                this.completed = true
+                keepAlive()
+                main.post(firstRefresh)
+            }
         }
 
         fun close() {

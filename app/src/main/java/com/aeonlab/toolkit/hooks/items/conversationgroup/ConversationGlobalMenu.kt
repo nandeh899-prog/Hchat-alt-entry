@@ -614,8 +614,7 @@ internal object ConversationGlobalMenu {
         val containerTop = containerLocation[1] - hostLocation[1]
         val containerHeight =
             if (container.height > 0) container.height else anchor.height.coerceAtLeast(1)
-        // 跟 ＋ 号那个图标同尺寸（实测 ＋ 号图标 74px，坐在 149px 高的按钮里，正好一半），
-        // 并垂直居中，看起来就像宿主自己的一枚图标。
+        // 保留既有点击区域；实际外框和字母另按原生图标非透明边界绘制。
         val density = activity.resources.displayMetrics.density
         val size = (containerHeight * 0.5f).toInt().coerceAtLeast((density * 20).toInt())
         val screenWidth = activity.resources.displayMetrics.widthPixels
@@ -638,6 +637,7 @@ internal object ConversationGlobalMenu {
             params.height = size
             entry.layoutParams = params
         }
+        updateEntryVisual(activity, host, entry, size)
         // 微信重建 ActionBar 时可能把自己重新加到 decorView 上层，把我们的入口盖住
         // （被盖住等于点不到、也可能看不见），发现不在最上层就提一次。
         if (host.childCount > 0 && host.getChildAt(host.childCount - 1) !== entry) {
@@ -655,6 +655,82 @@ internal object ConversationGlobalMenu {
         val found = findViewByDesc(host, "更多功能按钮") ?: findViewByDesc(host, "搜索")
         if (found != null) overlayAnchor = java.lang.ref.WeakReference(found)
         return found
+    }
+
+    private val nativeInkBounds = java.util.WeakHashMap<Drawable, android.graphics.RectF>()
+    private val entryVisualSizes = java.util.WeakHashMap<View, Int>()
+
+    /** Measure nontransparent drawable pixels, then apply the native ImageView matrix. */
+    private fun nativeIconSize(view: View): Int? {
+        if (view is android.widget.ImageView) {
+            val drawable = view.drawable
+            if (drawable != null && !drawable.bounds.isEmpty) {
+                val ink = nativeInkBounds[drawable] ?: runCatching {
+                    val original = android.graphics.Rect(drawable.bounds)
+                    val bitmap = android.graphics.Bitmap.createBitmap(64, 64, android.graphics.Bitmap.Config.ARGB_8888)
+                    try {
+                        drawable.setBounds(0, 0, 64, 64)
+                        drawable.draw(android.graphics.Canvas(bitmap))
+                        var left = 64
+                        var top = 64
+                        var right = -1
+                        var bottom = -1
+                        for (y in 0 until 64) for (x in 0 until 64) {
+                            if (Color.alpha(bitmap.getPixel(x, y)) > 16) {
+                                left = minOf(left, x)
+                                top = minOf(top, y)
+                                right = maxOf(right, x)
+                                bottom = maxOf(bottom, y)
+                            }
+                        }
+                        if (right < left) null else android.graphics.RectF(
+                            original.left + left * original.width() / 64f,
+                            original.top + top * original.height() / 64f,
+                            original.left + (right + 1) * original.width() / 64f,
+                            original.top + (bottom + 1) * original.height() / 64f
+                        )
+                    } finally {
+                        drawable.bounds = original
+                        bitmap.recycle()
+                    }
+                }.onFailure { HLog.e("$TAG 测量原生标题栏图标失败", it) }.getOrNull()
+                    ?.also { nativeInkBounds[drawable] = it }
+                if (ink != null) {
+                    val mapped = android.graphics.RectF(ink)
+                    view.imageMatrix.mapRect(mapped)
+                    val size = kotlin.math.ceil(maxOf(mapped.width(), mapped.height()).toDouble()).toInt()
+                    if (size > 0) return size
+                }
+            }
+        }
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                nativeIconSize(view.getChildAt(index))?.let { return it }
+            }
+        }
+        return null
+    }
+
+    private fun updateEntryVisual(activity: Activity, host: ViewGroup, entry: View, touchSize: Int) {
+        // The title layout runs every frame; measure only on entry creation or size change.
+        if (entryVisualSizes[entry] == touchSize) return
+        val sizes = listOfNotNull(
+            findViewByDesc(host, "更多功能按钮")?.let { nativeIconSize(it) },
+            findViewByDesc(host, "搜索")?.let { nativeIconSize(it) }
+        )
+        val visualSize = minOf(
+            touchSize,
+            sizes.minOrNull() ?: (20f * activity.resources.displayMetrics.density).toInt()
+        ).coerceAtLeast(1)
+        entryVisualSizes[entry] = touchSize
+        val inset = (touchSize - visualSize) / 2
+        entry.background = android.graphics.drawable.InsetDrawable(
+            buildFrameDrawable(activity, titleTextColor(activity)),
+            inset, inset, touchSize - visualSize - inset, touchSize - visualSize - inset
+        )
+        if (entry is TextView) {
+            entry.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, visualSize * 0.65f)
+        }
     }
 
     private fun buildEntryView(activity: Activity): TextView {
