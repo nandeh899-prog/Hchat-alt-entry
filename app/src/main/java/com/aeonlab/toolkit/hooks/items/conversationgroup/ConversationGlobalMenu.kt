@@ -119,7 +119,9 @@ internal object ConversationGlobalMenu {
     internal fun refreshAfterContactChange(activity: Activity) {
         if (activity.isFinishing || activity.isDestroyed) return
         refreshHome()
-        refreshHomeListOnce(activity)
+        // 群聊免打扰走异步落库：原生会话 adapter 需要覆盖落库前后的多个时点。
+        // 复用首页已有的多波重绑，避免只在中间态刷新一次。
+        notifyHomeList(activity)
     }
 
     private fun scheduleHomeRefresh(activity: Activity) {
