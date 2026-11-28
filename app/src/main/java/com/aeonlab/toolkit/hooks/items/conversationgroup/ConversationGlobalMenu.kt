@@ -116,13 +116,14 @@ internal object ConversationGlobalMenu {
      * 未分组的原生行（微信 adapter 读自己的数据）还是旧图标。
      */
     private fun scheduleHomeRefresh(activity: Activity) {
+        trace("$TAG 开始刷新首页（免打扰等状态）")
         refreshHome()
+        // notifyHomeList 内部自带 0/300/900/2000ms 四波重绑，这里不再叠加，免得刷太频繁。
         notifyHomeList(activity)
         listOf(300L, 900L, 2000L, 3500L).forEach { delay ->
             main.postDelayed({
                 if (activity.isFinishing || activity.isDestroyed) return@postDelayed
                 refreshHome()
-                notifyHomeList(activity)
             }, delay)
         }
     }
@@ -572,7 +573,7 @@ internal object ConversationGlobalMenu {
                     )
                 )
                 entry.bringToFront()
-                HLog.i("$TAG 覆盖层入口已挂上 decorView pid=${Process.myPid()}")
+                trace("$TAG 覆盖层入口已挂上 decorView pid=${Process.myPid()}")
             }
             ownEntryRef = java.lang.ref.WeakReference(entry)
             positionOverlayEntry(activity, host, entry)
@@ -833,61 +834,90 @@ private fun hasOwnEntry(activity: Activity): Boolean {
         return false
     }
 
+    /**
+     * 给「找不到列表 / 解包失败 / 重绑是否生效」这类问题留一条**独立于 Xposed 日志**的证据通道：
+     * 直接追加到 /sdcard/AeonLab-debug/globalmenu.log。LSPosed 的日志会轮转、也会被宿主刷屏盖掉，
+     * 排查刷新链路时不可靠，落到文件里最直观。
+     */
+    private fun trace(message: String) {
+        HLog.i(message)
+        runCatching {
+            val dir = java.io.File("/sdcard/AeonLab-debug")
+            if (!dir.exists()) dir.mkdirs()
+            val file = java.io.File(dir, "globalmenu.log")
+            if (file.length() > 512L * 1024L) file.delete()
+            val stamp = java.text.SimpleDateFormat("MM-dd HH:mm:ss.SSS", java.util.Locale.US)
+                .format(java.util.Date())
+            file.appendText("$stamp [${Process.myPid()}] $message\n")
+        }
+    }
+
     /** 让微信原生会话列表自己刷新一次（免打扰 / 未读等图标由它的 adapter 绘制）。 */
     private fun notifyHomeList(activity: Activity) {
-        main.post {
-            runCatching {
-                val root: View = activity.window?.decorView ?: return@post
-                val list = findConversationList(root) ?: run {
-                    if (loggedKeys.add("noList")) {
-                        HLog.i("$TAG 找不到首页会话列表，跳过原生列表刷新")
-                    }
-                    return@post
-                }
-                if (loggedKeys.add("notifyHit")) {
-                    HLog.i(
-                        "$TAG 通知首页列表刷新 list=${list.javaClass.simpleName} " +
-                            "pid=${Process.myPid()}"
-                    )
-                }
-                // 用反射调 adapter.notifyDataSetChanged()，这样 ListView / RecyclerView 都能覆盖，
-                // 也不用为了一个刷新方法去引入 recyclerview 依赖。
-                val adapter = runCatching {
-                    list.javaClass.getMethod("getAdapter").invoke(list)
-                }.getOrNull()
-                if (adapter != null) {
-                    // 关键：ListView 加过 header 时拿到的是 HeaderViewListAdapter，
-                    // 它的 notifyDataSetChanged() 是**空实现**（observer 注册在内层 adapter 上），
-                    // 所以要一路 getWrappedAdapter 解包，通知真正干活的 adapter。
-                    var target: Any = adapter
-                    var depth = 0
-                    while (depth < 6) {
-                        val wrapped = runCatching {
-                            target.javaClass.getMethod("getWrappedAdapter").invoke(target)
-                        }.getOrNull()
-                        if (wrapped == null || wrapped === target) break
-                        target = wrapped
-                        depth++
-                    }
-                    if (target !== adapter && loggedKeys.add("adapterUnwrap")) {
-                        HLog.i(
-                            "$TAG 列表 adapter 解包: ${adapter.javaClass.simpleName}" +
-                                " → ${target.javaClass.simpleName}"
-                        )
-                    }
-                    runCatching { target.javaClass.getMethod("notifyDataSetChanged").invoke(target) }
-                        .onFailure { HLog.e("$TAG notifyDataSetChanged 失败: ${it.message}", it) }
-                } else if (loggedKeys.add("noadapter")) {
-                    HLog.i("$TAG 列表 ${list.javaClass.simpleName} 没有 adapter，跳过刷新")
-                }
-                // 再让 ListView 自己把可见行重新 bind 一次（invalidateViews 会清掉视觉缓存、
-                // 重新调 adapter.getView），这是把行内「免打扰图标」这种状态刷出来的最直接手段。
-                runCatching { list.javaClass.getMethod("invalidateViews").invoke(list) }
-                    .onFailure { HLog.e("$TAG invalidateViews 失败: ${it.message}", it) }
-                // 重绑过程中微信可能把头部行的两个图标重新显示出来，紧跟一次压制。
-                main.postDelayed({ runCatching { hideGhostTitleIcons(activity) } }, 150L)
-            }.onFailure { HLog.e("$TAG 刷新首页会话列表失败: ${it.message}", it) }
+        // 免打扰是异步落库的（群聊走 RoomSDK 异步提交），所以分几波催，谁先拿到新状态谁生效。
+        for (delay in longArrayOf(0L, 300L, 900L, 2000L)) {
+            main.postDelayed({ refreshHomeListOnce(activity) }, delay)
         }
+    }
+
+    private fun refreshHomeListOnce(activity: Activity) {
+        runCatching {
+            val root: View = activity.window?.decorView ?: return
+            val list = findConversationList(root) ?: run {
+                trace("$TAG 找不到首页会话列表，跳过原生列表刷新")
+                return
+            }
+            // 用反射调 adapter.notifyDataSetChanged()，这样 ListView / RecyclerView 都能覆盖，
+            // 也不用为了一个刷新方法去引入 recyclerview 依赖。
+            val adapter = runCatching {
+                list.javaClass.getMethod("getAdapter").invoke(list)
+            }.getOrNull()
+            var target: Any? = null
+            if (adapter != null) {
+                // 关键：ListView 加过 header 时拿到的是 HeaderViewListAdapter，
+                // 它的 notifyDataSetChanged() 是**空实现**（observer 注册在内层 adapter 上），
+                // 所以要一路 getWrappedAdapter 解包，通知真正干活的 adapter。
+                var candidate: Any = adapter
+                var depth = 0
+                while (depth < 8) {
+                    val wrapped = runCatching {
+                        candidate.javaClass.getMethod("getWrappedAdapter").invoke(candidate)
+                    }.getOrNull()
+                    if (wrapped == null || wrapped === candidate) break
+                    candidate = wrapped
+                    depth++
+                }
+                target = candidate
+                runCatching { candidate.javaClass.getMethod("notifyDataSetChanged").invoke(candidate) }
+                    .onFailure { trace("$TAG notifyDataSetChanged 失败: ${it.message}") }
+            }
+            // 再让 ListView 自己把可见行重新 bind 一次（invalidateViews 会清掉视觉缓存、
+            // 重新调 adapter.getView），这是把行内「免打扰图标」这种状态刷出来的最直接手段。
+            runCatching { list.javaClass.getMethod("invalidateViews").invoke(list) }
+                .onFailure { trace("$TAG invalidateViews 失败: ${it.message}") }
+            // 最后再重设一次同一个 adapter：某些情况下 ListView 只在 setAdapter 时才会
+            // 丢掉 mRecycler 里已经绑好的旧行，notifyDataSetChanged 不足以让行内图标换图。
+            // 注意要记住当前滚动位置，否则列表可能被拉回顶部。
+            if (adapter != null) {
+                val firstPosition = list.firstVisiblePosition
+                val topOffset = list.getChildAt(0)?.top ?: 0
+                runCatching {
+                    list.javaClass
+                        .getMethod("setAdapter", Class.forName("android.widget.ListAdapter"))
+                        .invoke(list, adapter)
+                }.onFailure { trace("$TAG setAdapter 重设失败: ${it.message}") }
+                if (list.firstVisiblePosition != firstPosition) {
+                    runCatching { list.setSelectionFromTop(firstPosition, topOffset) }
+                }
+            }
+            trace(
+                "$TAG 刷新首页列表 list=${list.javaClass.name} " +
+                    "adapter=${adapter?.javaClass?.name} target=${target?.javaClass?.name} " +
+                    "childCount=${list.childCount} pid=${Process.myPid()}"
+            )
+            // 重绑过程中微信可能把头部行的两个图标重新显示出来，紧跟一次压制。
+            main.postDelayed({ runCatching { hideGhostTitleIcons(activity) } }, 150L)
+        }.onFailure { trace("$TAG 刷新首页会话列表失败: ${it.message}") }
     }
 
     private fun findConversationList(view: View?): android.widget.ListView? =
@@ -906,14 +936,21 @@ private fun hasOwnEntry(activity: Activity): Boolean {
 
     private fun findListView(view: View?, requireConversationName: Boolean): android.widget.ListView? {
         val current = view ?: return null
-        if (current is android.widget.ListView &&
-            (!requireConversationName ||
-                current.javaClass.simpleName.contains("Conversation", ignoreCase = true))
-        ) {
-            if (!requireConversationName && loggedKeys.add("list:" + current.javaClass.name)) {
-                HLog.i("$TAG 首页列表类名不含 Conversation，按兜底规则命中 ${current.javaClass.name}")
+        if (current is android.widget.ListView) {
+            // 1069 之前只按 ListView 自身的类名判断，实测首页那个列表有时是宿主子类
+            // （simpleName 里不含 Conversation），于是整条刷新链直接放弃。现在补两条判据：
+            // 自身类名 或 adapter 类名 里含 Conversation 都算命中。
+            val nameHit = current.javaClass.simpleName.contains("Conversation", ignoreCase = true)
+            val adapterHit = runCatching {
+                (current.javaClass.getMethod("getAdapter").invoke(current)?.javaClass?.name ?: "")
+                    .contains("Conversation", ignoreCase = true)
+            }.getOrDefault(false)
+            if (!requireConversationName || nameHit || adapterHit) {
+                if (!requireConversationName && loggedKeys.add("list:" + current.javaClass.name)) {
+                    HLog.i("$TAG 首页列表类名不含 Conversation，按兜底规则命中 ${current.javaClass.name}")
+                }
+                return current
             }
-            return current
         }
         if (current is ViewGroup) {
             for (index in 0 until current.childCount) {
