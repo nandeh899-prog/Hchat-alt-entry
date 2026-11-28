@@ -449,6 +449,7 @@ object ConversationGroupRuntime {
         ConversationGroupQuickDialog.cancelPendingDocuments()
         ConversationGroupSendPicker.cancelAll()
         ConversationGroupTask.cancelAll()
+        ConversationDndRefresh.cancelAll()
     }
 
     @JvmStatic

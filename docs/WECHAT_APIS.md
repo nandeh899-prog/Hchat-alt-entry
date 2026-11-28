@@ -949,6 +949,12 @@ boolean ok = WeChatApis.runtime().network().send(request);
 - `ConversationGlobalMenu.refreshHomeListOnce` 在原有 adapter 解包之后、通知之前使行缓存失效。仅在主线程、adapter 类名严格匹配、字段非静态且声明类型为 `HashMap`、所有条目符合上述键值结构时清理；反射使用 `KavaReflector`，异常记入 `HLog.e` 后继续原有刷新流程。
 - 保留原有 0 / 300 / 900 / 2000 ms 四波刷新以覆盖异步落库；成功清理输出 `清理原生行状态缓存 rows=N`。该变更的构建及真机图标即时刷新效果仍待验证，不能将字节码取证视作功能验收。
 
+### 群聊免打扰落库后的短期刷新
+
+1074 单聊实时刷新已获用户确认；群聊混合分组操作仍有 30–60 秒延迟。新增 ConversationDndRefresh，在提交前订阅 WeChatApis.contactChanges()，仅匹配本批目标群的 rcontact 通知（wxId 或 whereArgs）。首条通知后 400ms 合并刷新，1200ms 后补刷，同时更新分组投影及原生行，复用已有行缓存失效逻辑。保留批量结束刷新，不修改微信联系人缓存或业务数据。
+
+执行中续期，正常结束后保留最多 90 秒；每秒检查取消、页面有效性与超时。异常、页面销毁、运行时销毁均释放订阅和延时回调，页面仅保存弱引用。依据限微信 8.0.49 / 2600，其他版本未验证；本次构建及真机速度待验收。
+
 ## API Smoke Test
 
 稳定包不注册 API Smoke Test / 媒体 API 测试功能，避免日常日志噪音和额外入口。

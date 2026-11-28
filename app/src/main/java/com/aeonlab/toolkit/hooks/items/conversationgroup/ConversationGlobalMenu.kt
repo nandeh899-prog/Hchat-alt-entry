@@ -116,6 +116,12 @@ internal object ConversationGlobalMenu {
      * 只刷一次会得到一个中间态——分组内的行（我们自己读状态）已经变了，
      * 未分组的原生行（微信 adapter 读自己的数据）还是旧图标。
      */
+    internal fun refreshAfterContactChange(activity: Activity) {
+        if (activity.isFinishing || activity.isDestroyed) return
+        refreshHome()
+        refreshHomeListOnce(activity)
+    }
+
     private fun scheduleHomeRefresh(activity: Activity) {
         trace("$TAG 开始刷新首页（免打扰等状态）")
         refreshHome()

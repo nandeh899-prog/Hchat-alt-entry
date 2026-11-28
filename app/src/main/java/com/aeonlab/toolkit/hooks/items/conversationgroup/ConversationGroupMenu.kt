@@ -260,14 +260,22 @@ internal object ConversationGroupMenu {
                     action,
                     "正在处理 ${ids.size} 个会话...",
                     task = { canceled ->
-                        val api = WeChatApis.conversations()
-                        var success = 0
-                        ids.forEach { talker ->
-                            if (canceled.get()) return@forEach
-                            if (api?.setWechatDoNotDisturb(talker, enabled) == true) success++
-                            if (!canceled.get()) Thread.sleep(BATCH_INTERVAL_MS)
+                        val refresh = ConversationDndRefresh.watch(activity, ids, canceled)
+                        var completed = false
+                        try {
+                            val api = WeChatApis.conversations()
+                            var success = 0
+                            ids.forEach { talker ->
+                                if (canceled.get()) return@forEach
+                                refresh?.keepAlive()
+                                if (api?.setWechatDoNotDisturb(talker, enabled) == true) success++
+                                if (!canceled.get()) Thread.sleep(BATCH_INTERVAL_MS)
+                            }
+                            completed = !canceled.get()
+                            BatchResult(success, ids.size, action)
+                        } finally {
+                            refresh?.finish(completed)
                         }
-                        BatchResult(success, ids.size, action)
                     },
                     onComplete = { result ->
                         onChanged()
