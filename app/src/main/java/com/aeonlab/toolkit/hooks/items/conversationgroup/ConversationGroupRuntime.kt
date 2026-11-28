@@ -1060,6 +1060,8 @@ object ConversationGroupRuntime {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val activity = param.thisObject as? Activity ?: return
                         if (!isVirtualGroupPage(activity)) return
+                        // 聊天与分组共用 Activity，先由微信收起聊天层。
+                        if (hasChattingView(activity.window?.decorView)) return
                         beginGroupPageExit(activity)
                         param.setResult(null)
                         runCatching { activity.finish() }.onFailure {
@@ -1081,6 +1083,8 @@ object ConversationGroupRuntime {
                         if (event.keyCode != KeyEvent.KEYCODE_BACK) return
                         val activity = param.thisObject as? Activity ?: return
                         if (!isVirtualGroupPage(activity)) return
+                        // 聊天与分组共用 Activity，先由微信收起聊天层。
+                        if (hasChattingView(activity.window?.decorView)) return
                         if (event.action == KeyEvent.ACTION_UP) {
                             beginGroupPageExit(activity)
                             runCatching { activity.finish() }.onFailure {

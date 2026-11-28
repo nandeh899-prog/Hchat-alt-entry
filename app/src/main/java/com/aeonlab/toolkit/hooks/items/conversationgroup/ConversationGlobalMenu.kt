@@ -861,6 +861,7 @@ private fun hasOwnEntry(activity: Activity): Boolean {
     }
 
     private fun refreshHomeListOnce(activity: Activity) {
+        if (activity.isFinishing || activity.isDestroyed) return
         runCatching {
             val root: View = activity.window?.decorView ?: return
             val list = findConversationList(root) ?: run {
@@ -895,27 +896,13 @@ private fun hasOwnEntry(activity: Activity): Boolean {
             // 重新调 adapter.getView），这是把行内「免打扰图标」这种状态刷出来的最直接手段。
             runCatching { list.javaClass.getMethod("invalidateViews").invoke(list) }
                 .onFailure { trace("$TAG invalidateViews 失败: ${it.message}") }
-            // 最后再重设一次同一个 adapter：某些情况下 ListView 只在 setAdapter 时才会
-            // 丢掉 mRecycler 里已经绑好的旧行，notifyDataSetChanged 不足以让行内图标换图。
-            // 注意要记住当前滚动位置，否则列表可能被拉回顶部。
-            if (adapter != null) {
-                val firstPosition = list.firstVisiblePosition
-                val topOffset = list.getChildAt(0)?.top ?: 0
-                runCatching {
-                    list.javaClass
-                        .getMethod("setAdapter", Class.forName("android.widget.ListAdapter"))
-                        .invoke(list, adapter)
-                }.onFailure { trace("$TAG setAdapter 重设失败: ${it.message}") }
-                if (list.firstVisiblePosition != firstPosition) {
-                    runCatching { list.setSelectionFromTop(firstPosition, topOffset) }
-                }
-            }
+            // 保留宿主 Adapter 和头部结构，禁止强制重绑。
             trace(
                 "$TAG 刷新首页列表 list=${list.javaClass.name} " +
                     "adapter=${adapter?.javaClass?.name} target=${target?.javaClass?.name} " +
                     "childCount=${list.childCount} pid=${Process.myPid()}"
             )
-            // 重绑过程中微信可能把头部行的两个图标重新显示出来，紧跟一次压制。
+            // 刷新过程中微信可能把头部行的两个图标重新显示出来，紧跟一次压制。
             main.postDelayed({ runCatching { hideGhostTitleIcons(activity) } }, 150L)
         }.onFailure { trace("$TAG 刷新首页会话列表失败: ${it.message}") }
     }
