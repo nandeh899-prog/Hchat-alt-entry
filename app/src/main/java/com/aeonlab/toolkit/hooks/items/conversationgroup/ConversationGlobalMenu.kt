@@ -20,6 +20,7 @@ import com.aeonlab.toolkit.hooks.api.core.WeChatApis
 import com.aeonlab.toolkit.hooks.api.ui.AeonLabMenuDotDrawable
 import com.aeonlab.toolkit.ui.miuix.VoiceForwardMiuixDialog
 import com.aeonlab.toolkit.utils.HLog
+import com.aeonlab.toolkit.utils.KavaReflector
 import java.lang.reflect.Method
 
 /**
@@ -889,6 +890,25 @@ private fun hasOwnEntry(activity: Activity): Boolean {
                     depth++
                 }
                 target = candidate
+                // WeChat 8.0.49: q3.y caches username -> n3, including mute state.
+                // Native MainUI/z9 clear it before rebinding; notify alone clears positions.
+                // Restrict this compatibility path to the bytecode-verified adapter/schema.
+                val clearedRows = runCatching {
+                    if (Looper.myLooper() != Looper.getMainLooper()) return@runCatching null
+                    if (candidate.javaClass.name != "com.tencent.mm.ui.conversation.q3") return@runCatching null
+                    val field = KavaReflector.findDeclaredField(candidate.javaClass, "y")
+                        ?: return@runCatching null
+                    if (java.lang.reflect.Modifier.isStatic(field.modifiers) ||
+                        field.type != java.util.HashMap::class.java) return@runCatching null
+                    val cache = KavaReflector.readField(field, candidate)
+                        as? java.util.HashMap<*, *> ?: return@runCatching null
+                    check(cache.entries.all {
+                        it.key is String &&
+                            it.value?.javaClass?.name == "com.tencent.mm.ui.conversation.n3"
+                    }) { "Unexpected native conversation row cache schema" }
+                    cache.size.also { cache.clear() }
+                }.onFailure { HLog.e("$TAG 清理原生行状态缓存失败", it) }.getOrNull()
+                if (clearedRows != null) trace("$TAG 清理原生行状态缓存 rows=$clearedRows")
                 runCatching { candidate.javaClass.getMethod("notifyDataSetChanged").invoke(candidate) }
                     .onFailure { trace("$TAG notifyDataSetChanged 失败: ${it.message}") }
             }

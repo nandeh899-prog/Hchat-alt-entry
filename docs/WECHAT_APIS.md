@@ -939,6 +939,16 @@ boolean ok = WeChatApis.runtime().network().send(request);
 
 只有 DexKit 解析结果、Hook 安装、微信内部结构变更这类启动期能力可以要求重启。
 
+## 原生首页会话行缓存与免打扰刷新（微信 8.0.49 / 2600）
+
+以下结构已通过该版本 APK 的 DEX 指令核对，其他微信版本尚未验证；不得直接复用混淆字段名。
+
+- `com.tencent.mm.ui.conversation.q3.y` 是 `HashMap<String, n3>` 行状态缓存。`getView` 命中缓存时跳过 `F()` 重读，`n3.o` 的免打扰状态来自联系人 `k4.S`。
+- `q3.notifyDataSetChanged()` 只清静态位置表 `Z0`，不会清理 `y`，因此单独通知加 `invalidateViews()` 仍可能显示旧免打扰图标。
+- 原生失效路径位于 `classes8.dex`：`j6.b(Object)` 在 `N` 为真时清空 `y` 并复位 `N`，否则按待更新集合 `M` 逐项删除，随后清空 `M`；`z9.handleMessage(Message)` 先清 `y`、设置 `N=true` 再通知；`MainUI.I()` 也会先清 `y`。
+- `ConversationGlobalMenu.refreshHomeListOnce` 在原有 adapter 解包之后、通知之前使行缓存失效。仅在主线程、adapter 类名严格匹配、字段非静态且声明类型为 `HashMap`、所有条目符合上述键值结构时清理；反射使用 `KavaReflector`，异常记入 `HLog.e` 后继续原有刷新流程。
+- 保留原有 0 / 300 / 900 / 2000 ms 四波刷新以覆盖异步落库；成功清理输出 `清理原生行状态缓存 rows=N`。该变更的构建及真机图标即时刷新效果仍待验证，不能将字节码取证视作功能验收。
+
 ## API Smoke Test
 
 稳定包不注册 API Smoke Test / 媒体 API 测试功能，避免日常日志噪音和额外入口。
