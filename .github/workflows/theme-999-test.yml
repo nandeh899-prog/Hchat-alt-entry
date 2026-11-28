@@ -65,10 +65,10 @@ jobs:
           echo "HCAT_VERSION_NAME=5.5.103.$code-theme" >> "$GITHUB_ENV"
           echo "versionCode=$code versionName=5.5.103.$code-theme"
 
-      - name: 编译 release（关 R8，999 测试通道）
+      - name: 编译 release（R8 与资源收缩，999 测试通道）
         env:
           HCAT_APP_ID_SUFFIX: '.coexist'
-          HCAT_MINIFY: 'false'
+          HCAT_MINIFY: 'true'
           HCAT_APK_NAME: 'Toolbox-coexist-test-signed.apk'
           HCAT_STORE_PASSWORD: ${{ secrets.HCAT_STORE_PASSWORD }}
           HCAT_KEY_ALIAS: ${{ secrets.HCAT_KEY_ALIAS }}
